@@ -1,7 +1,10 @@
 # -*- coding: utf-8 -*-
 """
 每日全球市場與總經個股監控報告 — 純 GitHub Actions 自動化生成腳本
-修正：滑鼠懸停浮動資訊框 (Tooltip) 徹底過濾並刪除所有警示線/門檻線資訊
+修正重點：
+1. 恢復上方圖例 (Legend) 的警示線/門檻線圖示 (虛線樣式)
+2. 懸停浮動框 (Tooltip) 依然保持純淨，徹底過濾警示線
+3. 日股上下圖塊間距擴大至 48px，徹底解決圖例遮擋 X 軸時間軸問題
 """
 
 import json
@@ -156,7 +159,7 @@ html_template = f"""<!DOCTYPE html>
     .tf-btn:hover {{ background: rgba(59, 130, 246, 0.2); color: #ffffff; border-color: #3b82f6; }}
     .tf-btn.active {{ background: #2563eb; color: #ffffff; border-color: #3b82f6; }}
     
-    .chart-container {{ position: relative; width: 100%; height: 310px; margin-top: 8px; margin-bottom: 12px; }}
+    .chart-container {{ position: relative; width: 100%; height: 300px; margin-top: 8px; margin-bottom: 12px; }}
     
     .marquee-vertical-container {{
       background: rgba(11, 15, 25, 0.75);
@@ -199,6 +202,7 @@ html_template = f"""<!DOCTYPE html>
     .chart-source-box strong {{ color: #94a3b8; white-space: nowrap; }}
     .chart-source-box a {{ color: #38bdf8 !important; text-decoration: underline !important; font-weight: 500; margin: 0 2px; white-space: nowrap; }}
 
+    /* 單列自訂圖例樣式 (實線──、虛線- - -、柱狀圖■) */
     .custom-legend {{
       display: flex;
       flex-wrap: nowrap;
@@ -206,19 +210,53 @@ html_template = f"""<!DOCTYPE html>
       align-items: center;
       justify-content: center;
       gap: 10px;
-      margin-bottom: 6px;
-      padding: 4px 6px;
-      background: rgba(11, 15, 25, 0.4);
+      margin-bottom: 8px;
+      padding: 4px 8px;
+      background: rgba(11, 15, 25, 0.45);
       border-radius: 6px;
       font-size: 11px;
       color: #94a3b8;
       scrollbar-width: none;
     }}
     .custom-legend::-webkit-scrollbar {{ display: none; }}
-    .legend-item {{ display: inline-flex; align-items: center; cursor: pointer; padding: 2px 4px; border-radius: 4px; white-space: nowrap; flex-shrink: 0; }}
+    .legend-item {{
+      display: inline-flex;
+      align-items: center;
+      cursor: pointer;
+      padding: 2px 4px;
+      border-radius: 4px;
+      white-space: nowrap;
+      flex-shrink: 0;
+      transition: all 0.15s;
+    }}
+    .legend-item:hover {{ background: rgba(36, 48, 73, 0.6); color: #f8fafc; }}
     .legend-item.hidden-dataset {{ text-decoration: line-through; opacity: 0.35; }}
-    .legend-icon-solid {{ display: inline-block; width: 18px; height: 0; border-top-width: 3px; border-top-style: solid; margin-right: 4px; }}
-    .legend-icon-bar {{ display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 4px; }}
+    .legend-icon-solid {{
+      display: inline-block;
+      width: 18px;
+      height: 0;
+      border-top-width: 3px;
+      border-top-style: solid;
+      margin-right: 4px;
+      vertical-align: middle;
+    }}
+    .legend-icon-dashed {{
+      display: inline-block;
+      width: 18px;
+      height: 0;
+      border-top-width: 2px;
+      border-top-style: dashed;
+      margin-right: 4px;
+      vertical-align: middle;
+    }}
+    .legend-icon-bar {{
+      display: inline-block;
+      width: 10px;
+      height: 10px;
+      border-radius: 2px;
+      margin-right: 4px;
+      vertical-align: middle;
+    }}
 
     @media (max-width: 768px) {{
       body {{ padding: 10px 6px; }}
@@ -229,18 +267,18 @@ html_template = f"""<!DOCTYPE html>
       .grid-2 {{ grid-template-columns: 1fr !important; gap: 10px; }}
       .stock-grid {{ grid-template-columns: 1fr !important; gap: 16px; }}
       .stat-value {{ font-size: 18px; }}
-      .chart-container {{ height: 240px !important; margin-bottom: 12px; }}
+      .chart-container {{ height: 230px !important; margin-bottom: 10px; }}
       table.stock-table {{ font-size: 9px; }}
       table.stock-table th, table.stock-table td {{ padding: 5px 1px; }}
       .badge {{ font-size: 9px; padding: 2px 4px; }}
-      .chart-source-box {{ font-size: 9px; padding: 6px 8px; margin-top: 30px; }}
+      .chart-source-box {{ font-size: 9px; padding: 6px 8px; margin-top: 26px; }}
       .tf-btn {{ font-size: 9.5px; padding: 2px 5px; }}
     }}
 
     body.force-mobile .container {{ max-width: 520px; }}
     body.force-mobile .stock-grid {{ grid-template-columns: 1fr !important; }}
     body.force-mobile .grid-2 {{ grid-template-columns: 1fr !important; }}
-    body.force-mobile .chart-container {{ height: 240px !important; }}
+    body.force-mobile .chart-container {{ height: 230px !important; }}
     body.force-mobile .section-card {{ padding: 14px 10px; }}
     body.force-mobile table.stock-table {{ font-size: 9px; }}
     body.force-mobile table.stock-table th, body.force-mobile table.stock-table td {{ padding: 5px 1px; }}
@@ -445,7 +483,7 @@ html_template = f"""<!DOCTYPE html>
       </div>
     </div>
 
-    <!-- 5-11 日本焦點個股 -->
+    <!-- 5-11 日本焦點個股 (垂直間距擴大至 48px，徹底隔離圖例與 X 軸) -->
     <h2 style="font-size: 20px; margin: 28px 0 14px; color: #fff;">5～11. 日本焦點個股追蹤 (2026/08/14 最新收盤) 與 5 年財務趨勢</h2>
     <div class="stock-grid">
       
@@ -493,7 +531,8 @@ html_template = f"""<!DOCTYPE html>
         </div>
 
         <div class="chart-container"><canvas id="stock2802Chart"></canvas></div>
-        <div class="chart-container" style="height: 260px; margin-top: 18px;"><canvas id="stock2802FinChart"></canvas></div>
+        <!-- ⭐️ 間距加大至 48px 絕不遮擋上方 X 軸 -->
+        <div class="chart-container" style="height: 270px; margin-top: 48px;"><canvas id="stock2802FinChart"></canvas></div>
         <div class="chart-source-box">
           <strong>📌 權威數據來源：</strong>
           <a href="https://www.buffett-code.com/company/2802/financial" target="_blank">Buffett Code (2802 財務)</a> ｜ 
@@ -545,7 +584,7 @@ html_template = f"""<!DOCTYPE html>
         </div>
 
         <div class="chart-container"><canvas id="stock8411Chart"></canvas></div>
-        <div class="chart-container" style="height: 260px; margin-top: 18px;"><canvas id="stock8411FinChart"></canvas></div>
+        <div class="chart-container" style="height: 270px; margin-top: 48px;"><canvas id="stock8411FinChart"></canvas></div>
         <div class="chart-source-box">
           <strong>📌 權威數據來源：</strong>
           <a href="https://www.buffett-code.com/company/8411/financial" target="_blank">Buffett Code (8411 財務)</a> ｜ 
@@ -597,7 +636,7 @@ html_template = f"""<!DOCTYPE html>
         </div>
 
         <div class="chart-container"><canvas id="stock6506Chart"></canvas></div>
-        <div class="chart-container" style="height: 260px; margin-top: 18px;"><canvas id="stock6506FinChart"></canvas></div>
+        <div class="chart-container" style="height: 270px; margin-top: 48px;"><canvas id="stock6506FinChart"></canvas></div>
         <div class="chart-source-box">
           <strong>📌 權威數據來源：</strong>
           <a href="https://www.buffett-code.com/company/6506/financial" target="_blank">Buffett Code (6506 財務)</a> ｜ 
@@ -649,7 +688,7 @@ html_template = f"""<!DOCTYPE html>
         </div>
 
         <div class="chart-container"><canvas id="stock5016Chart"></canvas></div>
-        <div class="chart-container" style="height: 260px; margin-top: 18px;"><canvas id="stock5016FinChart"></canvas></div>
+        <div class="chart-container" style="height: 270px; margin-top: 48px;"><canvas id="stock5016FinChart"></canvas></div>
         <div class="chart-source-box">
           <strong>📌 權威數據來源：</strong>
           <a href="https://www.buffett-code.com/company/5016/financial" target="_blank">Buffett Code (5016 財務)</a> ｜ 
@@ -701,7 +740,7 @@ html_template = f"""<!DOCTYPE html>
         </div>
 
         <div class="chart-container"><canvas id="stock5711Chart"></canvas></div>
-        <div class="chart-container" style="height: 260px; margin-top: 18px;"><canvas id="stock5711FinChart"></canvas></div>
+        <div class="chart-container" style="height: 270px; margin-top: 48px;"><canvas id="stock5711FinChart"></canvas></div>
         <div class="chart-source-box">
           <strong>📌 權威數據來源：</strong>
           <a href="https://www.buffett-code.com/company/5711/financial" target="_blank">Buffett Code (5711 財務)</a> ｜ 
@@ -753,7 +792,7 @@ html_template = f"""<!DOCTYPE html>
         </div>
 
         <div class="chart-container"><canvas id="stock6501Chart"></canvas></div>
-        <div class="chart-container" style="height: 260px; margin-top: 18px;"><canvas id="stock6501FinChart"></canvas></div>
+        <div class="chart-container" style="height: 270px; margin-top: 48px;"><canvas id="stock6501FinChart"></canvas></div>
         <div class="chart-source-box">
           <strong>📌 權威數據來源：</strong>
           <a href="https://www.buffett-code.com/company/6501/financial" target="_blank">Buffett Code (6501 財務)</a> ｜ 
@@ -805,7 +844,7 @@ html_template = f"""<!DOCTYPE html>
         </div>
 
         <div class="chart-container"><canvas id="stock7012Chart"></canvas></div>
-        <div class="chart-container" style="height: 260px; margin-top: 18px;"><canvas id="stock7012FinChart"></canvas></div>
+        <div class="chart-container" style="height: 270px; margin-top: 48px;"><canvas id="stock7012FinChart"></canvas></div>
         <div class="chart-source-box">
           <strong>📌 權威數據來源：</strong>
           <a href="https://www.buffett-code.com/company/7012/financial" target="_blank">Buffett Code (7012 財務)</a> ｜ 
@@ -846,6 +885,7 @@ html_template = f"""<!DOCTYPE html>
     }}
     window.toggleBBHolyGrail = toggleBBHolyGrail;
 
+    // ⭐️ 恢復上方圖例 (Legend) 的所有圖示 (包含警示線 - - - 虛線)
     function buildCustomLegend(canvasId, chartInstance) {{
       var canvas = document.getElementById(canvasId);
       if (!canvas || !canvas.parentElement) return;
@@ -856,17 +896,19 @@ html_template = f"""<!DOCTYPE html>
       container.className = 'custom-legend';
 
       chartInstance.data.datasets.forEach(function(ds, idx) {{
-        if (ds.label && (ds.label.includes('警示') || ds.label.includes('門檻') || ds.label.includes('警戒'))) return;
-
         var item = document.createElement('div');
         item.className = 'legend-item';
         var color = ds.borderColor || ds.backgroundColor || '#94a3b8';
+        var isDashed = ds.borderDash && ds.borderDash.length > 0;
         var isBar = ds.type === 'bar' || (!ds.type && chartInstance.config.type === 'bar');
 
         var icon = document.createElement('span');
         if (isBar) {{
           icon.className = 'legend-icon-bar';
           icon.style.backgroundColor = ds.backgroundColor || color;
+        }} else if (isDashed) {{
+          icon.className = 'legend-icon-dashed';
+          icon.style.borderTopColor = color;
         }} else {{
           icon.className = 'legend-icon-solid';
           icon.style.borderTopColor = color;
@@ -877,6 +919,18 @@ html_template = f"""<!DOCTYPE html>
 
         item.appendChild(icon);
         item.appendChild(label);
+
+        item.addEventListener('click', function() {{
+          var visible = chartInstance.isDatasetVisible(idx);
+          chartInstance.setDatasetVisibility(idx, !visible);
+          chartInstance.update();
+          if (visible) {{
+            item.classList.add('hidden-dataset');
+          }} else {{
+            item.classList.remove('hidden-dataset');
+          }}
+        }});
+
         container.appendChild(item);
       }});
 
@@ -999,7 +1053,6 @@ html_template = f"""<!DOCTYPE html>
     window.updateStockTimeframe = updateStockTimeframe;
 
     window.addEventListener('DOMContentLoaded', function() {{
-      // 全域圖表設定：Tooltip 徹底過濾警示線
       Chart.defaults.color = '#94a3b8';
       Chart.defaults.borderColor = '#1e293b';
       Chart.defaults.plugins.legend.display = false;
@@ -1024,7 +1077,7 @@ html_template = f"""<!DOCTYPE html>
         grid: {{ color: 'rgba(38, 51, 77, 0.4)' }}
       }};
 
-      // 1. 台股加權 (浮動框只顯示指數與成交量)
+      // 1. 台股加權
       chartStore['taiex'] = new Chart(document.getElementById('taiexChart'), {{
         type: 'line',
         data: {{
@@ -1048,7 +1101,7 @@ html_template = f"""<!DOCTYPE html>
       }});
       buildCustomLegend('taiexChart', chartStore['taiex']);
 
-      // 2. 美國 VIX 與密大信心 (浮動框只顯示 VIX 與 信心指數)
+      // 2. 美國 VIX 與密大信心
       chartStore['us'] = new Chart(document.getElementById('usIndicatorsChart'), {{
         type: 'line',
         data: {{
@@ -1074,7 +1127,7 @@ html_template = f"""<!DOCTYPE html>
       }});
       buildCustomLegend('usIndicatorsChart', chartStore['us']);
 
-      // 3. 日經 225 (浮動框只顯示指數)
+      // 3. 日經 225
       chartStore['nikkei'] = new Chart(document.getElementById('nikkeiChart'), {{
         type: 'line',
         data: {{
@@ -1096,7 +1149,7 @@ html_template = f"""<!DOCTYPE html>
       }});
       buildCustomLegend('nikkeiChart', chartStore['nikkei']);
 
-      // 4. 村田 B/B (浮動框只顯示 B/B Ratio)
+      // 4. 村田 B/B
       chartStore['murata'] = new Chart(document.getElementById('murataChart'), {{
         type: 'line',
         data: {{
@@ -1122,7 +1175,7 @@ html_template = f"""<!DOCTYPE html>
       const finQ18 = {json.dumps(fin_quarters)};
 
       function makeStock(code, priceId, finId, name, pData, warn, margin, pe, eps, pbr) {{
-        // 股價圖 (浮動框只顯示真實收盤價)
+        // 股價圖
         const priceEl = document.getElementById(priceId);
         if (priceEl) {{
           chartStore['price_' + code] = new Chart(priceEl, {{
@@ -1147,7 +1200,7 @@ html_template = f"""<!DOCTYPE html>
           buildCustomLegend(priceId, chartStore['price_' + code]);
         }}
 
-        // 財務指標圖 (浮動框一次顯示 4 大財務指標)
+        // 財務指標圖
         const finEl = document.getElementById(finId);
         if (finEl) {{
           chartStore['fin_' + code] = new Chart(finEl, {{
