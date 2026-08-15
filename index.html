@@ -5,7 +5,20 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>每日全球市場與總經個股監控報告 (2026/08/15 最新盤勢)</title>
   <!-- Chart.js CDN with fallback -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js">
+    function toggleBBHolyGrail() {
+      const content = document.getElementById('bbHolyGrailContent');
+      const arrow = document.getElementById('bbToggleArrow');
+      if (content.style.display === 'none' || content.style.display === '') {
+        content.style.display = 'block';
+        arrow.style.transform = 'rotate(180deg)';
+      } else {
+        content.style.display = 'none';
+        arrow.style.transform = 'rotate(0deg)';
+      }
+    }
+
+  </script>
   <style>
     :root {
       --bg-primary: #0f172a;
@@ -153,6 +166,21 @@
         </div>
       </div>
       <div class="chart-container"><canvas id="murataChart"></canvas></div>
+
+      <!-- 💡 反指標聖杯 互動註解按鈕 -->
+      <div style="margin-top: 20px;">
+        <button id="bbHolyGrailBtn" onclick="toggleBBHolyGrail()" style="background: rgba(245, 158, 11, 0.15); border: 1px solid #f59e0b; color: #fbbf24; padding: 8px 16px; border-radius: 8px; font-size: 14px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; transition: all 0.2s;">
+          <span style="font-size: 16px;">💡</span> 反指標聖杯
+          <span id="bbToggleArrow" style="font-size: 11px; margin-left: 4px; transition: transform 0.2s;">▼</span>
+        </button>
+        <div id="bbHolyGrailContent" style="display: none; margin-top: 14px; background: rgba(15, 23, 42, 0.85); border: 1px solid rgba(245, 158, 11, 0.4); border-left: 4px solid #f59e0b; border-radius: 8px; padding: 18px 20px; color: #cbd5e1; font-size: 13.5px; line-height: 1.8;">
+          <h4 style="color: #f59e0b; margin: 0 0 10px 0; font-size: 15px; font-weight: 700;">為何 B/B Ratio 突破 1.2 會成為「反指標聖杯」？</h4>
+          <p style="margin: 0 0 10px 0;">在正常的景氣擴張期，B/B Ratio 上升代表行業復甦；但當 <strong>村田 MLCC B/B Ratio 突破 1.2</strong> 時，景氣便會進入極度過熱、甚至瘋狂的末端。</p>
+          <p style="margin: 0 0 10px 0;">因為被動元件產量巨大、單價低，且極易受到下游廠商「<strong>重複下單（Double Booking）</strong>」的扭曲。當下游（如 D-RAM、伺服器廠、代工廠）因為怕拿不到貨而瘋狂超額訂貨，導致 B/B Ratio 暴衝到 1.2 以上時，通常也意味著下游的需求熱度已到臨界點。一旦供應鏈發現算力、零組件過剩，訂單將會瞬間斷崖式下修，行情隨即戛然而止。</p>
+          <p style="margin: 0 0 10px 0;">因此，歷史規律顯示：<strong>村田 B/B Ratio 只要突破 1.2，往往也是台股指數與被動元件股價見到中期高點的時刻（相差最後 1 至 1.5 個月）</strong>。</p>
+          <p style="margin: 0; color: #fca5a5; font-weight: 500;">總結而言，B/B Ratio 是科技股投資人用於「逃頂」的關鍵武器。當村田的訂單出貨比突破 1.2，這並非追價的綠燈，而是警告市場「重複下單已到極限，景氣準備在 1.5 個月內見頂」的紅燈信號。</p>
+        </div>
+      </div>
     </div>
 
     <!-- 5-11 日本焦點股票 -->
