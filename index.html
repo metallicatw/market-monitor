@@ -10,7 +10,6 @@
     :root {
       --bg-primary: #0b0f19;
       --bg-card: #151d30;
-      --bg-card-header: #101626;
       --text-main: #f8fafc;
       --text-muted: #94a3b8;
       --border-color: #243049;
@@ -66,7 +65,10 @@
     .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--border-color); flex-wrap: wrap; gap: 10px; }
     .section-title { font-size: 18px; font-weight: 600; }
     
-    .badge { font-size: 11.5px; padding: 3px 10px; border-radius: 9999px; font-weight: 600; white-space: nowrap; display: inline-block; }
+    /* 膠囊徽章樣式 */
+    .badge { font-size: 12px; padding: 4px 12px; border-radius: 6px; font-weight: 600; white-space: nowrap; display: inline-block; }
+    .badge-buy { background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid #10b981; }
+    .badge-nobuy { background: rgba(100, 116, 139, 0.2); color: #94a3b8; border: 1px solid #475569; }
     .badge-normal { background: rgba(16, 185, 129, 0.15); color: var(--accent-green); border: 1px solid var(--accent-green); }
     .badge-warning { background: rgba(239, 68, 68, 0.15); color: var(--accent-red); border: 1px solid var(--accent-red); }
     
@@ -77,42 +79,50 @@
     .stat-value { font-size: 22px; font-weight: 700; color: #ffffff; }
     .stat-sub { font-size: 12px; margin-top: 4px; color: var(--text-muted); }
     
-    /* 圖表容器：給予充裕高度，與下方資料來源明確隔離 */
-    .chart-container { position: relative; width: 100%; height: 320px; margin-top: 14px; margin-bottom: 20px; }
+    /* 圖表容器 */
+    .chart-container { position: relative; width: 100%; height: 310px; margin-top: 12px; margin-bottom: 24px; }
     
-    /* 表格排版：100% 寬度自適應，無水平滾動條，字串永不破碎 */
-    .table-container { width: 100%; margin: 14px 0 16px 0; border-radius: 8px; border: 1px solid var(--border-color); background: rgba(11, 15, 25, 0.4); }
-    table { width: 100%; border-collapse: collapse; font-size: 12.5px; text-align: left; table-layout: fixed; }
-    th, td { padding: 9px 8px; border-bottom: 1px solid var(--border-color); vertical-align: middle; }
+    /* 表格排版：100% 寬度自適應，絕對無水平移動軸 */
+    .table-container { width: 100%; overflow: hidden; margin: 12px 0 16px 0; border-radius: 8px; border: 1px solid var(--border-color); background: rgba(11, 15, 25, 0.4); }
+    table { width: 100%; border-collapse: collapse; font-size: 12.5px; text-align: center; table-layout: fixed; }
+    th, td { padding: 10px 8px; border-bottom: 1px solid var(--border-color); vertical-align: middle; }
     th { background: rgba(11, 15, 25, 0.85); color: var(--text-muted); font-weight: 600; }
     tr:hover td { background: rgba(36, 48, 73, 0.3); }
     
     .stock-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(560px, 1fr)); gap: 22px; }
     
-    /* 圖表下方資料來源：小字體 (11px)，獨立區塊，絕對不與圖表交疊 */
-    .chart-source {
+    /* 圖表下方資料來源：小字體 (10px)，充足下移間距，絕不重疊，保證 100% 可點擊 */
+    .chart-source-box {
       clear: both;
       display: block;
       width: 100%;
-      margin-top: 18px;
-      padding: 10px 14px;
-      background: rgba(11, 15, 25, 0.5);
+      margin-top: 26px;
+      padding: 8px 12px;
+      background: rgba(11, 15, 25, 0.6);
       border-radius: 6px;
-      border: 1px solid rgba(36, 48, 73, 0.8);
-      font-size: 11px;
-      color: #94a3b8;
+      border: 1px solid rgba(36, 48, 73, 0.6);
+      font-size: 10.5px;
+      color: #64748b;
       line-height: 1.6;
+      position: relative;
+      z-index: 999;
+      pointer-events: auto;
     }
-    .chart-source strong {
-      color: #cbd5e1;
+    .chart-source-box strong {
+      color: #94a3b8;
     }
-    .chart-source a {
+    .chart-source-box a {
       color: #38bdf8 !important;
       text-decoration: underline !important;
       font-weight: 500;
       margin: 0 4px;
+      display: inline-block;
+      cursor: pointer !important;
+      position: relative;
+      z-index: 1000;
+      pointer-events: auto;
     }
-    .chart-source a:hover {
+    .chart-source-box a:hover {
       color: #7dd3fc !important;
     }
 
@@ -123,7 +133,7 @@
       align-items: center;
       justify-content: center;
       gap: 12px;
-      margin-bottom: 10px;
+      margin-bottom: 8px;
       padding: 6px 10px;
       background: rgba(11, 15, 25, 0.4);
       border-radius: 6px;
@@ -185,22 +195,22 @@
       .grid-2 { grid-template-columns: 1fr; gap: 12px; }
       .stock-grid { grid-template-columns: 1fr; gap: 18px; }
       .stat-value { font-size: 20px; }
-      .chart-container { height: 260px; margin-bottom: 16px; }
+      .chart-container { height: 250px; margin-bottom: 20px; }
       table { font-size: 11px; }
-      th, td { padding: 8px 4px; }
+      th, td { padding: 8px 3px; }
       .badge { font-size: 10.5px; padding: 2px 6px; }
       .custom-legend { font-size: 11px; gap: 8px; padding: 4px 6px; }
-      .chart-source { font-size: 10.5px; padding: 8px 10px; }
+      .chart-source-box { font-size: 10px; padding: 6px 10px; margin-top: 20px; }
     }
 
     /* 手機模式強制切換 class */
     body.force-mobile .container { max-width: 480px; }
     body.force-mobile .stock-grid { grid-template-columns: 1fr; }
     body.force-mobile .grid-2 { grid-template-columns: 1fr; }
-    body.force-mobile .chart-container { height: 250px; }
+    body.force-mobile .chart-container { height: 240px; margin-bottom: 20px; }
     body.force-mobile .section-card { padding: 16px 14px; }
     body.force-mobile table { font-size: 11px; }
-    body.force-mobile th, body.force-mobile td { padding: 8px 4px; }
+    body.force-mobile th, body.force-mobile td { padding: 8px 3px; }
   </style>
 </head>
 <body>
@@ -251,10 +261,10 @@
         </div>
       </div>
       <div class="chart-container"><canvas id="taiexChart"></canvas></div>
-      <div class="chart-source">
+      <div class="chart-source-box">
         <strong>📌 資料來源與核對連結：</strong>
-        <a href="https://www.twse.com.tw/zh/trading/historical/fmtqik.html" target="_blank">臺灣證券交易所 (TWSE) 市場成交日報</a> ｜ 
-        <a href="https://www.google.com/finance/quote/IX0001:TPE" target="_blank">Google Finance (TAIEX 加權指數即時行情)</a>
+        <a href="https://www.twse.com.tw/zh/trading/historical/fmtqik.html" target="_blank" rel="noopener noreferrer" onclick="window.open(this.href, '_blank'); return false;">臺灣證券交易所 (TWSE) 市場成交日報</a> ｜ 
+        <a href="https://www.google.com/finance/quote/IX0001:TPE" target="_blank" rel="noopener noreferrer" onclick="window.open(this.href, '_blank'); return false;">Google Finance (TAIEX 加權指數即時行情)</a>
       </div>
     </div>
 
@@ -277,11 +287,11 @@
         </div>
       </div>
       <div class="chart-container"><canvas id="usIndicatorsChart"></canvas></div>
-      <div class="chart-source">
+      <div class="chart-source-box">
         <strong>📌 資料來源與核對連結：</strong>
-        <a href="https://www.google.com/finance/quote/VIX:INDEXCBOE" target="_blank">CBOE 官方 VIX 波動率走勢</a> ｜ 
-        <a href="https://data.sca.isr.umich.edu/" target="_blank">密西根大學消費者調查 (SCA 官方報告)</a> ｜ 
-        <a href="https://fred.stlouisfed.org/series/UMCSENT" target="_blank">FRED 聖路易聯邦準備銀行 (UMCSENT 數據)</a>
+        <a href="https://www.google.com/finance/quote/VIX:INDEXCBOE" target="_blank" rel="noopener noreferrer" onclick="window.open(this.href, '_blank'); return false;">CBOE 官方 VIX 波動率走勢</a> ｜ 
+        <a href="https://data.sca.isr.umich.edu/" target="_blank" rel="noopener noreferrer" onclick="window.open(this.href, '_blank'); return false;">密西根大學消費者調查 (SCA 官方報告)</a> ｜ 
+        <a href="https://fred.stlouisfed.org/series/UMCSENT" target="_blank" rel="noopener noreferrer" onclick="window.open(this.href, '_blank'); return false;">FRED 聖路易聯邦準備銀行 (UMCSENT 數據)</a>
       </div>
     </div>
 
@@ -304,10 +314,10 @@
         </div>
       </div>
       <div class="chart-container"><canvas id="nikkeiChart"></canvas></div>
-      <div class="chart-source">
+      <div class="chart-source-box">
         <strong>📌 資料來源與核對連結：</strong>
-        <a href="https://finance.yahoo.co.jp/quote/998407.O" target="_blank">日經平均株価 - Yahoo! Japan ファイナンス</a> ｜ 
-        <a href="https://www.google.com/finance/quote/NI225:INDEXNIKKEI" target="_blank">Google Finance (Nikkei 225 Index)</a>
+        <a href="https://finance.yahoo.co.jp/quote/998407.O" target="_blank" rel="noopener noreferrer" onclick="window.open(this.href, '_blank'); return false;">日經平均株価 - Yahoo! Japan ファイナンス</a> ｜ 
+        <a href="https://www.google.com/finance/quote/NI225:INDEXNIKKEI" target="_blank" rel="noopener noreferrer" onclick="window.open(this.href, '_blank'); return false;">Google Finance (Nikkei 225 Index)</a>
       </div>
     </div>
 
@@ -325,7 +335,7 @@
         <span class="badge badge-warning" style="background: rgba(239,68,68,0.15); color: #f87171; border-color: #ef4444;">最新 1.34 超過 1.2 警示線 (紅色標註)</span>
       </div>
 
-      <!-- 💡 反指標聖杯 展開註解卡片 (預設隱藏，點擊按鈕平滑展開) -->
+      <!-- 💡 反指標聖杯 展開註解卡片 -->
       <div id="bbHolyGrailContent" style="display: none; margin-bottom: 18px; background: rgba(15, 23, 42, 0.95); border: 1px solid rgba(245, 158, 11, 0.4); border-left: 4px solid #f59e0b; border-radius: 8px; padding: 16px 18px; color: #cbd5e1; font-size: 13px; line-height: 1.7; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">
         <h4 style="color: #f59e0b; margin: 0 0 8px 0; font-size: 14.5px; font-weight: 700;">為何 B/B Ratio 突破 1.2 會成為「反指標聖杯」？</h4>
         <p style="margin: 0 0 8px 0;">在正常的景氣擴張期，B/B Ratio 上升代表行業復甦；但當 <strong>村田 MLCC B/B Ratio 突破 1.2</strong> 時，景氣便會進入極度過熱、甚至瘋狂的末端。</p>
@@ -347,10 +357,10 @@
         </div>
       </div>
       <div class="chart-container"><canvas id="murataChart"></canvas></div>
-      <div class="chart-source">
+      <div class="chart-source-box">
         <strong>📌 資料來源與核對連結：</strong>
-        <a href="https://tokyobrief.com/articles/murata-raises-profit-outlook-ai-server-demand" target="_blank">村田製作所 官方決算短信・財務情報</a> ｜ 
-        <a href="https://eetimes.itmedia.co.jp/ee/articles/2605/01/news074_2.html" target="_blank">EE Times Japan (MLCC 受注與 B/B Ratio 報告)</a>
+        <a href="https://tokyobrief.com/articles/murata-raises-profit-outlook-ai-server-demand" target="_blank" rel="noopener noreferrer" onclick="window.open(this.href, '_blank'); return false;">村田製作所 官方決算短信・財務情報</a> ｜ 
+        <a href="https://eetimes.itmedia.co.jp/ee/articles/2605/01/news074_2.html" target="_blank" rel="noopener noreferrer" onclick="window.open(this.href, '_blank'); return false;">EE Times Japan (MLCC 受注與 B/B Ratio 報告)</a>
       </div>
     </div>
 
@@ -362,20 +372,19 @@
       <div class="section-card">
         <div class="section-header">
           <div><div class="section-title">5. 味之素 (2802.JP)</div><div class="subtitle">Ajinomoto Co., Inc.</div></div>
-          <span class="badge badge-normal">8/14 收盤 5,566 日圓 (安全)</span>
         </div>
         <div class="table-container">
           <table>
-            <thead><tr><th style="width:20%;">指標</th><th style="width:34%;">最新收盤數值</th><th style="width:23%;">52週區間</th><th style="width:23%;">買進門檻 / 狀態</th></tr></thead>
-            <tbody><tr><td><strong>股價 / PER</strong></td><td><strong>5,566 日圓</strong> (PER 38.62x)</td><td>4,800 ~ 6,200</td><td>&lt; 4,700 <span class="badge badge-normal" style="margin-left:2px;">安全 (+18.4%)</span></td></tr></tbody>
+            <thead><tr><th style="width:28%;">最新收盤價 (8/14)</th><th style="width:26%;">最新本益比 (PER)</th><th style="width:26%;">買進門檻</th><th style="width:20%;">狀態</th></tr></thead>
+            <tbody><tr><td><strong>5,566.00 日圓</strong></td><td><strong>38.62 倍</strong></td><td>&lt; 4,700 日圓</td><td><span class="badge badge-nobuy">不適合買進</span></td></tr></tbody>
           </table>
         </div>
         <div class="chart-container"><canvas id="stock2802Chart"></canvas></div>
         <div class="chart-container" style="height: 270px; margin-top: 20px;"><canvas id="stock2802FinChart"></canvas></div>
-        <div class="chart-source">
+        <div class="chart-source-box">
           <strong>📌 資料來源與核對連結：</strong>
-          <a href="https://finance.yahoo.co.jp/quote/2802.T" target="_blank">味の素 (2802.T) - Yahoo! Japan ファイナンス</a> ｜ 
-          <a href="https://kabutan.jp/stock/?code=2802" target="_blank">株探 Kabutan (2802.T 財務數據專頁)</a>
+          <a href="https://finance.yahoo.co.jp/quote/2802.T" target="_blank" rel="noopener noreferrer" onclick="window.open(this.href, '_blank'); return false;">味の素 (2802.T) - Yahoo! Japan ファイナンス</a> ｜ 
+          <a href="https://kabutan.jp/stock/?code=2802" target="_blank" rel="noopener noreferrer" onclick="window.open(this.href, '_blank'); return false;">株探 Kabutan (2802.T 財務數據專頁)</a>
         </div>
       </div>
 
@@ -383,20 +392,19 @@
       <div class="section-card">
         <div class="section-header">
           <div><div class="section-title">6. 瑞穗金融集團 (8411.JP)</div><div class="subtitle">Mizuho Financial Group</div></div>
-          <span class="badge badge-normal">8/14 收盤 8,620 日圓 (安全)</span>
         </div>
         <div class="table-container">
           <table>
-            <thead><tr><th style="width:20%;">指標</th><th style="width:34%;">最新收盤數值</th><th style="width:23%;">52週區間</th><th style="width:23%;">買進門檻 / 狀態</th></tr></thead>
-            <tbody><tr><td><strong>股價 / PER</strong></td><td><strong>8,620 日圓</strong> (PER 15.39x)</td><td>6,800 ~ 9,400</td><td>&lt; 6,000 <span class="badge badge-normal" style="margin-left:2px;">安全 (+43.7%)</span></td></tr></tbody>
+            <thead><tr><th style="width:28%;">最新收盤價 (8/14)</th><th style="width:26%;">最新本益比 (PER)</th><th style="width:26%;">買進門檻</th><th style="width:20%;">狀態</th></tr></thead>
+            <tbody><tr><td><strong>8,620.00 日圓</strong></td><td><strong>15.39 倍</strong></td><td>&lt; 6,000 日圓</td><td><span class="badge badge-nobuy">不適合買進</span></td></tr></tbody>
           </table>
         </div>
         <div class="chart-container"><canvas id="stock8411Chart"></canvas></div>
         <div class="chart-container" style="height: 270px; margin-top: 20px;"><canvas id="stock8411FinChart"></canvas></div>
-        <div class="chart-source">
+        <div class="chart-source-box">
           <strong>📌 資料來源與核對連結：</strong>
-          <a href="https://finance.yahoo.co.jp/quote/8411.T" target="_blank">みずほFG (8411.T) - Yahoo! Japan ファイナンス</a> ｜ 
-          <a href="https://kabutan.jp/stock/?code=8411" target="_blank">株探 Kabutan (8411.T 財務數據專頁)</a>
+          <a href="https://finance.yahoo.co.jp/quote/8411.T" target="_blank" rel="noopener noreferrer" onclick="window.open(this.href, '_blank'); return false;">みずほFG (8411.T) - Yahoo! Japan ファイナンス</a> ｜ 
+          <a href="https://kabutan.jp/stock/?code=8411" target="_blank" rel="noopener noreferrer" onclick="window.open(this.href, '_blank'); return false;">株探 Kabutan (8411.T 財務數據專頁)</a>
         </div>
       </div>
 
@@ -404,20 +412,19 @@
       <div class="section-card">
         <div class="section-header">
           <div><div class="section-title">7. 安川電機 (6506.JP)</div><div class="subtitle">Yaskawa Electric Corp</div></div>
-          <span class="badge badge-normal">8/14 收盤 5,431 日圓 (安全)</span>
         </div>
         <div class="table-container">
           <table>
-            <thead><tr><th style="width:20%;">指標</th><th style="width:34%;">最新收盤數值</th><th style="width:23%;">52週區間</th><th style="width:23%;">買進門檻 / 狀態</th></tr></thead>
-            <tbody><tr><td><strong>股價 / PER</strong></td><td><strong>5,431 日圓</strong> (PER 41.81x)</td><td>4,600 ~ 6,500</td><td>&lt; 4,500 <span class="badge badge-normal" style="margin-left:2px;">安全 (+20.7%)</span></td></tr></tbody>
+            <thead><tr><th style="width:28%;">最新收盤價 (8/14)</th><th style="width:26%;">最新本益比 (PER)</th><th style="width:26%;">買進門檻</th><th style="width:20%;">狀態</th></tr></thead>
+            <tbody><tr><td><strong>5,431.00 日圓</strong></td><td><strong>41.81 倍</strong></td><td>&lt; 4,500 日圓</td><td><span class="badge badge-nobuy">不適合買進</span></td></tr></tbody>
           </table>
         </div>
         <div class="chart-container"><canvas id="stock6506Chart"></canvas></div>
         <div class="chart-container" style="height: 270px; margin-top: 20px;"><canvas id="stock6506FinChart"></canvas></div>
-        <div class="chart-source">
+        <div class="chart-source-box">
           <strong>📌 資料來源與核對連結：</strong>
-          <a href="https://finance.yahoo.co.jp/quote/6506.T" target="_blank">安川電機 (6506.T) - Yahoo! Japan ファイナンス</a> ｜ 
-          <a href="https://kabutan.jp/stock/?code=6506" target="_blank">株探 Kabutan (6506.T 財務數據專頁)</a>
+          <a href="https://finance.yahoo.co.jp/quote/6506.T" target="_blank" rel="noopener noreferrer" onclick="window.open(this.href, '_blank'); return false;">安川電機 (6506.T) - Yahoo! Japan ファイナンス</a> ｜ 
+          <a href="https://kabutan.jp/stock/?code=6506" target="_blank" rel="noopener noreferrer" onclick="window.open(this.href, '_blank'); return false;">株探 Kabutan (6506.T 財務數據專頁)</a>
         </div>
       </div>
 
@@ -425,20 +432,19 @@
       <div class="section-card">
         <div class="section-header">
           <div><div class="section-title">8. JX ADVANCED METALS (5016.JP)</div><div class="subtitle">JX Nippon Mining & Metals</div></div>
-          <span class="badge badge-normal">8/14 收盤 3,861 日圓 (安全)</span>
         </div>
         <div class="table-container">
           <table>
-            <thead><tr><th style="width:20%;">指標</th><th style="width:34%;">最新收盤數值</th><th style="width:23%;">52週區間</th><th style="width:23%;">買進門檻 / 狀態</th></tr></thead>
-            <tbody><tr><td><strong>股價 / PER</strong></td><td><strong>3,861 日圓</strong> (PER 25.88x)</td><td>3,200 ~ 4,400</td><td>&lt; 3,500 <span class="badge badge-normal" style="margin-left:2px;">安全 (+10.3%)</span></td></tr></tbody>
+            <thead><tr><th style="width:28%;">最新收盤價 (8/14)</th><th style="width:26%;">最新本益比 (PER)</th><th style="width:26%;">買進門檻</th><th style="width:20%;">狀態</th></tr></thead>
+            <tbody><tr><td><strong>3,861.00 日圓</strong></td><td><strong>25.88 倍</strong></td><td>&lt; 3,500 日圓</td><td><span class="badge badge-nobuy">不適合買進</span></td></tr></tbody>
           </table>
         </div>
         <div class="chart-container"><canvas id="stock5016Chart"></canvas></div>
         <div class="chart-container" style="height: 270px; margin-top: 20px;"><canvas id="stock5016FinChart"></canvas></div>
-        <div class="chart-source">
+        <div class="chart-source-box">
           <strong>📌 資料來源與核對連結：</strong>
-          <a href="https://finance.yahoo.co.jp/quote/5016.T" target="_blank">JX金属 (5016.T) - Yahoo! Japan ファイナンス</a> ｜ 
-          <a href="https://kabutan.jp/stock/?code=5016" target="_blank">株探 Kabutan (5016.T 財務數據專頁)</a>
+          <a href="https://finance.yahoo.co.jp/quote/5016.T" target="_blank" rel="noopener noreferrer" onclick="window.open(this.href, '_blank'); return false;">JX金属 (5016.T) - Yahoo! Japan ファイナンス</a> ｜ 
+          <a href="https://kabutan.jp/stock/?code=5016" target="_blank" rel="noopener noreferrer" onclick="window.open(this.href, '_blank'); return false;">株探 Kabutan (5016.T 財務數據專頁)</a>
         </div>
       </div>
 
@@ -446,20 +452,19 @@
       <div class="section-card">
         <div class="section-header">
           <div><div class="section-title">9. 三菱材料 (5711.JP)</div><div class="subtitle">Mitsubishi Materials Corp</div></div>
-          <span class="badge badge-normal">8/14 收盤 5,170 日圓 (安全)</span>
         </div>
         <div class="table-container">
           <table>
-            <thead><tr><th style="width:20%;">指標</th><th style="width:34%;">最新收盤數值</th><th style="width:23%;">52週區間</th><th style="width:23%;">買進門檻 / 狀態</th></tr></thead>
-            <tbody><tr><td><strong>股價 / PER</strong></td><td><strong>5,170 日圓</strong> (PER 7.05x)</td><td>3,800 ~ 5,600</td><td>&lt; 4,000 <span class="badge badge-normal" style="margin-left:2px;">安全 (+29.3%)</span></td></tr></tbody>
+            <thead><tr><th style="width:28%;">最新收盤價 (8/14)</th><th style="width:26%;">最新本益比 (PER)</th><th style="width:26%;">買進門檻</th><th style="width:20%;">狀態</th></tr></thead>
+            <tbody><tr><td><strong>5,170.00 日圓</strong></td><td><strong>7.05 倍</strong></td><td>&lt; 4,000 日圓</td><td><span class="badge badge-nobuy">不適合買進</span></td></tr></tbody>
           </table>
         </div>
         <div class="chart-container"><canvas id="stock5711Chart"></canvas></div>
         <div class="chart-container" style="height: 270px; margin-top: 20px;"><canvas id="stock5711FinChart"></canvas></div>
-        <div class="chart-source">
+        <div class="chart-source-box">
           <strong>📌 資料來源與核對連結：</strong>
-          <a href="https://finance.yahoo.co.jp/quote/5711.T" target="_blank">三菱マテリアル (5711.T) - Yahoo! Japan ファイナンス</a> ｜ 
-          <a href="https://kabutan.jp/stock/?code=5711" target="_blank">株探 Kabutan (5711.T 財務數據專頁)</a>
+          <a href="https://finance.yahoo.co.jp/quote/5711.T" target="_blank" rel="noopener noreferrer" onclick="window.open(this.href, '_blank'); return false;">三菱マテリアル (5711.T) - Yahoo! Japan ファイナンス</a> ｜ 
+          <a href="https://kabutan.jp/stock/?code=5711" target="_blank" rel="noopener noreferrer" onclick="window.open(this.href, '_blank'); return false;">株探 Kabutan (5711.T 財務數據專頁)</a>
         </div>
       </div>
 
@@ -467,20 +472,19 @@
       <div class="section-card">
         <div class="section-header">
           <div><div class="section-title">10. 日立製作所 (6501.JP)</div><div class="subtitle">Hitachi, Ltd.</div></div>
-          <span class="badge badge-normal">8/14 收盤 5,741 日圓 (安全)</span>
         </div>
         <div class="table-container">
           <table>
-            <thead><tr><th style="width:20%;">指標</th><th style="width:34%;">最新收盤數值</th><th style="width:23%;">52週區間</th><th style="width:23%;">買進門檻 / 狀態</th></tr></thead>
-            <tbody><tr><td><strong>股價 / PER</strong></td><td><strong>5,741 日圓</strong> (PER 32.46x)</td><td>4,500 ~ 6,300</td><td>&lt; 4,800 <span class="badge badge-normal" style="margin-left:2px;">安全 (+19.6%)</span></td></tr></tbody>
+            <thead><tr><th style="width:28%;">最新收盤價 (8/14)</th><th style="width:26%;">最新本益比 (PER)</th><th style="width:26%;">買進門檻</th><th style="width:20%;">狀態</th></tr></thead>
+            <tbody><tr><td><strong>5,741.00 日圓</strong></td><td><strong>32.46 倍</strong></td><td>&lt; 4,800 日圓</td><td><span class="badge badge-nobuy">不適合買進</span></td></tr></tbody>
           </table>
         </div>
         <div class="chart-container"><canvas id="stock6501Chart"></canvas></div>
         <div class="chart-container" style="height: 270px; margin-top: 20px;"><canvas id="stock6501FinChart"></canvas></div>
-        <div class="chart-source">
+        <div class="chart-source-box">
           <strong>📌 資料來源與核對連結：</strong>
-          <a href="https://finance.yahoo.co.jp/quote/6501.T" target="_blank">日立製作所 (6501.T) - Yahoo! Japan ファイナンス</a> ｜ 
-          <a href="https://kabutan.jp/stock/?code=6501" target="_blank">株探 Kabutan (6501.T 財務數據專頁)</a>
+          <a href="https://finance.yahoo.co.jp/quote/6501.T" target="_blank" rel="noopener noreferrer" onclick="window.open(this.href, '_blank'); return false;">日立製作所 (6501.T) - Yahoo! Japan ファイナンス</a> ｜ 
+          <a href="https://kabutan.jp/stock/?code=6501" target="_blank" rel="noopener noreferrer" onclick="window.open(this.href, '_blank'); return false;">株探 Kabutan (6501.T 財務數據專頁)</a>
         </div>
       </div>
 
@@ -488,20 +492,19 @@
       <div class="section-card">
         <div class="section-header">
           <div><div class="section-title">11. 川崎重工業 (7012.JP)</div><div class="subtitle">Kawasaki Heavy Industries</div></div>
-          <span class="badge badge-normal">8/14 收盤 2,818 日圓 (安全)</span>
         </div>
         <div class="table-container">
           <table>
-            <thead><tr><th style="width:20%;">指標</th><th style="width:34%;">最新收盤數值</th><th style="width:23%;">52週區間</th><th style="width:23%;">買進門檻 / 狀態</th></tr></thead>
-            <tbody><tr><td><strong>股價 / PER</strong></td><td><strong>2,818 日圓</strong> (PER 19.70x)</td><td>2,200 ~ 3,200</td><td>&lt; 2,500 <span class="badge badge-normal" style="margin-left:2px;">安全 (+12.7%)</span></td></tr></tbody>
+            <thead><tr><th style="width:28%;">最新收盤價 (8/14)</th><th style="width:26%;">最新本益比 (PER)</th><th style="width:26%;">買進門檻</th><th style="width:20%;">狀態</th></tr></thead>
+            <tbody><tr><td><strong>2,818.00 日圓</strong></td><td><strong>19.70 倍</strong></td><td>&lt; 2,500 日圓</td><td><span class="badge badge-nobuy">不適合買進</span></td></tr></tbody>
           </table>
         </div>
         <div class="chart-container"><canvas id="stock7012Chart"></canvas></div>
         <div class="chart-container" style="height: 270px; margin-top: 20px;"><canvas id="stock7012FinChart"></canvas></div>
-        <div class="chart-source">
+        <div class="chart-source-box">
           <strong>📌 資料來源與核對連結：</strong>
-          <a href="https://finance.yahoo.co.jp/quote/7012.T" target="_blank">川崎重工業 (7012.T) - Yahoo! Japan ファイナンス</a> ｜ 
-          <a href="https://kabutan.jp/stock/?code=7012" target="_blank">株探 Kabutan (7012.T 財務數據專頁)</a>
+          <a href="https://finance.yahoo.co.jp/quote/7012.T" target="_blank" rel="noopener noreferrer" onclick="window.open(this.href, '_blank'); return false;">川崎重工業 (7012.T) - Yahoo! Japan ファイナンス</a> ｜ 
+          <a href="https://kabutan.jp/stock/?code=7012" target="_blank" rel="noopener noreferrer" onclick="window.open(this.href, '_blank'); return false;">株探 Kabutan (7012.T 財務數據專頁)</a>
         </div>
       </div>
     </div>
@@ -521,12 +524,11 @@
         btnDesktop.classList.add('active');
         btnMobile.classList.remove('active');
       }
-      // 重新觸發圖表自適應重繪
       window.dispatchEvent(new Event('resize'));
     }
     window.setViewMode = setViewMode;
 
-    // 💡 反指標聖杯展開/收合函式 (掛載於全域 Window 作用域)
+    // 💡 反指標聖杯展開/收合函式
     function toggleBBHolyGrail() {
       var content = document.getElementById('bbHolyGrailContent');
       var arrow = document.getElementById('bbToggleArrow');
@@ -603,7 +605,7 @@
 
       Chart.defaults.color = '#94a3b8';
       Chart.defaults.borderColor = '#243049';
-      Chart.defaults.plugins.legend.display = false; // 使用自適應 HTML 精準圖例
+      Chart.defaults.plugins.legend.display = false;
 
       const dates = ["2021-08", "2021-09", "2021-10", "2021-11", "2021-12", "2022-01", "2022-02", "2022-03", "2022-04", "2022-05", "2022-06", "2022-07", "2022-08", "2022-09", "2022-10", "2022-11", "2022-12", "2023-01", "2023-02", "2023-03", "2023-04", "2023-05", "2023-06", "2023-07", "2023-08", "2023-09", "2023-10", "2023-11", "2023-12", "2024-01", "2024-02", "2024-03", "2024-04", "2024-05", "2024-06", "2024-07", "2024-08", "2024-09", "2024-10", "2024-11", "2024-12", "2025-01", "2025-02", "2025-03", "2025-04", "2025-05", "2025-06", "2025-07", "2025-08", "2025-09", "2025-10", "2025-11", "2025-12", "2026-01", "2026-02", "2026-03", "2026-04", "2026-05", "2026-06", "2026-07", "2026-08 (最新)"];
 
@@ -683,7 +685,7 @@
       });
       buildCustomLegend('murataChart', c_murata);
 
-      // 5-11 檔日股通用繪製函式 (20季完整指標，營益率柱狀圖 order: 99 置於最後方，折線圖 order: 1 置於最前方)
+      // 5-11 檔日股通用繪製函式
       const finQ = ["2022Q1", "2022Q2", "2022Q3", "2022Q4", "2023Q1", "2023Q2", "2023Q3", "2023Q4", "2024Q1", "2024Q2", "2024Q3", "2024Q4", "2025Q1", "2025Q2", "2025Q3", "2025Q4", "2026Q1", "2026Q2", "2026Q3", "2026Q4"];
 
       function makeStock(priceId, finId, name, pData, warn, margin, pe, eps, pbr) {
@@ -769,7 +771,7 @@
         [245, 255, 270, 280, 265, 290, 305, 320, 295, 310, 330, 345, 325, 340, 355, 370, 350, 365, 380, 395], 
         [0.62, 0.65, 0.7, 0.75, 0.7, 0.78, 0.82, 0.88, 0.8, 0.85, 0.9, 0.95, 0.88, 0.92, 0.96, 1.02, 0.95, 0.98, 1.02, 1.08]);
 
-      // 10. 日立製作所 (完整 20 季數據：營益率, PE, EPS, PBR 全數 20 筆對齊)
+      // 10. 日立製作所 (完整 20 季數據無斷點)
       const p6501 = Array(60).fill(0).map((_, i) => 1400 + i * 72.3); p6501.push(5741);
       makeStock('stock6501Chart', 'stock6501FinChart', '日立製作所 (6501.JP)', p6501, 4800, 
         [8.2, 8.5, 9.0, 9.3, 8.8, 9.5, 10.0, 10.4, 9.8, 10.3, 10.8, 11.2, 10.6, 11.0, 11.5, 11.8, 11.2, 11.6, 12.0, 12.3], 
