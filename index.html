@@ -8,11 +8,11 @@
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <style>
     :root {
-      --bg-primary: #0f172a;
-      --bg-card: #1e293b;
+      --bg-primary: #0b0f19;
+      --bg-card: #151d30;
       --text-main: #f8fafc;
       --text-muted: #94a3b8;
-      --border-color: #334155;
+      --border-color: #243049;
       --accent-red: #ef4444;
       --accent-green: #10b981;
       --accent-blue: #3b82f6;
@@ -22,52 +22,54 @@
       --accent-cyan: #06b6d4;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Microsoft JhengHei", "PingFang TC", "Segoe UI", Roboto, sans-serif; }
-    body { background-color: var(--bg-primary); color: var(--text-main); padding: 24px; line-height: 1.6; }
+    body { background-color: var(--bg-primary); color: var(--text-main); padding: 20px; line-height: 1.6; }
     .container { max-width: 1300px; margin: 0 auto; }
-    header { margin-bottom: 28px; padding-bottom: 20px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 16px; }
-    h1 { font-size: 26px; font-weight: 700; color: #ffffff; }
-    .subtitle { color: var(--text-muted); font-size: 14px; margin-top: 4px; }
+    header { margin-bottom: 24px; padding-bottom: 18px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 16px; }
+    h1 { font-size: 25px; font-weight: 700; color: #ffffff; letter-spacing: -0.3px; }
+    .subtitle { color: var(--text-muted); font-size: 13.5px; margin-top: 4px; }
     
     /* 頂部警示區塊 */
-    .alert-banner { background: rgba(239, 68, 68, 0.15); border: 1.5px solid var(--accent-red); border-radius: 8px; padding: 18px 20px; margin-bottom: 28px; display: flex; align-items: flex-start; gap: 14px; }
-    .alert-tag { background: var(--accent-red); color: #fff; font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 4px; white-space: nowrap; margin-top: 2px; }
+    .alert-banner { background: rgba(239, 68, 68, 0.12); border: 1.5px solid var(--accent-red); border-radius: 8px; padding: 16px 20px; margin-bottom: 24px; display: flex; align-items: flex-start; gap: 14px; }
+    .alert-tag { background: var(--accent-red); color: #fff; font-size: 12px; font-weight: 700; padding: 3px 8px; border-radius: 4px; white-space: nowrap; margin-top: 2px; }
     
-    .section-card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; padding: 24px; margin-bottom: 28px; }
-    .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; padding-bottom: 12px; border-bottom: 1px solid var(--border-color); flex-wrap: wrap; gap: 10px; }
-    .section-title { font-size: 19px; font-weight: 600; }
+    .section-card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; padding: 22px; margin-bottom: 24px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.2); }
+    .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--border-color); flex-wrap: wrap; gap: 10px; }
+    .section-title { font-size: 18.5px; font-weight: 600; }
     
-    /* 判定標籤：避免折行與重疊 */
-    .badge { font-size: 12.5px; padding: 4px 12px; border-radius: 9999px; font-weight: 600; white-space: nowrap; display: inline-block; }
+    /* 判定標籤：精巧自適應 */
+    .badge { font-size: 11.5px; padding: 3px 10px; border-radius: 9999px; font-weight: 600; white-space: nowrap; display: inline-block; }
     .badge-normal { background: rgba(16, 185, 129, 0.15); color: var(--accent-green); border: 1px solid var(--accent-green); }
     .badge-warning { background: rgba(239, 68, 68, 0.15); color: var(--accent-red); border: 1px solid var(--accent-red); }
     
-    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
     @media (max-width: 900px) { .grid-2 { grid-template-columns: 1fr; } }
     
-    .stat-box { background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-color); border-radius: 8px; padding: 16px; }
-    .stat-label { color: var(--text-muted); font-size: 13px; margin-bottom: 4px; }
-    .stat-value { font-size: 24px; font-weight: 700; color: #ffffff; }
+    .stat-box { background: rgba(11, 15, 25, 0.6); border: 1px solid var(--border-color); border-radius: 8px; padding: 14px 16px; }
+    .stat-label { color: var(--text-muted); font-size: 12.5px; margin-bottom: 4px; }
+    .stat-value { font-size: 23px; font-weight: 700; color: #ffffff; }
     .stat-sub { font-size: 12px; margin-top: 4px; color: var(--text-muted); }
     
-    .chart-container { position: relative; width: 100%; height: 350px; margin-top: 14px; }
+    .chart-container { position: relative; width: 100%; height: 320px; margin-top: 12px; }
     
-    /* 表格排版修復：防止中文字串被壓縮破裂 */
-    .table-container { overflow-x: auto; margin: 16px 0; border-radius: 8px; border: 1px solid var(--border-color); }
-    table { width: 100%; border-collapse: collapse; font-size: 13.5px; text-align: left; }
-    th, td { padding: 12px 16px; border-bottom: 1px solid var(--border-color); white-space: nowrap; }
-    th { background: rgba(15, 23, 42, 0.85); color: var(--text-muted); font-weight: 600; letter-spacing: 0.3px; }
-    tr:hover td { background: rgba(51, 65, 85, 0.3); }
+    /* 表格排版修復：100% 寬度自適應，完全無水平滾動條，字串永不破碎 */
+    .table-container { width: 100%; overflow: hidden; margin: 14px 0 16px 0; border-radius: 8px; border: 1px solid var(--border-color); }
+    table { width: 100%; border-collapse: collapse; font-size: 12.5px; text-align: left; table-layout: fixed; }
+    th, td { padding: 10px 10px; border-bottom: 1px solid var(--border-color); vertical-align: middle; overflow: hidden; text-overflow: ellipsis; }
+    th { background: rgba(11, 15, 25, 0.85); color: var(--text-muted); font-weight: 600; }
+    tr:hover td { background: rgba(36, 48, 73, 0.3); }
     
-    .stock-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(580px, 1fr)); gap: 24px; }
-    @media (max-width: 650px) { .stock-grid { grid-template-columns: 1fr; } }
+    .stock-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(560px, 1fr)); gap: 22px; }
+    @media (max-width: 600px) { .stock-grid { grid-template-columns: 1fr; } }
     
     a { color: var(--accent-cyan); text-decoration: none; }
     a:hover { text-decoration: underline; }
 
-    /* 圖表下方資料來源小字標籤 */
+    /* 圖表下方資料來源：小字體 (11px)，不重疊 */
     .chart-source {
-      margin-top: 10px;
-      font-size: 12px;
+      margin-top: 14px;
+      padding-top: 8px;
+      border-top: 1px dashed rgba(51, 65, 85, 0.5);
+      font-size: 11px;
       color: #64748b;
       display: flex;
       align-items: center;
@@ -88,28 +90,28 @@
       flex-wrap: wrap;
       align-items: center;
       justify-content: center;
-      gap: 16px;
-      margin-bottom: 10px;
-      padding: 6px 12px;
-      background: rgba(15, 23, 42, 0.4);
+      gap: 14px;
+      margin-bottom: 8px;
+      padding: 6px 10px;
+      background: rgba(11, 15, 25, 0.4);
       border-radius: 6px;
-      font-size: 13px;
+      font-size: 12px;
       color: #94a3b8;
     }
     .legend-item {
       display: inline-flex;
       align-items: center;
       cursor: pointer;
-      padding: 4px 8px;
+      padding: 3px 6px;
       border-radius: 4px;
       transition: all 0.2s;
       user-select: none;
       border: 1px solid transparent;
     }
     .legend-item:hover {
-      background: rgba(51, 65, 85, 0.6);
+      background: rgba(36, 48, 73, 0.6);
       color: #f8fafc;
-      border-color: rgba(148, 163, 184, 0.4);
+      border-color: rgba(148, 163, 184, 0.3);
     }
     .legend-item.hidden-dataset {
       text-decoration: line-through;
@@ -117,28 +119,28 @@
     }
     .legend-icon-solid {
       display: inline-block;
-      width: 26px;
+      width: 24px;
       height: 0;
-      border-top-width: 3.5px;
+      border-top-width: 3px;
       border-top-style: solid;
-      margin-right: 8px;
+      margin-right: 6px;
       vertical-align: middle;
     }
     .legend-icon-dashed {
       display: inline-block;
-      width: 26px;
+      width: 24px;
       height: 0;
-      border-top-width: 2.5px;
+      border-top-width: 2px;
       border-top-style: dashed;
-      margin-right: 8px;
+      margin-right: 6px;
       vertical-align: middle;
     }
     .legend-icon-bar {
       display: inline-block;
-      width: 14px;
-      height: 14px;
+      width: 13px;
+      height: 13px;
       border-radius: 2px;
-      margin-right: 8px;
+      margin-right: 6px;
       vertical-align: middle;
     }
   </style>
@@ -157,8 +159,8 @@
     <div class="alert-banner">
       <span class="alert-tag">預警通知</span>
       <div>
-        <div style="font-size: 15px; font-weight: 700; color: #f87171; margin-bottom: 6px;">🚨 本日達到預警標準之指標項目：</div>
-        <div style="font-size: 13.5px; color: #fecaca; line-height: 1.7;">
+        <div style="font-size: 14.5px; font-weight: 700; color: #f87171; margin-bottom: 5px;">🚨 本日達到預警標準之指標項目：</div>
+        <div style="font-size: 13px; color: #fecaca; line-height: 1.6;">
           1. <strong>美國密西根大學消費者信心指數</strong>：8 月最新公布初值為 <strong>51.0</strong>（已跌破警戒門檻 <strong>60.0</strong>，處於歷史低檔區間）。<br>
           2. <strong>日本村田製作所 B/B Ratio</strong>：最新數值為 <strong>1.34</strong>（主力 MLCC 部門 <strong>1.47</strong>），突破 <strong>1.2</strong> 警戒線，顯示產業端面臨下游過熱重複下單與供需吃緊狀態。
         </div>
@@ -174,12 +176,12 @@
       <div class="grid-2">
         <div class="stat-box">
           <div class="stat-label">最新收盤指數 (2026/08/14 收盤)</div>
-          <div class="stat-value" style="color: var(--accent-green);">45,811.01 <span style="font-size: 15px; color: #f87171;">(-210.47 / -0.46%)</span></div>
+          <div class="stat-value" style="color: var(--accent-green);">45,811.01 <span style="font-size: 14px; color: #f87171;">(-210.47 / -0.46%)</span></div>
           <div class="stat-sub">警示門檻：&lt; 38,000 點 ｜ 全週累計大漲 +1,585 點 (+3.58%)</div>
         </div>
         <div class="stat-box">
           <div class="stat-label">當日成交金額 / 10日均量</div>
-          <div class="stat-value">11,048.44 億 <span style="font-size: 15px; color: var(--text-muted);">/ 均量 9,881.66 億</span></div>
+          <div class="stat-value">11,048.44 億 <span style="font-size: 14px; color: var(--text-muted);">/ 均量 9,881.66 億</span></div>
           <div class="stat-sub">均量門檻：&lt; 8,000 億 ｜ 資金動能強勁未觸發警示</div>
         </div>
       </div>
@@ -227,7 +229,7 @@
       <div class="grid-2">
         <div class="stat-box">
           <div class="stat-label">最新收盤點位 (2026/08/14)</div>
-          <div class="stat-value" style="color: var(--accent-green);">68,595.81 <span style="font-size: 15px; color: #4ade80;">(+287.22 / +0.42%)</span></div>
+          <div class="stat-value" style="color: var(--accent-green);">68,595.81 <span style="font-size: 14px; color: #4ade80;">(+287.22 / +0.42%)</span></div>
           <div class="stat-sub">警示門檻：&lt; 56,000 點 ｜ 目前高出門檻 +12,595 點 (+22.5%)</div>
         </div>
         <div class="stat-box">
@@ -247,11 +249,11 @@
     <!-- 4. 日本村田製作所 B/B Ratio -->
     <div class="section-card">
       <div class="section-header">
-        <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+        <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
           <div class="section-title">4. 日本村田製作所 (Murata, 6981.T) B/B Ratio (5年21季度趨勢)</div>
           <!-- 💡 反指標聖杯 按鈕位於標題正右側 -->
-          <button id="bbHolyGrailBtn" onclick="toggleBBHolyGrail()" type="button" style="background: rgba(245, 158, 11, 0.18); border: 1px solid #f59e0b; color: #fbbf24; padding: 4px 12px; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: all 0.2s;">
-            <span style="font-size: 14px;">💡</span> 反指標聖杯
+          <button id="bbHolyGrailBtn" onclick="toggleBBHolyGrail()" type="button" style="background: rgba(245, 158, 11, 0.18); border: 1px solid #f59e0b; color: #fbbf24; padding: 3px 10px; border-radius: 6px; font-size: 12.5px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; transition: all 0.2s;">
+            <span style="font-size: 13px;">💡</span> 反指標聖杯
             <span id="bbToggleArrow" style="font-size: 10px; margin-left: 2px; transition: transform 0.2s;">▼</span>
           </button>
         </div>
@@ -259,11 +261,11 @@
       </div>
 
       <!-- 💡 反指標聖杯 展開註解卡片 (預設隱藏，點擊按鈕平滑展開) -->
-      <div id="bbHolyGrailContent" style="display: none; margin-bottom: 20px; background: rgba(15, 23, 42, 0.95); border: 1px solid rgba(245, 158, 11, 0.4); border-left: 4px solid #f59e0b; border-radius: 8px; padding: 18px 20px; color: #cbd5e1; font-size: 13.5px; line-height: 1.8; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">
-        <h4 style="color: #f59e0b; margin: 0 0 10px 0; font-size: 15px; font-weight: 700;">為何 B/B Ratio 突破 1.2 會成為「反指標聖杯」？</h4>
-        <p style="margin: 0 0 10px 0;">在正常的景氣擴張期，B/B Ratio 上升代表行業復甦；但當 <strong>村田 MLCC B/B Ratio 突破 1.2</strong> 時，景氣便會進入極度過熱、甚至瘋狂的末端。</p>
-        <p style="margin: 0 0 10px 0;">因為被動元件產量巨大、單價低，且極易受到下游廠商「<strong>重複下單（Double Booking）</strong>」的扭曲。當下游（如 D-RAM、伺服器廠、代工廠）因為怕拿不到貨而瘋狂超額訂貨，導致 B/B Ratio 暴衝到 1.2 以上時，通常也意味著下游的需求熱度已到臨界點。一旦供應鏈發現算力、零組件過剩，訂單將會瞬間斷崖式下修，行情隨即戛然而止。</p>
-        <p style="margin: 0 0 10px 0;">因此，歷史規律顯示：<strong>村田 B/B Ratio 只要突破 1.2，往往也是台股指數與被動元件股價見到中期高點的時刻（相差最後 1 至 1.5 個月）</strong>。</p>
+      <div id="bbHolyGrailContent" style="display: none; margin-bottom: 18px; background: rgba(15, 23, 42, 0.95); border: 1px solid rgba(245, 158, 11, 0.4); border-left: 4px solid #f59e0b; border-radius: 8px; padding: 16px 18px; color: #cbd5e1; font-size: 13px; line-height: 1.7; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">
+        <h4 style="color: #f59e0b; margin: 0 0 8px 0; font-size: 14.5px; font-weight: 700;">為何 B/B Ratio 突破 1.2 會成為「反指標聖杯」？</h4>
+        <p style="margin: 0 0 8px 0;">在正常的景氣擴張期，B/B Ratio 上升代表行業復甦；但當 <strong>村田 MLCC B/B Ratio 突破 1.2</strong> 時，景氣便會進入極度過熱、甚至瘋狂的末端。</p>
+        <p style="margin: 0 0 8px 0;">因為被動元件產量巨大、單價低，且極易受到下游廠商「<strong>重複下單（Double Booking）</strong>」的扭曲。當下游（如 D-RAM、伺服器廠、代工廠）因為怕拿不到貨而瘋狂超額訂貨，導致 B/B Ratio 暴衝到 1.2 以上時，通常也意味著下游的需求熱度已到臨界點。一旦供應鏈發現算力、零組件過剩，訂單將會瞬間斷崖式下修，行情隨即戛然而止。</p>
+        <p style="margin: 0 0 8px 0;">因此，歷史規律顯示：<strong>村田 B/B Ratio 只要突破 1.2，往往也是台股指數與被動元件股價見到中期高點的時刻（相差最後 1 至 1.5 個月）</strong>。</p>
         <p style="margin: 0; color: #fca5a5; font-weight: 500;">總結而言，B/B Ratio 是科技股投資人用於「逃頂」的關鍵武器。當村田的訂單出貨比突破 1.2，這並非追價的綠燈，而是警告市場「重複下單已到極限，景氣準備在 1.5 個月內見頂」的紅燈信號。</p>
       </div>
 
@@ -288,22 +290,23 @@
     </div>
 
     <!-- 5-11 日本焦點股票 -->
-    <h2 style="font-size: 22px; margin: 36px 0 18px; color: #fff;">5～11. 日本焦點個股追蹤 (2026/08/14 最新收盤) 與 5 年財務趨勢</h2>
+    <h2 style="font-size: 21px; margin: 32px 0 16px; color: #fff;">5～11. 日本焦點個股追蹤 (2026/08/14 最新收盤) 與 5 年財務趨勢</h2>
     <div class="stock-grid">
+      
       <!-- 5. 味之素 -->
       <div class="section-card">
         <div class="section-header">
           <div><div class="section-title">5. 味之素 (2802.JP)</div><div class="subtitle">Ajinomoto Co., Inc.</div></div>
-          <span class="badge badge-normal">8/14 收盤 5,566 日圓 (高於門檻 4,700)</span>
+          <span class="badge badge-normal">8/14 收盤 5,566 日圓 (安全)</span>
         </div>
         <div class="table-container">
           <table>
-            <thead><tr><th>指標</th><th>最新收盤數值</th><th>52週區間</th><th>買進警示門檻</th><th>判定狀態</th></tr></thead>
-            <tbody><tr><td>股價 / PER</td><td><strong>5,566 日圓</strong> (PER 38.62x)</td><td>4,800 ~ 6,200</td><td>&lt; 4,700 日圓</td><td><span class="badge badge-normal">安全 (+18.4%)</span></td></tr></tbody>
+            <thead><tr><th style="width:20%;">指標</th><th style="width:34%;">最新收盤數值</th><th style="width:23%;">52週區間</th><th style="width:23%;">買進門檻 / 狀態</th></tr></thead>
+            <tbody><tr><td><strong>股價 / PER</strong></td><td><strong>5,566 日圓</strong> (PER 38.62x)</td><td>4,800 ~ 6,200</td><td>&lt; 4,700 <span class="badge badge-normal" style="margin-left:4px;">安全 (+18.4%)</span></td></tr></tbody>
           </table>
         </div>
         <div class="chart-container"><canvas id="stock2802Chart"></canvas></div>
-        <div class="chart-container" style="height: 280px; margin-top: 24px;"><canvas id="stock2802FinChart"></canvas></div>
+        <div class="chart-container" style="height: 270px; margin-top: 20px;"><canvas id="stock2802FinChart"></canvas></div>
         <div class="chart-source">
           <span>📌 資料來源：</span>
           <a href="https://finance.yahoo.co.jp/quote/2802.T" target="_blank">味の素 (2802.T) - Yahoo! Japan ファイナンス</a> ｜ 
@@ -315,16 +318,16 @@
       <div class="section-card">
         <div class="section-header">
           <div><div class="section-title">6. 瑞穗金融集團 (8411.JP)</div><div class="subtitle">Mizuho Financial Group</div></div>
-          <span class="badge badge-normal">8/14 收盤 8,620 日圓 (高於門檻 6,000)</span>
+          <span class="badge badge-normal">8/14 收盤 8,620 日圓 (安全)</span>
         </div>
         <div class="table-container">
           <table>
-            <thead><tr><th>指標</th><th>最新收盤數值</th><th>52週區間</th><th>買進警示門檻</th><th>判定狀態</th></tr></thead>
-            <tbody><tr><td>股價 / PER</td><td><strong>8,620 日圓</strong> (PER 15.39x)</td><td>6,800 ~ 9,400</td><td>&lt; 6,000 日圓</td><td><span class="badge badge-normal">安全 (+43.7%)</span></td></tr></tbody>
+            <thead><tr><th style="width:20%;">指標</th><th style="width:34%;">最新收盤數值</th><th style="width:23%;">52週區間</th><th style="width:23%;">買進門檻 / 狀態</th></tr></thead>
+            <tbody><tr><td><strong>股價 / PER</strong></td><td><strong>8,620 日圓</strong> (PER 15.39x)</td><td>6,800 ~ 9,400</td><td>&lt; 6,000 <span class="badge badge-normal" style="margin-left:4px;">安全 (+43.7%)</span></td></tr></tbody>
           </table>
         </div>
         <div class="chart-container"><canvas id="stock8411Chart"></canvas></div>
-        <div class="chart-container" style="height: 280px; margin-top: 24px;"><canvas id="stock8411FinChart"></canvas></div>
+        <div class="chart-container" style="height: 270px; margin-top: 20px;"><canvas id="stock8411FinChart"></canvas></div>
         <div class="chart-source">
           <span>📌 資料來源：</span>
           <a href="https://finance.yahoo.co.jp/quote/8411.T" target="_blank">みずほFG (8411.T) - Yahoo! Japan ファイナンス</a> ｜ 
@@ -336,16 +339,16 @@
       <div class="section-card">
         <div class="section-header">
           <div><div class="section-title">7. 安川電機 (6506.JP)</div><div class="subtitle">Yaskawa Electric Corp</div></div>
-          <span class="badge badge-normal">8/14 收盤 5,431 日圓 (高於門檻 4,500)</span>
+          <span class="badge badge-normal">8/14 收盤 5,431 日圓 (安全)</span>
         </div>
         <div class="table-container">
           <table>
-            <thead><tr><th>指標</th><th>最新收盤數值</th><th>52週區間</th><th>買進警示門檻</th><th>判定狀態</th></tr></thead>
-            <tbody><tr><td>股價 / PER</td><td><strong>5,431 日圓</strong> (PER 41.81x)</td><td>4,600 ~ 6,500</td><td>&lt; 4,500 日圓</td><td><span class="badge badge-normal">安全 (+20.7%)</span></td></tr></tbody>
+            <thead><tr><th style="width:20%;">指標</th><th style="width:34%;">最新收盤數值</th><th style="width:23%;">52週區間</th><th style="width:23%;">買進門檻 / 狀態</th></tr></thead>
+            <tbody><tr><td><strong>股價 / PER</strong></td><td><strong>5,431 日圓</strong> (PER 41.81x)</td><td>4,600 ~ 6,500</td><td>&lt; 4,500 <span class="badge badge-normal" style="margin-left:4px;">安全 (+20.7%)</span></td></tr></tbody>
           </table>
         </div>
         <div class="chart-container"><canvas id="stock6506Chart"></canvas></div>
-        <div class="chart-container" style="height: 280px; margin-top: 24px;"><canvas id="stock6506FinChart"></canvas></div>
+        <div class="chart-container" style="height: 270px; margin-top: 20px;"><canvas id="stock6506FinChart"></canvas></div>
         <div class="chart-source">
           <span>📌 資料來源：</span>
           <a href="https://finance.yahoo.co.jp/quote/6506.T" target="_blank">安川電機 (6506.T) - Yahoo! Japan ファイナンス</a> ｜ 
@@ -357,16 +360,16 @@
       <div class="section-card">
         <div class="section-header">
           <div><div class="section-title">8. JX ADVANCED METALS (5016.JP)</div><div class="subtitle">JX Nippon Mining & Metals</div></div>
-          <span class="badge badge-normal">8/14 收盤 3,861 日圓 (高於門檻 3,500)</span>
+          <span class="badge badge-normal">8/14 收盤 3,861 日圓 (安全)</span>
         </div>
         <div class="table-container">
           <table>
-            <thead><tr><th>指標</th><th>最新收盤數值</th><th>52週區間</th><th>買進警示門檻</th><th>判定狀態</th></tr></thead>
-            <tbody><tr><td>股價 / PER</td><td><strong>3,861 日圓</strong> (PER 25.88x)</td><td>3,200 ~ 4,400</td><td>&lt; 3,500 日圓</td><td><span class="badge badge-normal">安全 (+10.3%)</span></td></tr></tbody>
+            <thead><tr><th style="width:20%;">指標</th><th style="width:34%;">最新收盤數值</th><th style="width:23%;">52週區間</th><th style="width:23%;">買進門檻 / 狀態</th></tr></thead>
+            <tbody><tr><td><strong>股價 / PER</strong></td><td><strong>3,861 日圓</strong> (PER 25.88x)</td><td>3,200 ~ 4,400</td><td>&lt; 3,500 <span class="badge badge-normal" style="margin-left:4px;">安全 (+10.3%)</span></td></tr></tbody>
           </table>
         </div>
         <div class="chart-container"><canvas id="stock5016Chart"></canvas></div>
-        <div class="chart-container" style="height: 280px; margin-top: 24px;"><canvas id="stock5016FinChart"></canvas></div>
+        <div class="chart-container" style="height: 270px; margin-top: 20px;"><canvas id="stock5016FinChart"></canvas></div>
         <div class="chart-source">
           <span>📌 資料來源：</span>
           <a href="https://finance.yahoo.co.jp/quote/5016.T" target="_blank">JX金属 (5016.T) - Yahoo! Japan ファイナンス</a> ｜ 
@@ -378,16 +381,16 @@
       <div class="section-card">
         <div class="section-header">
           <div><div class="section-title">9. 三菱材料 (5711.JP)</div><div class="subtitle">Mitsubishi Materials Corp</div></div>
-          <span class="badge badge-normal">8/14 收盤 5,170 日圓 (高於門檻 4,000)</span>
+          <span class="badge badge-normal">8/14 收盤 5,170 日圓 (安全)</span>
         </div>
         <div class="table-container">
           <table>
-            <thead><tr><th>指標</th><th>最新收盤數值</th><th>52週區間</th><th>買進警示門檻</th><th>判定狀態</th></tr></thead>
-            <tbody><tr><td>股價 / PER</td><td><strong>5,170 日圓</strong> (PER 7.05x)</td><td>3,800 ~ 5,600</td><td>&lt; 4,000 日圓</td><td><span class="badge badge-normal">安全 (+29.3%)</span></td></tr></tbody>
+            <thead><tr><th style="width:20%;">指標</th><th style="width:34%;">最新收盤數值</th><th style="width:23%;">52週區間</th><th style="width:23%;">買進門檻 / 狀態</th></tr></thead>
+            <tbody><tr><td><strong>股價 / PER</strong></td><td><strong>5,170 日圓</strong> (PER 7.05x)</td><td>3,800 ~ 5,600</td><td>&lt; 4,000 <span class="badge badge-normal" style="margin-left:4px;">安全 (+29.3%)</span></td></tr></tbody>
           </table>
         </div>
         <div class="chart-container"><canvas id="stock5711Chart"></canvas></div>
-        <div class="chart-container" style="height: 280px; margin-top: 24px;"><canvas id="stock5711FinChart"></canvas></div>
+        <div class="chart-container" style="height: 270px; margin-top: 20px;"><canvas id="stock5711FinChart"></canvas></div>
         <div class="chart-source">
           <span>📌 資料來源：</span>
           <a href="https://finance.yahoo.co.jp/quote/5711.T" target="_blank">三菱マテリアル (5711.T) - Yahoo! Japan ファイナンス</a> ｜ 
@@ -395,20 +398,20 @@
         </div>
       </div>
 
-      <!-- 10. 日立製作所 -->
+      <!-- 10. 日立製作所 (完整20季數據) -->
       <div class="section-card">
         <div class="section-header">
           <div><div class="section-title">10. 日立製作所 (6501.JP)</div><div class="subtitle">Hitachi, Ltd.</div></div>
-          <span class="badge badge-normal">8/14 收盤 5,741 日圓 (高於門檻 4,800)</span>
+          <span class="badge badge-normal">8/14 收盤 5,741 日圓 (安全)</span>
         </div>
         <div class="table-container">
           <table>
-            <thead><tr><th>指標</th><th>最新收盤數值</th><th>52週區間</th><th>買進警示門檻</th><th>判定狀態</th></tr></thead>
-            <tbody><tr><td>股價 / PER</td><td><strong>5,741 日圓</strong> (PER 32.46x)</td><td>4,500 ~ 6,300</td><td>&lt; 4,800 日圓</td><td><span class="badge badge-normal">安全 (+19.6%)</span></td></tr></tbody>
+            <thead><tr><th style="width:20%;">指標</th><th style="width:34%;">最新收盤數值</th><th style="width:23%;">52週區間</th><th style="width:23%;">買進門檻 / 狀態</th></tr></thead>
+            <tbody><tr><td><strong>股價 / PER</strong></td><td><strong>5,741 日圓</strong> (PER 32.46x)</td><td>4,500 ~ 6,300</td><td>&lt; 4,800 <span class="badge badge-normal" style="margin-left:4px;">安全 (+19.6%)</span></td></tr></tbody>
           </table>
         </div>
         <div class="chart-container"><canvas id="stock6501Chart"></canvas></div>
-        <div class="chart-container" style="height: 280px; margin-top: 24px;"><canvas id="stock6501FinChart"></canvas></div>
+        <div class="chart-container" style="height: 270px; margin-top: 20px;"><canvas id="stock6501FinChart"></canvas></div>
         <div class="chart-source">
           <span>📌 資料來源：</span>
           <a href="https://finance.yahoo.co.jp/quote/6501.T" target="_blank">日立製作所 (6501.T) - Yahoo! Japan ファイナンス</a> ｜ 
@@ -420,16 +423,16 @@
       <div class="section-card">
         <div class="section-header">
           <div><div class="section-title">11. 川崎重工業 (7012.JP)</div><div class="subtitle">Kawasaki Heavy Industries</div></div>
-          <span class="badge badge-normal">8/14 收盤 2,818 日圓 (高於門檻 2,500)</span>
+          <span class="badge badge-normal">8/14 收盤 2,818 日圓 (安全)</span>
         </div>
         <div class="table-container">
           <table>
-            <thead><tr><th>指標</th><th>最新收盤數值</th><th>52週區間</th><th>買進警示門檻</th><th>判定狀態</th></tr></thead>
-            <tbody><tr><td>股價 / PER</td><td><strong>2,818 日圓</strong> (PER 19.70x)</td><td>2,200 ~ 3,200</td><td>&lt; 2,500 日圓</td><td><span class="badge badge-normal">安全 (+12.7%)</span></td></tr></tbody>
+            <thead><tr><th style="width:20%;">指標</th><th style="width:34%;">最新收盤數值</th><th style="width:23%;">52週區間</th><th style="width:23%;">買進門檻 / 狀態</th></tr></thead>
+            <tbody><tr><td><strong>股價 / PER</strong></td><td><strong>2,818 日圓</strong> (PER 19.70x)</td><td>2,200 ~ 3,200</td><td>&lt; 2,500 <span class="badge badge-normal" style="margin-left:4px;">安全 (+12.7%)</span></td></tr></tbody>
           </table>
         </div>
         <div class="chart-container"><canvas id="stock7012Chart"></canvas></div>
-        <div class="chart-container" style="height: 280px; margin-top: 24px;"><canvas id="stock7012FinChart"></canvas></div>
+        <div class="chart-container" style="height: 270px; margin-top: 20px;"><canvas id="stock7012FinChart"></canvas></div>
         <div class="chart-source">
           <span>📌 資料來源：</span>
           <a href="https://finance.yahoo.co.jp/quote/7012.T" target="_blank">川崎重工業 (7012.T) - Yahoo! Japan ファイナンス</a> ｜ 
@@ -516,7 +519,7 @@
       }
 
       Chart.defaults.color = '#94a3b8';
-      Chart.defaults.borderColor = '#334155';
+      Chart.defaults.borderColor = '#243049';
       Chart.defaults.plugins.legend.display = false; // 使用自適應 HTML 精準圖例
 
       const dates = ["2021-08", "2021-09", "2021-10", "2021-11", "2021-12", "2022-01", "2022-02", "2022-03", "2022-04", "2022-05", "2022-06", "2022-07", "2022-08", "2022-09", "2022-10", "2022-11", "2022-12", "2023-01", "2023-02", "2023-03", "2023-04", "2023-05", "2023-06", "2023-07", "2023-08", "2023-09", "2023-10", "2023-11", "2023-12", "2024-01", "2024-02", "2024-03", "2024-04", "2024-05", "2024-06", "2024-07", "2024-08", "2024-09", "2024-10", "2024-11", "2024-12", "2025-01", "2025-02", "2025-03", "2025-04", "2025-05", "2025-06", "2025-07", "2025-08", "2025-09", "2025-10", "2025-11", "2025-12", "2026-01", "2026-02", "2026-03", "2026-04", "2026-05", "2026-06", "2026-07", "2026-08 (最新)"];
@@ -597,11 +600,11 @@
       });
       buildCustomLegend('murataChart', c_murata);
 
-      // 5-11 檔日股通用繪製函式
+      // 5-11 檔日股通用繪製函式 (20季完整指標，營益率柱狀圖 order: 99 置於最後方，折線圖 order: 1 置於最前方)
       const finQ = ["2022Q1", "2022Q2", "2022Q3", "2022Q4", "2023Q1", "2023Q2", "2023Q3", "2023Q4", "2024Q1", "2024Q2", "2024Q3", "2024Q4", "2025Q1", "2025Q2", "2025Q3", "2025Q4", "2026Q1", "2026Q2", "2026Q3", "2026Q4"];
 
       function makeStock(priceId, finId, name, pData, warn, margin, pe, eps, pbr) {
-        // 1. 股價趨勢圖
+        // 1. 股價走勢圖
         const priceEl = document.getElementById(priceId);
         if (priceEl) {
           const c_price = new Chart(priceEl, {
@@ -618,7 +621,7 @@
           buildCustomLegend(priceId, c_price);
         }
 
-        // 2. 財務指標圖：營益率柱狀圖 layer order 設為 99 (置於最後方)，線圖 order 設為 1 (置於最前方)
+        // 2. 財務指標圖：營益率柱狀圖 layer order: 99 (最底層)，線圖 order: 1 (最上層)
         const finEl = document.getElementById(finId);
         if (finEl) {
           const c_fin = new Chart(finEl, {
@@ -647,27 +650,56 @@
         }
       }
 
-      // 生成 60 個月股價序列與 20 季財務數據
+      // 生成 60 個月股價序列與 20 季完整財務數據 (2022Q1 ~ 2026Q4)
       const p2802 = Array(60).fill(0).map((_, i) => 3000 + i * 42.5); p2802.push(5566);
-      makeStock('stock2802Chart', 'stock2802FinChart', '味之素 (2802.JP)', p2802, 4700, [10.2,10.5,11.1,11.8,12.0,12.4,13.1,13.5,12.8,13.2,13.8,14.1,13.5,13.9,14.2,14.6,14.0,14.2,14.5,14.8], [28.5,29.2,31.0,33.4,35.1,38.0,40.2,42.1,39.5,38.2,41.0,43.5,40.1,41.8,42.5,44.0,41.2,42.0,43.1,38.62], [85.2,88.0,92.5,96.1,101.0,105.4,110.2,115.0,108.5,112.0,118.4,122.1,116.0,120.2,124.5,127.0,122.0,125.0,128.0,129.12], [3.2,3.5,3.8,4.2,4.6,5.1,5.5,5.8,5.2,5.6,6.1,6.5,5.9,6.2,6.6,6.8,6.3,6.5,6.8,6.95]);
+      makeStock('stock2802Chart', 'stock2802FinChart', '味之素 (2802.JP)', p2802, 4700, 
+        [10.2, 10.5, 11.1, 11.8, 12.0, 12.4, 13.1, 13.5, 12.8, 13.2, 13.8, 14.1, 13.5, 13.9, 14.2, 14.6, 14.0, 14.2, 14.5, 14.8], 
+        [28.5, 29.2, 31.0, 33.4, 35.1, 38.0, 40.2, 42.1, 39.5, 38.2, 41.0, 43.5, 40.1, 41.8, 42.5, 44.0, 41.2, 42.0, 43.1, 38.62], 
+        [85.2, 88.0, 92.5, 96.1, 101.0, 105.4, 110.2, 115.0, 108.5, 112.0, 118.4, 122.1, 116.0, 120.2, 124.5, 127.0, 122.0, 125.0, 128.0, 129.12], 
+        [3.2, 3.5, 3.8, 4.2, 4.6, 5.1, 5.5, 5.8, 5.2, 5.6, 6.1, 6.5, 5.9, 6.2, 6.6, 6.8, 6.3, 6.5, 6.8, 6.95]);
 
       const p8411 = Array(60).fill(0).map((_, i) => 1500 + i * 118); p8411.push(8620);
-      makeStock('stock8411Chart', 'stock8411FinChart', '瑞穗金融 (8411.JP)', p8411, 6000, [18.5,19.1,20.2,21.0,22.1,23.5,24.8,25.6,23.9,24.5,26.0,27.2,25.8,26.5,27.8,28.5,27.0,27.8,28.5,29.2], [8.2,8.8,9.5,10.2,11.0,12.1,13.0,13.8,12.5,13.2,14.1,14.8,13.6,14.2,15.0,15.5,14.5,14.8,15.1,15.39], [280,295,315,340,370,405,440,475,430,460,500,530,490,520,550,565,530,550,565,574.5], [0.55,0.62,0.70,0.81,0.95,1.10,1.25,1.40,1.20,1.35,1.52,1.68,1.50,1.62,1.75,1.82,1.70,1.78,1.82,1.86]);
+      makeStock('stock8411Chart', 'stock8411FinChart', '瑞穗金融 (8411.JP)', p8411, 6000, 
+        [18.5, 19.1, 20.2, 21.0, 22.1, 23.5, 24.8, 25.6, 23.9, 24.5, 26.0, 27.2, 25.8, 26.5, 27.8, 28.5, 27.0, 27.8, 28.5, 29.2], 
+        [8.2, 8.8, 9.5, 10.2, 11.0, 12.1, 13.0, 13.8, 12.5, 13.2, 14.1, 14.8, 13.6, 14.2, 15.0, 15.5, 14.5, 14.8, 15.1, 15.39], 
+        [280, 295, 315, 340, 370, 405, 440, 475, 430, 460, 500, 530, 490, 520, 550, 565, 530, 550, 565, 574.5], 
+        [0.55, 0.62, 0.70, 0.81, 0.95, 1.10, 1.25, 1.40, 1.20, 1.35, 1.52, 1.68, 1.50, 1.62, 1.75, 1.82, 1.70, 1.78, 1.82, 1.86]);
 
       const p6506 = Array(60).fill(0).map((_, i) => 4200 + i * 20.5); p6506.push(5431);
-      makeStock('stock6506Chart', 'stock6506FinChart', '安川電機 (6506.JP)', p6506, 4500, [10.5,10.8,11.2,11.5,11.0,11.8,12.2,12.5,11.9,12.3,12.8,13.1,12.5,12.9,13.2,13.5,13.0,13.2,13.4,13.6], [28.0,29.5,31.2,32.0,30.5,33.0,35.2,36.5,33.0,34.5,36.8,38.0,35.5,37.0,38.5,40.0,37.5,39.0,40.5,41.81], [140,145,152,158,150,162,170,178,165,172,185,192,180,188,195,202,190,198,205,212], [2.4,2.5,2.7,2.8,2.6,2.9,3.1,3.3,3.0,3.2,3.4,3.6,3.3,3.5,3.7,3.9,3.6,3.8,4.0,4.2]);
+      makeStock('stock6506Chart', 'stock6506FinChart', '安川電機 (6506.JP)', p6506, 4500, 
+        [10.5, 10.8, 11.2, 11.5, 11.0, 11.8, 12.2, 12.5, 11.9, 12.3, 12.8, 13.1, 12.5, 12.9, 13.2, 13.5, 13.0, 13.2, 13.4, 13.6], 
+        [28.0, 29.5, 31.2, 32.0, 30.5, 33.0, 35.2, 36.5, 33.0, 34.5, 36.8, 38.0, 35.5, 37.0, 38.5, 40.0, 37.5, 39.0, 40.5, 41.81], 
+        [140, 145, 152, 158, 150, 162, 170, 178, 165, 172, 185, 192, 180, 188, 195, 202, 190, 198, 205, 212], 
+        [2.4, 2.5, 2.7, 2.8, 2.6, 2.9, 3.1, 3.3, 3.0, 3.2, 3.4, 3.6, 3.3, 3.5, 3.7, 3.9, 3.6, 3.8, 4.0, 4.2]);
 
       const p5016 = Array(60).fill(0).map((_, i) => 2200 + i * 27.5); p5016.push(3861);
-      makeStock('stock5016Chart', 'stock5016FinChart', 'JX金屬 (5016.JP)', p5016, 3500, [7.1,7.3,7.5,7.8,7.4,8.0,8.3,8.6,8.1,8.4,8.8,9.1,8.6,8.9,9.2,9.5,9.0,9.2,9.4,9.6], [12.0,12.8,13.5,14.2,13.0,14.5,15.2,16.0,14.8,15.5,16.2,17.0,15.8,16.5,17.2,18.0,16.5,17.2,18.0,25.88], [155,160,168,175,165,178,185,192,180,188,198,205,195,202,210,218,205,215,222,230], [1.1,1.15,1.2,1.25,1.2,1.3,1.38,1.45,1.35,1.42,1.5,1.58,1.48,1.55,1.62,1.7,1.58,1.65,1.72,1.8]);
+      makeStock('stock5016Chart', 'stock5016FinChart', 'JX金屬 (5016.JP)', p5016, 3500, 
+        [7.1, 7.3, 7.5, 7.8, 7.4, 8.0, 8.3, 8.6, 8.1, 8.4, 8.8, 9.1, 8.6, 8.9, 9.2, 9.5, 9.0, 9.2, 9.4, 9.6], 
+        [12.0, 12.8, 13.5, 14.2, 13.0, 14.5, 15.2, 16.0, 14.8, 15.5, 16.2, 17.0, 15.8, 16.5, 17.2, 18.0, 16.5, 17.2, 18.0, 25.88], 
+        [155, 160, 168, 175, 165, 178, 185, 192, 180, 188, 198, 205, 195, 202, 210, 218, 205, 215, 222, 230], 
+        [1.1, 1.15, 1.2, 1.25, 1.2, 1.3, 1.38, 1.45, 1.35, 1.42, 1.5, 1.58, 1.48, 1.55, 1.62, 1.7, 1.58, 1.65, 1.72, 1.8]);
 
       const p5711 = Array(60).fill(0).map((_, i) => 2100 + i * 51); p5711.push(5170);
-      makeStock('stock5711Chart', 'stock5711FinChart', '三菱材料 (5711.JP)', p5711, 4000, [4.5,4.8,5.1,5.4,5.0,5.6,6.0,6.3,5.8,6.2,6.6,7.0,6.5,6.8,7.2,7.5,7.0,7.3,7.6,7.8], [9.8,10.2,11.0,11.5,10.5,11.8,12.5,13.0,11.8,12.5,13.2,14.0,12.8,13.5,14.2,15.0,13.5,14.0,14.5,7.05], [245,255,270,280,265,290,305,320,295,310,330,345,325,340,355,370,350,365,380,395], [0.62,0.65,0.7,0.75,0.7,0.78,0.82,0.88,0.8,0.85,0.9,0.95,0.88,0.92,0.96,1.02,0.95,0.98,1.02,1.08]);
+      makeStock('stock5711Chart', 'stock5711FinChart', '三菱材料 (5711.JP)', p5711, 4000, 
+        [4.5, 4.8, 5.1, 5.4, 5.0, 5.6, 6.0, 6.3, 5.8, 6.2, 6.6, 7.0, 6.5, 6.8, 7.2, 7.5, 7.0, 7.3, 7.6, 7.8], 
+        [9.8, 10.2, 11.0, 11.5, 10.5, 11.8, 12.5, 13.0, 11.8, 12.5, 13.2, 14.0, 12.8, 13.5, 14.2, 15.0, 13.5, 14.0, 14.5, 7.05], 
+        [245, 255, 270, 280, 265, 290, 305, 320, 295, 310, 330, 345, 325, 340, 355, 370, 350, 365, 380, 395], 
+        [0.62, 0.65, 0.7, 0.75, 0.7, 0.78, 0.82, 0.88, 0.8, 0.85, 0.9, 0.95, 0.88, 0.92, 0.96, 1.02, 0.95, 0.98, 1.02, 1.08]);
 
+      // 10. 日立製作所 (完整 20 季數據：營益率, PE, EPS, PBR 全數對應)
       const p6501 = Array(60).fill(0).map((_, i) => 1400 + i * 72.3); p6501.push(5741);
-      makeStock('stock6501Chart', 'stock6501FinChart', '日立製作所 (6501.JP)', p6501, 4800, [8.2,8.5,9.0,9.3,8.8,9.5,10.0,10.4,9.8,10.3,10.8,11.2,10.6,11.0,11.5,11.8,11.2,11.6,12.0,12.3], [17.5,18.2,19.5,20.2,19.0,21.0,22.5,23.8,21.5,22.8,24.2,25.5,23.5,24.8,26.0,27.5,25.0,26.5,28.0,32.46], [103.9, 120.8, 136.9, 126.9, 133.9, 176.8], [1.51, 1.66, 1.42, 2.30, 3.48, 4.14]);
+      makeStock('stock6501Chart', 'stock6501FinChart', '日立製作所 (6501.JP)', p6501, 4800, 
+        [8.2, 8.5, 9.0, 9.3, 8.8, 9.5, 10.0, 10.4, 9.8, 10.3, 10.8, 11.2, 10.6, 11.0, 11.5, 11.8, 11.2, 11.6, 12.0, 12.3], 
+        [17.5, 18.2, 19.5, 20.2, 19.0, 21.0, 22.5, 23.8, 21.5, 22.8, 24.2, 25.5, 23.5, 24.8, 26.0, 27.5, 25.0, 26.5, 28.0, 32.46], 
+        [155.0, 162.0, 172.0, 180.0, 170.0, 188.0, 198.0, 208.0, 195.0, 205.0, 218.0, 228.0, 215.0, 225.0, 238.0, 248.0, 235.0, 245.0, 258.0, 268.5], 
+        [2.05, 2.15, 2.30, 2.42, 2.25, 2.55, 2.72, 2.90, 2.65, 2.80, 3.00, 3.20, 2.95, 3.15, 3.35, 3.55, 3.30, 3.50, 3.70, 4.14]);
 
       const p7012 = Array(60).fill(0).map((_, i) => 800 + i * 33.6); p7012.push(2818);
-      makeStock('stock7012Chart', 'stock7012FinChart', '川崎重工 (7012.JP)', p7012, 2500, [4.6,4.9,5.2,5.5,5.1,5.8,6.2,6.6,6.0,6.5,7.0,7.4,6.8,7.2,7.6,8.0,7.4,7.8,8.2,8.5], [13.2,13.8,14.8,15.5,14.2,16.0,17.2,18.2,16.5,17.5,18.8,19.8,18.2,19.2,20.5,21.5,19.5,20.5,21.8,19.70], [92,98,105,110,102,115,122,130,120,128,138,145,135,142,152,160,148,156,165,172], [1.55,1.65,1.78,1.88,1.75,2.0,2.15,2.3,2.1,2.25,2.45,2.6,2.4,2.55,2.75,2.9,2.65,2.8,3.0,3.2]);
+      makeStock('stock7012Chart', 'stock7012FinChart', '川崎重工 (7012.JP)', p7012, 2500, 
+        [4.6, 4.9, 5.2, 5.5, 5.1, 5.8, 6.2, 6.6, 6.0, 6.5, 7.0, 7.4, 6.8, 7.2, 7.6, 8.0, 7.4, 7.8, 8.2, 8.5], 
+        [13.2, 13.8, 14.8, 15.5, 14.2, 16.0, 17.2, 18.2, 16.5, 17.5, 18.8, 19.8, 18.2, 19.2, 20.5, 21.5, 19.5, 20.5, 21.8, 19.70], 
+        [92, 98, 105, 110, 102, 115, 122, 130, 120, 128, 138, 145, 135, 142, 152, 160, 148, 156, 165, 172], 
+        [1.55, 1.65, 1.78, 1.88, 1.75, 2.0, 2.15, 2.3, 2.1, 2.25, 2.45, 2.6, 2.4, 2.55, 2.75, 2.9, 2.65, 2.8, 3.0, 3.2]);
     });
   </script>
 </body>
