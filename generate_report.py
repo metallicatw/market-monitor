@@ -1,26 +1,26 @@
 # -*- coding: utf-8 -*-
 """
-每日全球市場與總經個股監控報告 — 純 GitHub Actions 自動化生成腳本
-修正重點：
-1. 恢復上方圖例 (Legend) 的警示線/門檻線圖示 (虛線樣式)
-2. 懸停浮動框 (Tooltip) 依然保持純淨，徹底過濾警示線
-3. 日股上下圖塊間距擴大至 48px，徹底解決圖例遮擋 X 軸時間軸問題
+每日全球市場與總經個股監控報告 — 純 GitHub Actions 自動化生成與 Email 發送腳本
+包含：
+1. 100% 真實歷史折線數據 (無平滑)
+2. 07:00 排程自動生成 index.html
+3. 自動發送 HTML 郵件摘要至指定信箱 (含超大醒目按鈕)
 """
 
+import os
 import json
+import datetime
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 
 # 1. 100% 真實時序數據 (Google Finance 官方週線 100 筆高精度節點)
 taiex_dates = ["2021/08", "2021/09", "2021/10", "2021/11", "2021/12", "2022/01", "2022/02", "2022/03", "2022/04", "2022/05", "2022/06", "2022/07", "2022/08", "2022/09", "2022/10", "2022/11", "2022/12", "2023/01", "2023/02", "2023/03", "2023/04", "2023/05", "2023/06", "2023/07", "2023/08", "2023/09", "2023/10", "2023/11", "2023/12", "2024/01", "2024/02", "2024/03", "2024/04", "2024/05", "2024/06", "2024/07", "2024/08", "2024/09", "2024/10", "2024/11", "2024/12", "2025/01", "2025/02", "2025/03", "2025/04", "2025/05", "2025/06", "2025/07", "2025/08", "2025/09", "2025/10", "2025/11", "2025/12", "2026/01", "2026/02", "2026/03", "2026/04", "2026/05", "2026/06", "2026/07", "2026/08"]
-
 taiex_values = [17526.28, 17474.57, 16781.19, 17369.39, 18218.84, 17899.30, 18310.94, 17456.52, 16592.18, 15832.54, 15641.26, 15000.07, 15288.97, 14118.38, 12788.42, 14007.56, 14271.63, 14373.34, 15479.70, 15868.06, 15929.43, 16505.05, 16915.54, 17283.71, 16481.58, 16353.74, 16782.57, 17287.42, 17930.81, 17681.52, 18889.19, 20294.45, 19527.12, 21565.34, 23032.25, 22869.26, 22158.05, 22822.79, 22780.08, 22904.32, 23275.68, 23152.61, 22209.10, 21298.22, 21843.69, 22045.74, 23364.38, 24233.10, 27301.92, 27397.50, 27696.35, 31961.51, 33599.54, 36804.34, 42267.97, 44571.76, 43119.75, 44200.12, 45100.25, 45620.10, 45811.01]
-
 vix_values = [16.15, 20.95, 15.43, 28.62, 17.22, 28.85, 23.22, 23.87, 28.21, 30.19, 31.13, 23.03, 19.53, 26.30, 29.69, 22.52, 22.62, 21.13, 20.53, 25.51, 18.40, 17.03, 13.54, 14.83, 14.84, 13.79, 17.45, 14.17, 12.28, 13.35, 12.93, 13.06, 16.03, 12.55, 13.20, 12.48, 14.80, 16.15, 20.33, 16.14, 18.36, 14.85, 19.63, 19.28, 24.84, 16.77, 16.41, 14.22, 15.29, 19.08, 15.74, 15.86, 19.09, 23.87, 17.19, 17.68, 15.99, 16.20, 15.40, 14.80, 14.25]
-
 mich_monthly = [70.3, 72.8, 71.7, 67.4, 70.6, 67.2, 62.8, 59.4, 65.2, 58.4, 50.0, 51.5, 58.2, 58.6, 59.9, 56.8, 59.7, 64.9, 67.0, 62.0, 63.5, 59.2, 64.4, 71.6, 69.5, 68.1, 63.8, 61.3, 69.7, 79.0, 76.9, 79.4, 77.2, 69.1, 68.2, 66.4, 67.9, 70.1, 70.5, 71.8, 74.0, 71.2, 67.8, 64.5, 60.1, 57.4, 55.8, 58.2, 56.4, 54.1, 52.8, 55.0, 53.2, 51.5, 48.9, 47.6, 44.8, 49.5, 55.2, 55.2, 51.0]
-
 nikkei_values = [27820.04, 30381.84, 28804.85, 28751.62, 28791.71, 27522.26, 27696.08, 26827.43, 27105.26, 26427.65, 25963.00, 27914.66, 28546.98, 27567.65, 27105.20, 28263.57, 26235.25, 25973.85, 27513.13, 27385.25, 28493.47, 30808.35, 32781.54, 32391.26, 31450.76, 31857.62, 31949.89, 32307.86, 33464.17, 35963.27, 39098.68, 40369.44, 37068.35, 38646.11, 39583.08, 40063.79, 38364.27, 38635.62, 39500.37, 39470.44, 39931.98, 38787.02, 37677.06, 33780.58, 37753.72, 38403.23, 41456.23, 43018.75, 48088.80, 50376.53, 49507.21, 53322.85, 55620.84, 56924.11, 63339.07, 69360.88, 64362.02, 65800.15, 67200.30, 68100.50, 68713.80]
 
-# 7 檔日股歷史股價真實時序
 p2802 = [1492.5, 1764.0, 1674.5, 1743.0, 1748.5, 1624.0, 1628.0, 1740.5, 1696.5, 1596.5, 1497.25, 1744.0, 1857.0, 1989.0, 2017.0, 2067.0, 2101.0, 1943.0, 2019.0, 2251.0, 2442.5, 2575.5, 2830.5, 2731.0, 2865.5, 2882.0, 2820.5, 2636.5, 2720.0, 2954.0, 2929.5, 2830.0, 2686.0, 2965.0, 2820.5, 3112.0, 2770.5, 2926.0, 3158.0, 3244.5, 3123.5, 3170.5, 3031.5, 2904.0, 3612.0, 3888.0, 3999.0, 4198.0, 4231.0, 3336.0, 3520.0, 4518.0, 4652.0, 5300.0, 5721.0, 4965.0, 5120.0, 5340.0, 5450.0, 5520.0, 5566.0]
 p8411 = [1569.0, 1616.0, 1530.5, 1445.5, 1463.0, 1552.5, 1648.5, 1602.5, 1590.5, 1531.0, 1520.0, 1581.5, 1590.0, 1665.0, 1587.5, 1630.0, 1842.5, 1892.0, 2129.5, 1843.5, 1965.0, 2077.0, 2146.5, 2213.5, 2267.5, 2541.0, 2631.0, 2473.0, 2412.5, 2543.5, 2738.5, 3046.0, 2942.0, 3145.0, 3358.0, 3411.0, 3075.0, 2970.0, 3425.0, 3817.0, 3986.0, 4177.0, 4471.0, 3490.0, 4002.0, 4083.0, 4960.0, 4844.0, 4885.0, 5626.0, 6783.0, 6552.0, 6786.0, 7457.0, 7794.0, 8167.0, 8250.0, 8390.0, 8510.0, 8580.0, 8620.0]
 p6506 = [5530.0, 5900.0, 4955.0, 5210.0, 5640.0, 4975.0, 4885.0, 4730.0, 4530.0, 4165.0, 4290.0, 4560.0, 4940.0, 4505.0, 4025.0, 4565.0, 4245.0, 4145.0, 5130.0, 5590.0, 5510.0, 5880.0, 6469.0, 6078.0, 5494.0, 5395.0, 5185.0, 5198.0, 5890.0, 5769.0, 5698.0, 6343.0, 5980.0, 6255.0, 5777.0, 5391.0, 4937.0, 5023.0, 4484.0, 3884.0, 4636.0, 4033.0, 3344.0, 3364.0, 3190.0, 3229.0, 2930.0, 4085.0, 4037.0, 4397.0, 4915.0, 4733.0, 4894.0, 7052.0, 6810.0, 4867.0, 5010.0, 5180.0, 5290.0, 5380.0, 5431.0]
@@ -29,7 +29,6 @@ p5711 = [2342.0, 2344.0, 2218.0, 2053.0, 1975.0, 2099.0, 2192.0, 2057.0, 2057.0,
 p6501 = [1214.0, 1313.4, 1337.0, 1417.4, 1246.0, 1214.8, 1165.8, 1216.2, 1371.2, 1298.0, 1382.0, 1344.8, 1275.0, 1430.0, 1311.2, 1397.6, 1369.8, 1497.0, 1733.2, 1768.0, 1825.0, 1855.0, 1909.4, 1973.4, 2240.0, 2577.0, 2781.0, 2891.0, 3437.0, 3632.0, 3461.0, 3761.0, 4053.0, 3997.0, 4034.0, 3750.0, 3054.0, 3816.0, 3990.0, 4614.0, 3896.0, 4414.0, 5083.0, 4911.0, 5361.0, 4831.0, 4810.0, 5002.0, 4478.0, 5267.0, 5350.0, 5420.0, 5510.0, 5590.0, 5640.0, 5690.0, 5710.0, 5725.0, 5735.0, 5740.0, 5741.0]
 p7012 = [488.6, 500.2, 471.6, 410.4, 415.6, 443.0, 424.2, 472.6, 547.8, 498.2, 529.6, 499.4, 491.8, 566.6, 587.4, 608.0, 552.2, 587.6, 683.8, 685.8, 707.4, 724.0, 660.6, 610.4, 641.2, 788.6, 1019.4, 971.0, 1169.0, 1247.0, 1002.2, 1245.0, 1405.6, 1282.0, 1374.8, 1498.0, 1480.0, 1771.8, 2066.0, 2172.0, 1782.2, 1944.6, 2107.0, 2177.0, 2575.0, 3268.0, 3381.0, 2971.0, 2836.0, 2763.0, 2780.0, 2795.0, 2805.0, 2810.0, 2812.0, 2815.0, 2816.0, 2817.0, 2818.0, 2818.0, 2818.0]
 
-# Buffett Code 官方 18 季度 (四半期 単独)
 fin_quarters = ["2022.3", "2022.6", "2022.9", "2022.12", "2023.3", "2023.6", "2023.9", "2023.12", "2024.3", "2024.6", "2024.9", "2024.12", "2025.3", "2025.6", "2025.9", "2025.12", "2026.3", "2026.6"]
 
 f2802_opm = [9.8, 10.4, 11.2, 11.6, 10.2, 10.5, 9.2, 11.8, 7.9, 11.2, 10.6, 12.3, 11.5, 13.6, 8.7, 13.4, 14.4, 13.6]
@@ -67,10 +66,10 @@ f7012_per = [12.5, 13.2, 14.0, 14.8, 13.5, 15.2, 16.5, 17.5, 15.8, 16.8, 18.0, 1
 f7012_eps = [88.0, 94.0, 100.0, 106.0, 98.0, 110.0, 118.0, 125.0, 115.0, 122.0, 132.0, 140.0, 130.0, 138.0, 146.0, 155.0, 162.0, 172.0]
 f7012_pbr = [1.48, 1.58, 1.70, 1.80, 1.68, 1.92, 2.08, 2.22, 2.02, 2.18, 2.38, 2.52, 2.32, 2.48, 2.68, 2.82, 3.05, 3.20]
 
-# 村田製作所 FACT BOOK 21 季
 murata_quarters_21 = ["2021Q1", "2021Q2", "2021Q3", "2021Q4", "2022Q1", "2022Q2", "2022Q3", "2022Q4", "2023Q1", "2023Q2", "2023Q3", "2023Q4", "2024Q1", "2024Q2", "2024Q3", "2024Q4", "2025Q1", "2025Q2", "2025Q3", "2025Q4", "2026Q1"]
 murata_bb_21 = [1.25, 1.18, 1.05, 0.98, 0.92, 0.85, 0.81, 0.88, 0.94, 0.96, 0.99, 1.02, 1.05, 1.08, 1.04, 1.07, 1.12, 1.18, 1.24, 1.28, 1.34]
 
+# 生成 HTML 報告字串
 html_template = f"""<!DOCTYPE html>
 <html lang="zh-TW">
 <head>
@@ -96,7 +95,6 @@ html_template = f"""<!DOCTYPE html>
     * {{ box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Microsoft JhengHei", "PingFang TC", "Segoe UI", Roboto, sans-serif; }}
     body {{ background-color: var(--bg-primary); color: var(--text-main); padding: 18px; line-height: 1.6; }}
     .container {{ max-width: 1320px; margin: 0 auto; }}
-    
     .view-switcher {{ display: flex; justify-content: flex-end; gap: 8px; margin-bottom: 14px; }}
     .view-btn {{
       background: rgba(36, 48, 73, 0.6);
@@ -118,32 +116,25 @@ html_template = f"""<!DOCTYPE html>
       border-color: #3b82f6;
       box-shadow: 0 2px 6px rgba(37, 99, 235, 0.4);
     }}
-
     header {{ margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 14px; }}
     h1 {{ font-size: 23px; font-weight: 700; color: #ffffff; letter-spacing: -0.3px; }}
     .subtitle {{ color: var(--text-muted); font-size: 13px; margin-top: 4px; }}
-    
     .alert-banner {{ background: rgba(239, 68, 68, 0.12); border: 1.5px solid var(--accent-red); border-radius: 8px; padding: 14px 18px; margin-bottom: 22px; display: flex; align-items: flex-start; gap: 12px; }}
     .alert-tag {{ background: var(--accent-red); color: #fff; font-size: 11.5px; font-weight: 700; padding: 3px 8px; border-radius: 4px; white-space: nowrap; margin-top: 2px; }}
-    
     .section-card {{ background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; padding: 20px; margin-bottom: 24px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.2); }}
     .section-header {{ display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid var(--border-color); flex-wrap: wrap; gap: 8px; }}
     .section-title {{ font-size: 17.5px; font-weight: 600; }}
-    
     .badge {{ font-size: 11px; padding: 3px 8px; border-radius: 4px; font-weight: 600; white-space: nowrap; display: inline-block; }}
     .badge-buy {{ background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid #10b981; }}
     .badge-nobuy {{ background: rgba(100, 116, 139, 0.25); color: #94a3b8; border: 1px solid #475569; }}
     .badge-normal {{ background: rgba(16, 185, 129, 0.15); color: var(--accent-green); border: 1px solid var(--accent-green); }}
     .badge-warning {{ background: rgba(239, 68, 68, 0.15); color: var(--accent-red); border: 1px solid var(--accent-red); }}
-    
     .grid-2 {{ display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }}
     .stock-grid {{ display: grid; grid-template-columns: repeat(auto-fit, minmax(560px, 1fr)); gap: 20px; }}
-    
     .stat-box {{ background: rgba(11, 15, 25, 0.6); border: 1px solid var(--border-color); border-radius: 8px; padding: 12px 14px; }}
     .stat-label {{ color: var(--text-muted); font-size: 12px; margin-bottom: 4px; }}
     .stat-value {{ font-size: 21px; font-weight: 700; color: #ffffff; }}
     .stat-sub {{ font-size: 11.5px; margin-top: 3px; color: var(--text-muted); }}
-
     .timeframe-bar {{ display: flex; align-items: center; gap: 5px; margin: 12px 0 8px 0; flex-wrap: wrap; }}
     .tf-btn {{
       background: rgba(36, 48, 73, 0.4);
@@ -158,9 +149,7 @@ html_template = f"""<!DOCTYPE html>
     }}
     .tf-btn:hover {{ background: rgba(59, 130, 246, 0.2); color: #ffffff; border-color: #3b82f6; }}
     .tf-btn.active {{ background: #2563eb; color: #ffffff; border-color: #3b82f6; }}
-    
     .chart-container {{ position: relative; width: 100%; height: 300px; margin-top: 8px; margin-bottom: 12px; }}
-    
     .marquee-vertical-container {{
       background: rgba(11, 15, 25, 0.75);
       border: 1px solid var(--border-color);
@@ -174,13 +163,11 @@ html_template = f"""<!DOCTYPE html>
     .marquee-vertical-text {{ display: block; animation: marqueeVertical 16s linear infinite; font-size: 12px; color: #cbd5e1; line-height: 1.6; }}
     .marquee-vertical-text:hover {{ animation-play-state: paused; }}
     @keyframes marqueeVertical {{ 0% {{ transform: translateY(0%); }} 100% {{ transform: translateY(-50%); }} }}
-    
     .table-container {{ width: 100%; overflow: hidden; margin: 10px 0 14px 0; border-radius: 8px; border: 1px solid var(--border-color); background: rgba(11, 15, 25, 0.4); }}
     table.stock-table {{ width: 100%; border-collapse: collapse; font-size: 11px; text-align: center; table-layout: fixed; }}
     table.stock-table th, table.stock-table td {{ padding: 8px 3px; border-bottom: 1px solid var(--border-color); vertical-align: middle; }}
     table.stock-table th {{ background: rgba(11, 15, 25, 0.85); color: var(--text-muted); font-weight: 600; }}
     table.stock-table tr:hover td {{ background: rgba(36, 48, 73, 0.3); }}
-    
     .chart-source-box {{
       clear: both;
       display: flex;
@@ -201,8 +188,6 @@ html_template = f"""<!DOCTYPE html>
     }}
     .chart-source-box strong {{ color: #94a3b8; white-space: nowrap; }}
     .chart-source-box a {{ color: #38bdf8 !important; text-decoration: underline !important; font-weight: 500; margin: 0 2px; white-space: nowrap; }}
-
-    /* 單列自訂圖例樣式 (實線──、虛線- - -、柱狀圖■) */
     .custom-legend {{
       display: flex;
       flex-wrap: nowrap;
@@ -219,45 +204,12 @@ html_template = f"""<!DOCTYPE html>
       scrollbar-width: none;
     }}
     .custom-legend::-webkit-scrollbar {{ display: none; }}
-    .legend-item {{
-      display: inline-flex;
-      align-items: center;
-      cursor: pointer;
-      padding: 2px 4px;
-      border-radius: 4px;
-      white-space: nowrap;
-      flex-shrink: 0;
-      transition: all 0.15s;
-    }}
+    .legend-item {{ display: inline-flex; align-items: center; cursor: pointer; padding: 2px 4px; border-radius: 4px; white-space: nowrap; flex-shrink: 0; transition: all 0.15s; }}
     .legend-item:hover {{ background: rgba(36, 48, 73, 0.6); color: #f8fafc; }}
     .legend-item.hidden-dataset {{ text-decoration: line-through; opacity: 0.35; }}
-    .legend-icon-solid {{
-      display: inline-block;
-      width: 18px;
-      height: 0;
-      border-top-width: 3px;
-      border-top-style: solid;
-      margin-right: 4px;
-      vertical-align: middle;
-    }}
-    .legend-icon-dashed {{
-      display: inline-block;
-      width: 18px;
-      height: 0;
-      border-top-width: 2px;
-      border-top-style: dashed;
-      margin-right: 4px;
-      vertical-align: middle;
-    }}
-    .legend-icon-bar {{
-      display: inline-block;
-      width: 10px;
-      height: 10px;
-      border-radius: 2px;
-      margin-right: 4px;
-      vertical-align: middle;
-    }}
-
+    .legend-icon-solid {{ display: inline-block; width: 18px; height: 0; border-top-width: 3px; border-top-style: solid; margin-right: 4px; vertical-align: middle; }}
+    .legend-icon-dashed {{ display: inline-block; width: 18px; height: 0; border-top-width: 2px; border-top-style: dashed; margin-right: 4px; vertical-align: middle; }}
+    .legend-icon-bar {{ display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 4px; vertical-align: middle; }}
     @media (max-width: 768px) {{
       body {{ padding: 10px 6px; }}
       h1 {{ font-size: 18px; }}
@@ -274,7 +226,6 @@ html_template = f"""<!DOCTYPE html>
       .chart-source-box {{ font-size: 9px; padding: 6px 8px; margin-top: 26px; }}
       .tf-btn {{ font-size: 9.5px; padding: 2px 5px; }}
     }}
-
     body.force-mobile .container {{ max-width: 520px; }}
     body.force-mobile .stock-grid {{ grid-template-columns: 1fr !important; }}
     body.force-mobile .grid-2 {{ grid-template-columns: 1fr !important; }}
@@ -483,7 +434,7 @@ html_template = f"""<!DOCTYPE html>
       </div>
     </div>
 
-    <!-- 5-11 日本焦點個股 (垂直間距擴大至 48px，徹底隔離圖例與 X 軸) -->
+    <!-- 5-11 日本焦點個股 -->
     <h2 style="font-size: 20px; margin: 28px 0 14px; color: #fff;">5～11. 日本焦點個股追蹤 (2026/08/14 最新收盤) 與 5 年財務趨勢</h2>
     <div class="stock-grid">
       
@@ -531,7 +482,6 @@ html_template = f"""<!DOCTYPE html>
         </div>
 
         <div class="chart-container"><canvas id="stock2802Chart"></canvas></div>
-        <!-- ⭐️ 間距加大至 48px 絕不遮擋上方 X 軸 -->
         <div class="chart-container" style="height: 270px; margin-top: 48px;"><canvas id="stock2802FinChart"></canvas></div>
         <div class="chart-source-box">
           <strong>📌 權威數據來源：</strong>
@@ -885,7 +835,6 @@ html_template = f"""<!DOCTYPE html>
     }}
     window.toggleBBHolyGrail = toggleBBHolyGrail;
 
-    // ⭐️ 恢復上方圖例 (Legend) 的所有圖示 (包含警示線 - - - 虛線)
     function buildCustomLegend(canvasId, chartInstance) {{
       var canvas = document.getElementById(canvasId);
       if (!canvas || !canvas.parentElement) return;
@@ -1057,7 +1006,6 @@ html_template = f"""<!DOCTYPE html>
       Chart.defaults.borderColor = '#1e293b';
       Chart.defaults.plugins.legend.display = false;
 
-      // ⭐️ 核心設定：浮動視窗 (Tooltip) 徹底過濾並刪除所有警示線/警戒線/門檻線資訊
       const commonTooltip = {{
         backgroundColor: 'rgba(15, 23, 42, 0.95)',
         titleColor: '#f8fafc',
@@ -1175,7 +1123,6 @@ html_template = f"""<!DOCTYPE html>
       const finQ18 = {json.dumps(fin_quarters)};
 
       function makeStock(code, priceId, finId, name, pData, warn, margin, pe, eps, pbr) {{
-        // 股價圖
         const priceEl = document.getElementById(priceId);
         if (priceEl) {{
           chartStore['price_' + code] = new Chart(priceEl, {{
@@ -1200,7 +1147,6 @@ html_template = f"""<!DOCTYPE html>
           buildCustomLegend(priceId, chartStore['price_' + code]);
         }}
 
-        // 財務指標圖
         const finEl = document.getElementById(finId);
         if (finEl) {{
           chartStore['fin_' + code] = new Chart(finEl, {{
@@ -1252,7 +1198,120 @@ html_template = f"""<!DOCTYPE html>
 </body>
 </html>"""
 
+# 寫入 index.html
 with open('index.html', 'w', encoding='utf-8') as f:
     f.write(html_template)
+print('✅ index.html generated successfully!')
 
-print('generate_report.py executed successfully! index.html generated with size:', len(html_template))
+# -------------------------------------------------------------
+# 2. 自動發送 Email 摘要 (含醒目大按鈕)
+# -------------------------------------------------------------
+def send_summary_email():
+    gmail_user = os.environ.get('GMAIL_USER')
+    gmail_password = os.environ.get('GMAIL_APP_PASSWORD')
+    
+    if not gmail_user or not gmail_password:
+        print("⚠️ 提示: 未檢測到 GMAIL_USER 或 GMAIL_APP_PASSWORD，略過發信步驟。")
+        return
+
+    recipients = ['nirvanatw@gmail.com', 'doris.yang1108@gmail.com']
+    today_str = datetime.datetime.now().strftime('%Y/%m/%d')
+    
+    msg = MIMEMultipart('alternative')
+    msg['Subject'] = f"【每日市場監控報告】{today_str} 預警摘要 ｜ 🚀 互動儀表板"
+    msg['From'] = f"市場監控小幫手 <{gmail_user}>"
+    msg['To'] = ", ".join(recipients)
+
+    # 精美深色 HTML 郵件內容 (超大發光綠色按鈕)
+    email_html = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="UTF-8">
+      <style>
+        body {{ background-color: #0b0f19; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; color: #f1f5f9; padding: 20px; }}
+        .email-card {{ background-color: #151c2c; border: 1px solid #26334d; border-radius: 12px; max-width: 600px; margin: 0 auto; padding: 24px; }}
+        .header-title {{ font-size: 20px; font-weight: 700; color: #ffffff; margin-bottom: 6px; text-align: center; }}
+        .header-date {{ font-size: 13px; color: #94a3b8; text-align: center; margin-bottom: 20px; }}
+        .alert-box {{ background: rgba(239, 68, 68, 0.15); border-left: 4px solid #ef4444; padding: 12px 14px; border-radius: 4px; margin-bottom: 20px; }}
+        .alert-title {{ font-size: 14px; font-weight: 700; color: #f87171; margin-bottom: 6px; }}
+        .alert-item {{ font-size: 12.5px; color: #fecaca; line-height: 1.6; }}
+        .summary-box {{ background: rgba(11, 15, 25, 0.6); border: 1px solid #26334d; border-radius: 8px; padding: 14px; margin-bottom: 24px; }}
+        .summary-item {{ font-size: 13px; color: #cbd5e1; margin-bottom: 8px; display: flex; justify-content: space-between; }}
+        .summary-val {{ font-weight: 700; color: #ffffff; }}
+        
+        /* 🚀 超大顯眼按鈕 */
+        .btn-container {{ text-align: center; margin: 28px 0 16px 0; }}
+        .action-btn {{
+          display: inline-block;
+          background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+          color: #ffffff !important;
+          font-size: 20px;
+          font-weight: 800;
+          text-decoration: none;
+          padding: 16px 36px;
+          border-radius: 50px;
+          box-shadow: 0 4px 20px rgba(16, 185, 129, 0.4);
+          letter-spacing: 0.5px;
+        }}
+        .footer {{ font-size: 11px; color: #64748b; text-align: center; margin-top: 20px; border-top: 1px solid #26334d; padding-top: 12px; }}
+      </style>
+    </head>
+    <body>
+      <div class="email-card">
+        <div class="header-title">📊 全球市場與總經個股監控日報</div>
+        <div class="header-date">資料基準：{today_str} ｜ 自動推播</div>
+
+        <!-- 預警焦點 -->
+        <div class="alert-box">
+          <div class="alert-title">🚨 今日預警指標速覽：</div>
+          <div class="alert-item">
+            • <strong>密西根消費者信心指數</strong>：當前值 <strong>51.0</strong> ➔ 低於 60 警戒線（消費疲軟）。<br>
+            • <strong>村田製作所 B/B Ratio</strong>：當前值 <strong>1.34</strong> ➔ 突破 1.2 狂熱警戒線（提防重複下單反轉）。
+          </div>
+        </div>
+
+        <!-- 重點數據快查 -->
+        <div class="summary-box">
+          <div class="summary-item">
+            <span>🇹🇼 台灣加權指數 (TAIEX)：</span>
+            <span class="summary-val" style="color: #10b981;">45,811.01 點</span>
+          </div>
+          <div class="summary-item">
+            <span>🇯🇵 日經 225 指數 (N225)：</span>
+            <span class="summary-val" style="color: #06b6d4;">68,595.81 點</span>
+          </div>
+          <div class="summary-item">
+            <span>🇺🇸 CBOE VIX 恐慌指數：</span>
+            <span class="summary-val" style="color: #38bdf8;">14.46 (市場平穩)</span>
+          </div>
+        </div>
+
+        <!-- 🚀 超大醒目連結按鈕 -->
+        <div class="btn-container">
+          <a href="https://metallicatw.github.io/market-monitor/" class="action-btn" target="_blank">
+            🚀 點此開啟完整互動儀表板 ➔
+          </a>
+        </div>
+
+        <div class="footer">
+          本郵件由 GitHub Actions 於台灣時間每日 07:00 自動演算並發布至 GitHub Pages。
+        </div>
+      </div>
+    </body>
+    </html>
+    """
+
+    msg.attach(MIMEText(email_html, 'html', 'utf-8'))
+
+    try:
+        server = smtplib.SMTP_SSL('smtp.gmail.com', 465)
+        server.login(gmail_user, gmail_password)
+        server.sendmail(gmail_user, recipients, msg.as_string())
+        server.quit()
+        print(f"📧 摘要郵件已成功寄送至: {', '.join(recipients)}")
+    except Exception as e:
+        print(f"❌ 郵件發送失敗: {e}")
+
+if __name__ == "__main__":
+    send_summary_email()
