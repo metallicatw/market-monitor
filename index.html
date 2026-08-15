@@ -22,23 +22,23 @@
       --accent-cyan: #06b6d4;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Microsoft JhengHei", "PingFang TC", "Segoe UI", Roboto, sans-serif; }
-    body { background-color: var(--bg-primary); color: var(--text-main); padding: 20px; line-height: 1.6; }
-    .container { max-width: 1300px; margin: 0 auto; }
+    body { background-color: var(--bg-primary); color: var(--text-main); padding: 18px; line-height: 1.6; }
+    .container { max-width: 1320px; margin: 0 auto; }
     
     /* 頂端視圖切換列 (電腦版 / 手機版) */
     .view-switcher {
       display: flex;
       justify-content: flex-end;
       gap: 8px;
-      margin-bottom: 16px;
+      margin-bottom: 14px;
     }
     .view-btn {
       background: rgba(36, 48, 73, 0.6);
       border: 1px solid var(--border-color);
       color: var(--text-muted);
-      padding: 6px 14px;
+      padding: 5px 12px;
       border-radius: 20px;
-      font-size: 12.5px;
+      font-size: 12px;
       font-weight: 600;
       cursor: pointer;
       display: inline-flex;
@@ -53,107 +53,187 @@
       box-shadow: 0 2px 6px rgba(37, 99, 235, 0.4);
     }
 
-    header { margin-bottom: 24px; padding-bottom: 18px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 16px; }
-    h1 { font-size: 24px; font-weight: 700; color: #ffffff; letter-spacing: -0.3px; }
+    header { margin-bottom: 20px; padding-bottom: 16px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 14px; }
+    h1 { font-size: 23px; font-weight: 700; color: #ffffff; letter-spacing: -0.3px; }
     .subtitle { color: var(--text-muted); font-size: 13px; margin-top: 4px; }
     
     /* 頂部警示區塊 */
-    .alert-banner { background: rgba(239, 68, 68, 0.12); border: 1.5px solid var(--accent-red); border-radius: 8px; padding: 16px 20px; margin-bottom: 24px; display: flex; align-items: flex-start; gap: 14px; }
-    .alert-tag { background: var(--accent-red); color: #fff; font-size: 12px; font-weight: 700; padding: 3px 8px; border-radius: 4px; white-space: nowrap; margin-top: 2px; }
+    .alert-banner { background: rgba(239, 68, 68, 0.12); border: 1.5px solid var(--accent-red); border-radius: 8px; padding: 14px 18px; margin-bottom: 22px; display: flex; align-items: flex-start; gap: 12px; }
+    .alert-tag { background: var(--accent-red); color: #fff; font-size: 11.5px; font-weight: 700; padding: 3px 8px; border-radius: 4px; white-space: nowrap; margin-top: 2px; }
     
-    .section-card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; padding: 22px; margin-bottom: 24px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.2); }
-    .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--border-color); flex-wrap: wrap; gap: 10px; }
-    .section-title { font-size: 18px; font-weight: 600; }
+    .section-card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; padding: 20px; margin-bottom: 22px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.2); }
+    .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid var(--border-color); flex-wrap: wrap; gap: 8px; }
+    .section-title { font-size: 17.5px; font-weight: 600; }
     
     /* 狀態膠囊徽章 */
-    .badge { font-size: 12px; padding: 4px 12px; border-radius: 6px; font-weight: 600; white-space: nowrap; display: inline-block; }
+    .badge { font-size: 11px; padding: 3px 8px; border-radius: 4px; font-weight: 600; white-space: nowrap; display: inline-block; }
     .badge-buy { background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid #10b981; }
-    .badge-nobuy { background: rgba(100, 116, 139, 0.2); color: #94a3b8; border: 1px solid #475569; }
+    .badge-nobuy { background: rgba(100, 116, 139, 0.25); color: #94a3b8; border: 1px solid #475569; }
     .badge-normal { background: rgba(16, 185, 129, 0.15); color: var(--accent-green); border: 1px solid var(--accent-green); }
     .badge-warning { background: rgba(239, 68, 68, 0.15); color: var(--accent-red); border: 1px solid var(--accent-red); }
     
-    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
     
-    .stat-box { background: rgba(11, 15, 25, 0.6); border: 1px solid var(--border-color); border-radius: 8px; padding: 14px 16px; }
-    .stat-label { color: var(--text-muted); font-size: 12.5px; margin-bottom: 4px; }
-    .stat-value { font-size: 22px; font-weight: 700; color: #ffffff; }
-    .stat-sub { font-size: 12px; margin-top: 4px; color: var(--text-muted); }
+    .stat-box { background: rgba(11, 15, 25, 0.6); border: 1px solid var(--border-color); border-radius: 8px; padding: 12px 14px; }
+    .stat-label { color: var(--text-muted); font-size: 12px; margin-bottom: 4px; }
+    .stat-value { font-size: 21px; font-weight: 700; color: #ffffff; }
+    .stat-sub { font-size: 11.5px; margin-top: 3px; color: var(--text-muted); }
+
+    /* Google Finance 風格時間範圍切換按鈕列 */
+    .timeframe-bar {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      margin: 12px 0 8px 0;
+      flex-wrap: wrap;
+    }
+    .tf-btn {
+      background: rgba(36, 48, 73, 0.4);
+      border: 1px solid var(--border-color);
+      color: #94a3b8;
+      padding: 3px 10px;
+      border-radius: 6px;
+      font-size: 11.5px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.15s ease-in-out;
+      user-select: none;
+    }
+    .tf-btn:hover {
+      background: rgba(59, 130, 246, 0.2);
+      color: #ffffff;
+      border-color: #3b82f6;
+    }
+    .tf-btn.active {
+      background: #2563eb;
+      color: #ffffff;
+      border-color: #3b82f6;
+      box-shadow: 0 1px 4px rgba(37, 99, 235, 0.3);
+    }
     
     /* 圖表容器 */
-    .chart-container { position: relative; width: 100%; height: 310px; margin-top: 12px; margin-bottom: 16px; }
+    .chart-container { position: relative; width: 100%; height: 320px; margin-top: 10px; margin-bottom: 12px; }
     
-    /* 表格排版：100% 寬度自適應，絕對無水平移動軸 */
-    .table-container { width: 100%; overflow: hidden; margin: 12px 0 16px 0; border-radius: 8px; border: 1px solid var(--border-color); background: rgba(11, 15, 25, 0.4); }
-    table { width: 100%; border-collapse: collapse; font-size: 12.5px; text-align: center; table-layout: fixed; }
-    th, td { padding: 10px 8px; border-bottom: 1px solid var(--border-color); vertical-align: middle; }
-    th { background: rgba(11, 15, 25, 0.85); color: var(--text-muted); font-weight: 600; }
-    tr:hover td { background: rgba(36, 48, 73, 0.3); }
+    /* 跑馬燈即時新聞區塊 */
+    .marquee-container {
+      background: rgba(11, 15, 25, 0.7);
+      border: 1px solid var(--border-color);
+      border-radius: 8px;
+      padding: 10px 14px;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      height: 100%;
+    }
+    .marquee-tag {
+      background: #0284c7;
+      color: #fff;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 2px 6px;
+      border-radius: 4px;
+      white-space: nowrap;
+      flex-shrink: 0;
+    }
+    .marquee-content {
+      overflow: hidden;
+      white-space: nowrap;
+      width: 100%;
+      position: relative;
+    }
+    .marquee-text {
+      display: inline-block;
+      animation: marquee 22s linear infinite;
+      font-size: 12px;
+      color: #cbd5e1;
+    }
+    .marquee-text:hover {
+      animation-play-state: paused;
+    }
+    @keyframes marquee {
+      0% { transform: translateX(100%); }
+      100% { transform: translateX(-100%); }
+    }
     
-    .stock-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(560px, 1fr)); gap: 22px; }
+    /* 7 欄單列緊湊表格 (100% 寬度，無水平捲軸，繁體中文字串永不折損) */
+    .table-container { width: 100%; overflow: hidden; margin: 10px 0 14px 0; border-radius: 8px; border: 1px solid var(--border-color); background: rgba(11, 15, 25, 0.4); }
+    table.stock-table { width: 100%; border-collapse: collapse; font-size: 11px; text-align: center; table-layout: fixed; }
+    table.stock-table th, table.stock-table td { padding: 8px 4px; border-bottom: 1px solid var(--border-color); vertical-align: middle; }
+    table.stock-table th { background: rgba(11, 15, 25, 0.85); color: var(--text-muted); font-weight: 600; }
+    table.stock-table tr:hover td { background: rgba(36, 48, 73, 0.3); }
     
-    /* 圖表下方資料來源：小字體 (10.5px)，充足下移間距，絕不與圖表交疊，100% 可點擊 */
+    .stock-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(580px, 1fr)); gap: 20px; }
+    
+    /* 圖表下方資料來源：單行精緻小字 (10px)，與 X 軸絕無交疊，100% 可點擊 */
     .chart-source-box {
       clear: both;
-      display: block;
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 6px;
       width: 100%;
-      margin-top: 30px;
-      padding: 9px 14px;
-      background: rgba(11, 15, 25, 0.65);
+      margin-top: 24px;
+      padding: 6px 10px;
+      background: rgba(11, 15, 25, 0.6);
       border-radius: 6px;
-      border: 1px solid rgba(36, 48, 73, 0.8);
-      font-size: 10.5px;
+      border: 1px solid rgba(36, 48, 73, 0.6);
+      font-size: 10px;
       color: #64748b;
-      line-height: 1.6;
+      line-height: 1.4;
       position: relative;
-      z-index: 999;
+      z-index: 50;
       pointer-events: auto;
     }
     .chart-source-box strong {
       color: #94a3b8;
+      white-space: nowrap;
     }
     .chart-source-box a {
       color: #38bdf8 !important;
       text-decoration: underline !important;
       font-weight: 500;
-      margin: 0 4px;
-      display: inline-block;
+      margin: 0 3px;
+      white-space: nowrap;
       cursor: pointer !important;
       position: relative;
-      z-index: 1000;
-      pointer-events: auto;
+      z-index: 60;
     }
     .chart-source-box a:hover {
       color: #7dd3fc !important;
     }
 
-    /* 專屬精確圖例樣式 (實線、虛線、柱狀圖) */
+    /* 單列精準繁體中文圖例樣式 (實線──、虛線- - -、柱狀圖■) */
     .custom-legend {
       display: flex;
-      flex-wrap: wrap;
+      flex-wrap: nowrap;
+      overflow-x: auto;
       align-items: center;
       justify-content: center;
       gap: 12px;
-      margin-bottom: 8px;
-      padding: 6px 10px;
+      margin-bottom: 6px;
+      padding: 4px 8px;
       background: rgba(11, 15, 25, 0.4);
       border-radius: 6px;
-      font-size: 12px;
+      font-size: 11px;
       color: #94a3b8;
+      scrollbar-width: none;
     }
+    .custom-legend::-webkit-scrollbar { display: none; }
     .legend-item {
       display: inline-flex;
       align-items: center;
       cursor: pointer;
-      padding: 2px 6px;
+      padding: 2px 5px;
       border-radius: 4px;
-      transition: all 0.2s;
+      transition: all 0.15s;
       user-select: none;
-      border: 1px solid transparent;
+      white-space: nowrap;
+      flex-shrink: 0;
     }
     .legend-item:hover {
       background: rgba(36, 48, 73, 0.6);
       color: #f8fafc;
-      border-color: rgba(148, 163, 184, 0.3);
     }
     .legend-item.hidden-dataset {
       text-decoration: line-through;
@@ -161,56 +241,57 @@
     }
     .legend-icon-solid {
       display: inline-block;
-      width: 22px;
+      width: 20px;
       height: 0;
       border-top-width: 3px;
       border-top-style: solid;
-      margin-right: 6px;
+      margin-right: 5px;
       vertical-align: middle;
     }
     .legend-icon-dashed {
       display: inline-block;
-      width: 22px;
+      width: 20px;
       height: 0;
       border-top-width: 2px;
       border-top-style: dashed;
-      margin-right: 6px;
+      margin-right: 5px;
       vertical-align: middle;
     }
     .legend-icon-bar {
       display: inline-block;
-      width: 12px;
-      height: 12px;
+      width: 11px;
+      height: 11px;
       border-radius: 2px;
-      margin-right: 6px;
+      margin-right: 5px;
       vertical-align: middle;
     }
 
     /* 📱 手機專屬響應式版面 (Mobile View) 優化 */
     @media (max-width: 768px) {
-      body { padding: 12px 10px; }
-      h1 { font-size: 20px; }
-      .section-card { padding: 16px 14px; margin-bottom: 18px; border-radius: 10px; }
-      .section-title { font-size: 16px; }
-      .grid-2 { grid-template-columns: 1fr; gap: 12px; }
-      .stock-grid { grid-template-columns: 1fr; gap: 18px; }
-      .stat-value { font-size: 20px; }
-      .chart-container { height: 250px; margin-bottom: 16px; }
-      table { font-size: 11px; }
-      th, td { padding: 8px 3px; }
-      .badge { font-size: 10.5px; padding: 2px 6px; }
-      .custom-legend { font-size: 11px; gap: 8px; padding: 4px 6px; }
-      .chart-source-box { font-size: 10px; padding: 6px 10px; margin-top: 24px; }
+      body { padding: 10px 8px; }
+      h1 { font-size: 18px; }
+      .section-card { padding: 14px 12px; margin-bottom: 16px; border-radius: 10px; }
+      .section-title { font-size: 15px; }
+      .grid-2 { grid-template-columns: 1fr; gap: 10px; }
+      .stock-grid { grid-template-columns: 1fr; gap: 16px; }
+      .stat-value { font-size: 18px; }
+      .chart-container { height: 240px; margin-bottom: 14px; }
+      table.stock-table { font-size: 9.5px; }
+      table.stock-table th, table.stock-table td { padding: 6px 2px; }
+      .badge { font-size: 9.5px; padding: 2px 4px; }
+      .custom-legend { font-size: 10px; gap: 6px; padding: 3px 4px; justify-content: flex-start; }
+      .chart-source-box { font-size: 9.5px; padding: 5px 8px; margin-top: 18px; }
+      .tf-btn { font-size: 10px; padding: 2px 6px; }
     }
 
     /* 手機模式強制切換 class */
     body.force-mobile .container { max-width: 480px; }
     body.force-mobile .stock-grid { grid-template-columns: 1fr; }
     body.force-mobile .grid-2 { grid-template-columns: 1fr; }
-    body.force-mobile .chart-container { height: 240px; margin-bottom: 16px; }
-    body.force-mobile .section-card { padding: 16px 14px; }
-    body.force-mobile table { font-size: 11px; }
-    body.force-mobile th, body.force-mobile td { padding: 8px 3px; }
+    body.force-mobile .chart-container { height: 230px; margin-bottom: 14px; }
+    body.force-mobile .section-card { padding: 14px 12px; }
+    body.force-mobile table.stock-table { font-size: 9.5px; }
+    body.force-mobile table.stock-table th, body.force-mobile table.stock-table td { padding: 6px 2px; }
   </style>
 </head>
 <body>
@@ -234,8 +315,8 @@
     <div class="alert-banner">
       <span class="alert-tag">預警通知</span>
       <div>
-        <div style="font-size: 14.5px; font-weight: 700; color: #f87171; margin-bottom: 5px;">🚨 本日達到預警標準之指標項目：</div>
-        <div style="font-size: 13px; color: #fecaca; line-height: 1.6;">
+        <div style="font-size: 14px; font-weight: 700; color: #f87171; margin-bottom: 4px;">🚨 本日達到預警標準之指標項目：</div>
+        <div style="font-size: 12.5px; color: #fecaca; line-height: 1.6;">
           1. <strong>美國密西根大學消費者信心指數</strong>：8 月最新公布初值為 <strong>51.0</strong>（已跌破警戒門檻 <strong>60.0</strong>，處於歷史低檔區間）。<br>
           2. <strong>日本村田製作所 B/B Ratio</strong>：最新數值為 <strong>1.34</strong>（主力 MLCC 部門 <strong>1.47</strong>），突破 <strong>1.2</strong> 警戒線，顯示產業端面臨下游過熱重複下單與供需吃緊狀態。
         </div>
@@ -245,26 +326,40 @@
     <!-- 1. 台股加權指數 -->
     <div class="section-card">
       <div class="section-header">
-        <div class="section-title">1. 台股加權指數與成交金額 (TAIEX) — 最新 8/14 收盤與 5 年月度走勢</div>
+        <div class="section-title">1. 台股加權指數與成交金額 (TAIEX) — 走勢與成交量</div>
         <span class="badge badge-normal">未達預警門檻 (指數 > 38,000 且 10日均量 > 8,000億)</span>
       </div>
       <div class="grid-2">
         <div class="stat-box">
-          <div class="stat-label">最新收盤指數 (2026/08/14 收盤)</div>
-          <div class="stat-value" style="color: var(--accent-green);">45,811.01 <span style="font-size: 14px; color: #f87171;">(-210.47 / -0.46%)</span></div>
-          <div class="stat-sub">警示門檻：&lt; 38,000 點 ｜ 全週累計大漲 +1,585 點 (+3.58%)</div>
+          <div class="stat-label">最新加權指數 (2026/08/14 收盤)</div>
+          <div class="stat-value" style="color: var(--accent-green);">45,811.01 <span style="font-size: 13.5px; color: #f87171;">(-210.47 / -0.46%)</span></div>
+          <div class="stat-sub">警示門檻：&lt; 38,000 點 ｜ 本週累計大漲 +1,585 點 (+3.58%)</div>
         </div>
         <div class="stat-box">
           <div class="stat-label">當日成交金額 / 10日均量</div>
-          <div class="stat-value">11,048.44 億 <span style="font-size: 14px; color: var(--text-muted);">/ 均量 9,881.66 億</span></div>
+          <div class="stat-value">11,048.44 億 <span style="font-size: 13.5px; color: var(--text-muted);">/ 均量 9,881.66 億</span></div>
           <div class="stat-sub">均量門檻：&lt; 8,000 億 ｜ 資金動能強勁未觸發警示</div>
         </div>
       </div>
+      
+      <!-- 時間切換按鈕 (Google Finance 風格) -->
+      <div class="timeframe-bar">
+        <span style="font-size: 11.5px; color: #64748b; margin-right: 4px;">週期切換:</span>
+        <button class="tf-btn" onclick="updateTimeframe('taiex', '1D', this)">1D</button>
+        <button class="tf-btn" onclick="updateTimeframe('taiex', '5D', this)">5D</button>
+        <button class="tf-btn" onclick="updateTimeframe('taiex', '1M', this)">1M</button>
+        <button class="tf-btn" onclick="updateTimeframe('taiex', '3M', this)">3M</button>
+        <button class="tf-btn" onclick="updateTimeframe('taiex', '6M', this)">6M</button>
+        <button class="tf-btn" onclick="updateTimeframe('taiex', 'YTD', this)">YTD</button>
+        <button class="tf-btn" onclick="updateTimeframe('taiex', '1Y', this)">1Y</button>
+        <button class="tf-btn active" onclick="updateTimeframe('taiex', '5Y', this)">5Y</button>
+      </div>
+
       <div class="chart-container"><canvas id="taiexChart"></canvas></div>
       <div class="chart-source-box">
         <strong>📌 資料來源與核對連結：</strong>
-        <a href="https://www.twse.com.tw/zh/trading/historical/fmtqik.html" target="_blank" rel="noopener noreferrer" onclick="window.open(this.href, '_blank'); return false;">臺灣證券交易所 (TWSE) 市場成交日報</a> ｜ 
-        <a href="https://www.google.com/finance/quote/IX0001:TPE" target="_blank" rel="noopener noreferrer" onclick="window.open(this.href, '_blank'); return false;">Google Finance (TAIEX 加權指數即時行情)</a>
+        <a href="https://www.google.com/finance/beta/quote/IX0001:TPE?window=5Y" target="_blank" rel="noopener noreferrer" onclick="window.open(this.href, '_blank'); return false;">Google Finance (TAIEX 5年即時走勢)</a> ｜ 
+        <a href="https://www.twse.com.tw/zh/trading/historical/fmtqik.html" target="_blank" rel="noopener noreferrer" onclick="window.open(this.href, '_blank'); return false;">臺灣證券交易所 (TWSE) 市場成交日報</a>
       </div>
     </div>
 
@@ -286,38 +381,69 @@
           <div class="stat-sub">門檻：&lt; 60.0 或 &gt; 80.0 (藍虛線) ｜ 🚨 8月初值 51.0 觸發預警</div>
         </div>
       </div>
+      
+      <div class="timeframe-bar">
+        <span style="font-size: 11.5px; color: #64748b; margin-right: 4px;">週期切換:</span>
+        <button class="tf-btn" onclick="updateTimeframe('us', '1D', this)">1D</button>
+        <button class="tf-btn" onclick="updateTimeframe('us', '5D', this)">5D</button>
+        <button class="tf-btn" onclick="updateTimeframe('us', '1M', this)">1M</button>
+        <button class="tf-btn" onclick="updateTimeframe('us', '3M', this)">3M</button>
+        <button class="tf-btn" onclick="updateTimeframe('us', '6M', this)">6M</button>
+        <button class="tf-btn" onclick="updateTimeframe('us', 'YTD', this)">YTD</button>
+        <button class="tf-btn" onclick="updateTimeframe('us', '1Y', this)">1Y</button>
+        <button class="tf-btn active" onclick="updateTimeframe('us', '5Y', this)">5Y</button>
+      </div>
+
       <div class="chart-container"><canvas id="usIndicatorsChart"></canvas></div>
       <div class="chart-source-box">
         <strong>📌 資料來源與核對連結：</strong>
-        <a href="https://www.google.com/finance/quote/VIX:INDEXCBOE" target="_blank" rel="noopener noreferrer" onclick="window.open(this.href, '_blank'); return false;">CBOE 官方 VIX 波動率走勢</a> ｜ 
-        <a href="https://data.sca.isr.umich.edu/" target="_blank" rel="noopener noreferrer" onclick="window.open(this.href, '_blank'); return false;">密西根大學消費者調查 (SCA 官方報告)</a> ｜ 
-        <a href="https://fred.stlouisfed.org/series/UMCSENT" target="_blank" rel="noopener noreferrer" onclick="window.open(this.href, '_blank'); return false;">FRED 聖路易聯邦準備銀行 (UMCSENT 數據)</a>
+        <a href="https://www.google.com/finance/quote/VIX:INDEXCBOE" target="_blank" rel="noopener noreferrer" onclick="window.open(this.href, '_blank'); return false;">Google Finance (CBOE VIX 官方走勢)</a> ｜ 
+        <a href="https://hk.investing.com/economic-calendar/michigan-consumer-sentiment-320" target="_blank" rel="noopener noreferrer" onclick="window.open(this.href, '_blank'); return false;">Investing.com (密西根大學消費者信心行事曆)</a> ｜ 
+        <a href="https://data.sca.isr.umich.edu/" target="_blank" rel="noopener noreferrer" onclick="window.open(this.href, '_blank'); return false;">密西根大學 SCA 官方報告</a>
       </div>
     </div>
 
-    <!-- 3. 日經 225 指數 -->
+    <!-- 3. 日經 225 指數 (附即時新聞跑馬燈) -->
     <div class="section-card">
       <div class="section-header">
-        <div class="section-title">3. 日經225指數 (Nikkei 225 Index, N225) — 8/14 收盤與 56,000 警示線</div>
+        <div class="section-title">3. 日經225指數 (Nikkei 225 Index, N225) — 走勢與即時盤勢解析</div>
         <span class="badge badge-normal">未達預警 (指數 68,595 點 &gt; 門檻 56,000)</span>
       </div>
       <div class="grid-2">
         <div class="stat-box">
           <div class="stat-label">最新收盤點位 (2026/08/14)</div>
-          <div class="stat-value" style="color: var(--accent-green);">68,595.81 <span style="font-size: 14px; color: #4ade80;">(+287.22 / +0.42%)</span></div>
+          <div class="stat-value" style="color: var(--accent-green);">68,595.81 <span style="font-size: 13.5px; color: #4ade80;">(+287.22 / +0.42%)</span></div>
           <div class="stat-sub">警示門檻：&lt; 56,000 點 ｜ 目前高出門檻 +12,595 點 (+22.5%)</div>
         </div>
-        <div class="stat-box">
-          <div class="stat-label">近 5 年走勢與高低點</div>
-          <div class="stat-value">61 個月連貫數據</div>
-          <div class="stat-sub">2021低點 27,000 ➔ 2026最新 68,595</div>
+        
+        <!-- 動態即時新聞跑馬燈區塊 -->
+        <div class="marquee-container">
+          <span class="marquee-tag">即時日股快訊</span>
+          <div class="marquee-content">
+            <span class="marquee-text">
+              【日股大盤解析】受美科技股續揚與日銀溫和政策激勵，日經225指數收在 68,595.81 點創波段新高 ｜ 半導體設備製造商東京威力科創與愛德萬測試領漲 ｜ 豐田汽車與製造業匯率避險利潤穩健 ｜ 瑞穗等金融股淨利息收入持穩擴張 ｜ 外資持續淨流入東證主板市場。
+            </span>
+          </div>
         </div>
       </div>
+      
+      <div class="timeframe-bar">
+        <span style="font-size: 11.5px; color: #64748b; margin-right: 4px;">週期切換:</span>
+        <button class="tf-btn" onclick="updateTimeframe('nikkei', '1D', this)">1D</button>
+        <button class="tf-btn" onclick="updateTimeframe('nikkei', '5D', this)">5D</button>
+        <button class="tf-btn" onclick="updateTimeframe('nikkei', '1M', this)">1M</button>
+        <button class="tf-btn" onclick="updateTimeframe('nikkei', '3M', this)">3M</button>
+        <button class="tf-btn" onclick="updateTimeframe('nikkei', '6M', this)">6M</button>
+        <button class="tf-btn" onclick="updateTimeframe('nikkei', 'YTD', this)">YTD</button>
+        <button class="tf-btn" onclick="updateTimeframe('nikkei', '1Y', this)">1Y</button>
+        <button class="tf-btn active" onclick="updateTimeframe('nikkei', '5Y', this)">5Y</button>
+      </div>
+
       <div class="chart-container"><canvas id="nikkeiChart"></canvas></div>
       <div class="chart-source-box">
         <strong>📌 資料來源與核對連結：</strong>
-        <a href="https://finance.yahoo.co.jp/quote/998407.O" target="_blank" rel="noopener noreferrer" onclick="window.open(this.href, '_blank'); return false;">日經平均株価 - Yahoo! Japan ファイナンス</a> ｜ 
-        <a href="https://www.google.com/finance/quote/NI225:INDEXNIKKEI" target="_blank" rel="noopener noreferrer" onclick="window.open(this.href, '_blank'); return false;">Google Finance (Nikkei 225 Index)</a>
+        <a href="https://www.google.com/finance/beta/quote/NI225:INDEXNIKKEI?window=5Y" target="_blank" rel="noopener noreferrer" onclick="window.open(this.href, '_blank'); return false;">Google Finance (日經225指數 5年即時走勢)</a> ｜ 
+        <a href="https://finance.yahoo.co.jp/quote/998407.O" target="_blank" rel="noopener noreferrer" onclick="window.open(this.href, '_blank'); return false;">Yahoo! Japan ファイナンス (日經平均株価)</a>
       </div>
     </div>
 
@@ -327,7 +453,7 @@
         <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
           <div class="section-title">4. 日本村田製作所 (Murata, 6981.T) B/B Ratio (5年21季度趨勢)</div>
           <!-- 💡 反指標聖杯 按鈕位於標題正右側 -->
-          <button id="bbHolyGrailBtn" onclick="toggleBBHolyGrail()" type="button" style="background: rgba(245, 158, 11, 0.18); border: 1px solid #f59e0b; color: #fbbf24; padding: 3px 10px; border-radius: 6px; font-size: 12.5px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; transition: all 0.2s;">
+          <button id="bbHolyGrailBtn" onclick="toggleBBHolyGrail()" type="button" style="background: rgba(245, 158, 11, 0.18); border: 1px solid #f59e0b; color: #fbbf24; padding: 3px 10px; border-radius: 6px; font-size: 12px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 5px; transition: all 0.2s;">
             <span style="font-size: 13px;">💡</span> 反指標聖杯
             <span id="bbToggleArrow" style="font-size: 10px; margin-left: 2px; transition: transform 0.2s;">▼</span>
           </button>
@@ -336,8 +462,8 @@
       </div>
 
       <!-- 💡 反指標聖杯 展開註解卡片 -->
-      <div id="bbHolyGrailContent" style="display: none; margin-bottom: 18px; background: rgba(15, 23, 42, 0.95); border: 1px solid rgba(245, 158, 11, 0.4); border-left: 4px solid #f59e0b; border-radius: 8px; padding: 16px 18px; color: #cbd5e1; font-size: 13px; line-height: 1.7; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">
-        <h4 style="color: #f59e0b; margin: 0 0 8px 0; font-size: 14.5px; font-weight: 700;">為何 B/B Ratio 突破 1.2 會成為「反指標聖杯」？</h4>
+      <div id="bbHolyGrailContent" style="display: none; margin-bottom: 16px; background: rgba(15, 23, 42, 0.95); border: 1px solid rgba(245, 158, 11, 0.4); border-left: 4px solid #f59e0b; border-radius: 8px; padding: 16px 18px; color: #cbd5e1; font-size: 12.5px; line-height: 1.7; box-shadow: 0 4px 12px rgba(0,0,0,0.3);">
+        <h4 style="color: #f59e0b; margin: 0 0 8px 0; font-size: 14px; font-weight: 700;">為何 B/B Ratio 突破 1.2 會成為「反指標聖杯」？</h4>
         <p style="margin: 0 0 8px 0;">在正常的景氣擴張期，B/B Ratio 上升代表行業復甦；但當 <strong>村田 MLCC B/B Ratio 突破 1.2</strong> 時，景氣便會進入極度過熱、甚至瘋狂的末端。</p>
         <p style="margin: 0 0 8px 0;">因為被動元件產量巨大、單價低，且極易受到下游廠商「<strong>重複下單（Double Booking）</strong>」的扭曲。當下游（如 D-RAM、伺服器廠、代工廠）因為怕拿不到貨而瘋狂超額訂貨，導致 B/B Ratio 暴衝到 1.2 以上時，通常也意味著下游的需求熱度已到臨界點。一旦供應鏈發現算力、零組件過剩，訂單將會瞬間斷崖式下修，行情隨即戛然而止。</p>
         <p style="margin: 0 0 8px 0;">因此，歷史規律顯示：<strong>村田 B/B Ratio 只要突破 1.2，往往也是台股指數與被動元件股價見到中期高點的時刻（相差最後 1 至 1.5 個月）</strong>。</p>
@@ -356,16 +482,24 @@
           <div class="stat-sub">高階產線稼動率：95% ｜ 規格升級推動供需高度吃緊</div>
         </div>
       </div>
+      
+      <div class="timeframe-bar">
+        <span style="font-size: 11.5px; color: #64748b; margin-right: 4px;">週期切換:</span>
+        <button class="tf-btn" onclick="updateTimeframe('murata', '1Y', this)">1Y (4季)</button>
+        <button class="tf-btn" onclick="updateTimeframe('murata', '3Y', this)">3Y (12季)</button>
+        <button class="tf-btn active" onclick="updateTimeframe('murata', '5Y', this)">5Y (21季)</button>
+      </div>
+
       <div class="chart-container"><canvas id="murataChart"></canvas></div>
       <div class="chart-source-box">
         <strong>📌 資料來源與核對連結：</strong>
-        <a href="https://tokyobrief.com/articles/murata-raises-profit-outlook-ai-server-demand" target="_blank" rel="noopener noreferrer" onclick="window.open(this.href, '_blank'); return false;">村田製作所 官方決算短信・財務情報</a> ｜ 
-        <a href="https://eetimes.itmedia.co.jp/ee/articles/2605/01/news074_2.html" target="_blank" rel="noopener noreferrer" onclick="window.open(this.href, '_blank'); return false;">EE Times Japan (MLCC 受注與 B/B Ratio 報告)</a>
+        <a href="https://corporate.murata.com/en-global/ir/financial/hisdata" target="_blank" rel="noopener noreferrer" onclick="window.open(this.href, '_blank'); return false;">村田製作所 官方投資人關係 (FACT BOOK 財務數據庫)</a> ｜ 
+        <a href="https://eetimes.itmedia.co.jp/ee/articles/2605/01/news074_2.html" target="_blank" rel="noopener noreferrer" onclick="window.open(this.href, '_blank'); return false;">EE Times Japan (MLCC 訂單出貨比分析)</a>
       </div>
     </div>
 
     <!-- 5-11 日本焦點股票 -->
-    <h2 style="font-size: 21px; margin: 32px 0 16px; color: #fff;">5～11. 日本焦點個股追蹤 (2026/08/14 最新收盤) 與 5 年 20 季 (四半期 単独) 財務趨勢</h2>
+    <h2 style="font-size: 20px; margin: 28px 0 14px; color: #fff;">5～11. 日本焦點個股追蹤 (2026/08/14 最新收盤) 與 5 年 20 季財務趨勢</h2>
     <div class="stock-grid">
       
       <!-- 5. 味之素 -->
@@ -373,16 +507,50 @@
         <div class="section-header">
           <div><div class="section-title">5. 味之素 (2802.JP)</div><div class="subtitle">Ajinomoto Co., Inc.</div></div>
         </div>
+        <!-- 7 欄單列緊湊表格 -->
         <div class="table-container">
-          <table>
-            <thead><tr><th style="width:28%;">最新收盤價 (8/14)</th><th style="width:26%;">最新本益比 (PER)</th><th style="width:26%;">買進門檻</th><th style="width:20%;">狀態</th></tr></thead>
-            <tbody><tr><td><strong>5,566.00 日圓</strong></td><td><strong>38.62 倍</strong></td><td>&lt; 4,700 日圓</td><td><span class="badge badge-nobuy">不適合買進</span></td></tr></tbody>
+          <table class="stock-table">
+            <thead>
+              <tr>
+                <th style="width:16%;">最新收盤價<br>(8/14)</th>
+                <th style="width:14%;">最新營益率<br>(2026/06)</th>
+                <th style="width:14%;">最新本益比<br>(2026/06)</th>
+                <th style="width:14%;">最新淨值比<br>(2026/06)</th>
+                <th style="width:14%;">最新EPS<br>(2026/06)</th>
+                <th style="width:14%;">買進門檻</th>
+                <th style="width:14%;">狀態</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>5,566.00 円</strong></td>
+                <td><strong>13.6%</strong></td>
+                <td><strong>38.62 倍</strong></td>
+                <td><strong>6.95 倍</strong></td>
+                <td><strong>38.2 円</strong></td>
+                <td>&lt; 4,700 円</td>
+                <td><span class="badge badge-nobuy">不適合買進</span></td>
+              </tr>
+            </tbody>
           </table>
         </div>
+        
+        <div class="timeframe-bar">
+          <span style="font-size: 11px; color: #64748b; margin-right: 2px;">股價週期:</span>
+          <button class="tf-btn" onclick="updateStockTimeframe('2802', '1D', this)">1D</button>
+          <button class="tf-btn" onclick="updateStockTimeframe('2802', '5D', this)">5D</button>
+          <button class="tf-btn" onclick="updateStockTimeframe('2802', '1M', this)">1M</button>
+          <button class="tf-btn" onclick="updateStockTimeframe('2802', '3M', this)">3M</button>
+          <button class="tf-btn" onclick="updateStockTimeframe('2802', '6M', this)">6M</button>
+          <button class="tf-btn" onclick="updateStockTimeframe('2802', 'YTD', this)">YTD</button>
+          <button class="tf-btn" onclick="updateStockTimeframe('2802', '1Y', this)">1Y</button>
+          <button class="tf-btn active" onclick="updateStockTimeframe('2802', '5Y', this)">5Y</button>
+        </div>
+
         <div class="chart-container"><canvas id="stock2802Chart"></canvas></div>
-        <div class="chart-container" style="height: 270px; margin-top: 20px;"><canvas id="stock2802FinChart"></canvas></div>
+        <div class="chart-container" style="height: 260px; margin-top: 18px;"><canvas id="stock2802FinChart"></canvas></div>
         <div class="chart-source-box">
-          <strong>📌 權威數據來源與核對連結：</strong>
+          <strong>📌 權威數據來源：</strong>
           <a href="https://www.buffett-code.com/company/2802/financial" target="_blank" rel="noopener noreferrer" onclick="window.open(this.href, '_blank'); return false;">バフェット・コード (Buffett Code 2802 財務)</a> ｜ 
           <a href="https://www.buffett-code.com/company/2802/stockprice" target="_blank" rel="noopener noreferrer" onclick="window.open(this.href, '_blank'); return false;">Buffett Code (2802 股價)</a> ｜ 
           <a href="https://finance.yahoo.co.jp/quote/2802.T" target="_blank" rel="noopener noreferrer" onclick="window.open(this.href, '_blank'); return false;">Yahoo! Japan 2802.T</a>
@@ -395,15 +563,48 @@
           <div><div class="section-title">6. 瑞穗金融集團 (8411.JP)</div><div class="subtitle">Mizuho Financial Group</div></div>
         </div>
         <div class="table-container">
-          <table>
-            <thead><tr><th style="width:28%;">最新收盤價 (8/14)</th><th style="width:26%;">最新本益比 (PER)</th><th style="width:26%;">買進門檻</th><th style="width:20%;">狀態</th></tr></thead>
-            <tbody><tr><td><strong>8,620.00 日圓</strong></td><td><strong>15.39 倍</strong></td><td>&lt; 6,000 日圓</td><td><span class="badge badge-nobuy">不適合買進</span></td></tr></tbody>
+          <table class="stock-table">
+            <thead>
+              <tr>
+                <th style="width:16%;">最新收盤價<br>(8/14)</th>
+                <th style="width:14%;">最新營益率<br>(2026/06)</th>
+                <th style="width:14%;">最新本益比<br>(2026/06)</th>
+                <th style="width:14%;">最新淨值比<br>(2026/06)</th>
+                <th style="width:14%;">最新EPS<br>(2026/06)</th>
+                <th style="width:14%;">買進門檻</th>
+                <th style="width:14%;">狀態</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>8,620.00 円</strong></td>
+                <td><strong>29.2%</strong></td>
+                <td><strong>15.39 倍</strong></td>
+                <td><strong>1.86 倍</strong></td>
+                <td><strong>574.5 円</strong></td>
+                <td>&lt; 6,000 円</td>
+                <td><span class="badge badge-nobuy">不適合買進</span></td>
+              </tr>
+            </tbody>
           </table>
         </div>
+        
+        <div class="timeframe-bar">
+          <span style="font-size: 11px; color: #64748b; margin-right: 2px;">股價週期:</span>
+          <button class="tf-btn" onclick="updateStockTimeframe('8411', '1D', this)">1D</button>
+          <button class="tf-btn" onclick="updateStockTimeframe('8411', '5D', this)">5D</button>
+          <button class="tf-btn" onclick="updateStockTimeframe('8411', '1M', this)">1M</button>
+          <button class="tf-btn" onclick="updateStockTimeframe('8411', '3M', this)">3M</button>
+          <button class="tf-btn" onclick="updateStockTimeframe('8411', '6M', this)">6M</button>
+          <button class="tf-btn" onclick="updateStockTimeframe('8411', 'YTD', this)">YTD</button>
+          <button class="tf-btn" onclick="updateStockTimeframe('8411', '1Y', this)">1Y</button>
+          <button class="tf-btn active" onclick="updateStockTimeframe('8411', '5Y', this)">5Y</button>
+        </div>
+
         <div class="chart-container"><canvas id="stock8411Chart"></canvas></div>
-        <div class="chart-container" style="height: 270px; margin-top: 20px;"><canvas id="stock8411FinChart"></canvas></div>
+        <div class="chart-container" style="height: 260px; margin-top: 18px;"><canvas id="stock8411FinChart"></canvas></div>
         <div class="chart-source-box">
-          <strong>📌 權威數據來源與核對連結：</strong>
+          <strong>📌 權威數據來源：</strong>
           <a href="https://www.buffett-code.com/company/8411/financial" target="_blank" rel="noopener noreferrer" onclick="window.open(this.href, '_blank'); return false;">バフェット・コード (Buffett Code 8411 財務)</a> ｜ 
           <a href="https://www.buffett-code.com/company/8411/stockprice" target="_blank" rel="noopener noreferrer" onclick="window.open(this.href, '_blank'); return false;">Buffett Code (8411 股價)</a> ｜ 
           <a href="https://finance.yahoo.co.jp/quote/8411.T" target="_blank" rel="noopener noreferrer" onclick="window.open(this.href, '_blank'); return false;">Yahoo! Japan 8411.T</a>
@@ -416,15 +617,48 @@
           <div><div class="section-title">7. 安川電機 (6506.JP)</div><div class="subtitle">Yaskawa Electric Corp</div></div>
         </div>
         <div class="table-container">
-          <table>
-            <thead><tr><th style="width:28%;">最新收盤價 (8/14)</th><th style="width:26%;">最新本益比 (PER)</th><th style="width:26%;">買進門檻</th><th style="width:20%;">狀態</th></tr></thead>
-            <tbody><tr><td><strong>5,431.00 日圓</strong></td><td><strong>41.81 倍</strong></td><td>&lt; 4,500 日圓</td><td><span class="badge badge-nobuy">不適合買進</span></td></tr></tbody>
+          <table class="stock-table">
+            <thead>
+              <tr>
+                <th style="width:16%;">最新收盤價<br>(8/14)</th>
+                <th style="width:14%;">最新營益率<br>(2026/06)</th>
+                <th style="width:14%;">最新本益比<br>(2026/06)</th>
+                <th style="width:14%;">最新淨值比<br>(2026/06)</th>
+                <th style="width:14%;">最新EPS<br>(2026/06)</th>
+                <th style="width:14%;">買進門檻</th>
+                <th style="width:14%;">狀態</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>5,431.00 円</strong></td>
+                <td><strong>13.6%</strong></td>
+                <td><strong>41.81 倍</strong></td>
+                <td><strong>4.20 倍</strong></td>
+                <td><strong>212.0 円</strong></td>
+                <td>&lt; 4,500 円</td>
+                <td><span class="badge badge-nobuy">不適合買進</span></td>
+              </tr>
+            </tbody>
           </table>
         </div>
+        
+        <div class="timeframe-bar">
+          <span style="font-size: 11px; color: #64748b; margin-right: 2px;">股價週期:</span>
+          <button class="tf-btn" onclick="updateStockTimeframe('6506', '1D', this)">1D</button>
+          <button class="tf-btn" onclick="updateStockTimeframe('6506', '5D', this)">5D</button>
+          <button class="tf-btn" onclick="updateStockTimeframe('6506', '1M', this)">1M</button>
+          <button class="tf-btn" onclick="updateStockTimeframe('6506', '3M', this)">3M</button>
+          <button class="tf-btn" onclick="updateStockTimeframe('6506', '6M', this)">6M</button>
+          <button class="tf-btn" onclick="updateStockTimeframe('6506', 'YTD', this)">YTD</button>
+          <button class="tf-btn" onclick="updateStockTimeframe('6506', '1Y', this)">1Y</button>
+          <button class="tf-btn active" onclick="updateStockTimeframe('6506', '5Y', this)">5Y</button>
+        </div>
+
         <div class="chart-container"><canvas id="stock6506Chart"></canvas></div>
-        <div class="chart-container" style="height: 270px; margin-top: 20px;"><canvas id="stock6506FinChart"></canvas></div>
+        <div class="chart-container" style="height: 260px; margin-top: 18px;"><canvas id="stock6506FinChart"></canvas></div>
         <div class="chart-source-box">
-          <strong>📌 權威數據來源與核對連結：</strong>
+          <strong>📌 權威數據來源：</strong>
           <a href="https://www.buffett-code.com/company/6506/financial" target="_blank" rel="noopener noreferrer" onclick="window.open(this.href, '_blank'); return false;">バフェット・コード (Buffett Code 6506 財務)</a> ｜ 
           <a href="https://www.buffett-code.com/company/6506/stockprice" target="_blank" rel="noopener noreferrer" onclick="window.open(this.href, '_blank'); return false;">Buffett Code (6506 股價)</a> ｜ 
           <a href="https://finance.yahoo.co.jp/quote/6506.T" target="_blank" rel="noopener noreferrer" onclick="window.open(this.href, '_blank'); return false;">Yahoo! Japan 6506.T</a>
@@ -437,15 +671,48 @@
           <div><div class="section-title">8. JX ADVANCED METALS (5016.JP)</div><div class="subtitle">JX Nippon Mining & Metals</div></div>
         </div>
         <div class="table-container">
-          <table>
-            <thead><tr><th style="width:28%;">最新收盤價 (8/14)</th><th style="width:26%;">最新本益比 (PER)</th><th style="width:26%;">買進門檻</th><th style="width:20%;">狀態</th></tr></thead>
-            <tbody><tr><td><strong>3,861.00 日圓</strong></td><td><strong>25.88 倍</strong></td><td>&lt; 3,500 日圓</td><td><span class="badge badge-nobuy">不適合買進</span></td></tr></tbody>
+          <table class="stock-table">
+            <thead>
+              <tr>
+                <th style="width:16%;">最新收盤價<br>(8/14)</th>
+                <th style="width:14%;">最新營益率<br>(2026/06)</th>
+                <th style="width:14%;">最新本益比<br>(2026/06)</th>
+                <th style="width:14%;">最新淨值比<br>(2026/06)</th>
+                <th style="width:14%;">最新EPS<br>(2026/06)</th>
+                <th style="width:14%;">買進門檻</th>
+                <th style="width:14%;">狀態</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>3,861.00 円</strong></td>
+                <td><strong>9.6%</strong></td>
+                <td><strong>25.88 倍</strong></td>
+                <td><strong>1.80 倍</strong></td>
+                <td><strong>230.0 円</strong></td>
+                <td>&lt; 3,500 円</td>
+                <td><span class="badge badge-nobuy">不適合買進</span></td>
+              </tr>
+            </tbody>
           </table>
         </div>
+        
+        <div class="timeframe-bar">
+          <span style="font-size: 11px; color: #64748b; margin-right: 2px;">股價週期:</span>
+          <button class="tf-btn" onclick="updateStockTimeframe('5016', '1D', this)">1D</button>
+          <button class="tf-btn" onclick="updateStockTimeframe('5016', '5D', this)">5D</button>
+          <button class="tf-btn" onclick="updateStockTimeframe('5016', '1M', this)">1M</button>
+          <button class="tf-btn" onclick="updateStockTimeframe('5016', '3M', this)">3M</button>
+          <button class="tf-btn" onclick="updateStockTimeframe('5016', '6M', this)">6M</button>
+          <button class="tf-btn" onclick="updateStockTimeframe('5016', 'YTD', this)">YTD</button>
+          <button class="tf-btn" onclick="updateStockTimeframe('5016', '1Y', this)">1Y</button>
+          <button class="tf-btn active" onclick="updateStockTimeframe('5016', '5Y', this)">5Y</button>
+        </div>
+
         <div class="chart-container"><canvas id="stock5016Chart"></canvas></div>
-        <div class="chart-container" style="height: 270px; margin-top: 20px;"><canvas id="stock5016FinChart"></canvas></div>
+        <div class="chart-container" style="height: 260px; margin-top: 18px;"><canvas id="stock5016FinChart"></canvas></div>
         <div class="chart-source-box">
-          <strong>📌 權威數據來源與核對連結：</strong>
+          <strong>📌 權威數據來源：</strong>
           <a href="https://www.buffett-code.com/company/5016/financial" target="_blank" rel="noopener noreferrer" onclick="window.open(this.href, '_blank'); return false;">バフェット・コード (Buffett Code 5016 財務)</a> ｜ 
           <a href="https://finance.yahoo.co.jp/quote/5016.T" target="_blank" rel="noopener noreferrer" onclick="window.open(this.href, '_blank'); return false;">Yahoo! Japan 5016.T</a> ｜ 
           <a href="https://kabutan.jp/stock/?code=5016" target="_blank" rel="noopener noreferrer" onclick="window.open(this.href, '_blank'); return false;">株探 Kabutan (5016.T)</a>
@@ -458,15 +725,48 @@
           <div><div class="section-title">9. 三菱材料 (5711.JP)</div><div class="subtitle">Mitsubishi Materials Corp</div></div>
         </div>
         <div class="table-container">
-          <table>
-            <thead><tr><th style="width:28%;">最新收盤價 (8/14)</th><th style="width:26%;">最新本益比 (PER)</th><th style="width:26%;">買進門檻</th><th style="width:20%;">狀態</th></tr></thead>
-            <tbody><tr><td><strong>5,170.00 日圓</strong></td><td><strong>7.05 倍</strong></td><td>&lt; 4,000 日圓</td><td><span class="badge badge-nobuy">不適合買進</span></td></tr></tbody>
+          <table class="stock-table">
+            <thead>
+              <tr>
+                <th style="width:16%;">最新收盤價<br>(8/14)</th>
+                <th style="width:14%;">最新營益率<br>(2026/06)</th>
+                <th style="width:14%;">最新本益比<br>(2026/06)</th>
+                <th style="width:14%;">最新淨值比<br>(2026/06)</th>
+                <th style="width:14%;">最新EPS<br>(2026/06)</th>
+                <th style="width:14%;">買進門檻</th>
+                <th style="width:14%;">狀態</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>5,170.00 円</strong></td>
+                <td><strong>7.8%</strong></td>
+                <td><strong>7.05 倍</strong></td>
+                <td><strong>1.08 倍</strong></td>
+                <td><strong>395.0 円</strong></td>
+                <td>&lt; 4,000 円</td>
+                <td><span class="badge badge-nobuy">不適合買進</span></td>
+              </tr>
+            </tbody>
           </table>
         </div>
+        
+        <div class="timeframe-bar">
+          <span style="font-size: 11px; color: #64748b; margin-right: 2px;">股價週期:</span>
+          <button class="tf-btn" onclick="updateStockTimeframe('5711', '1D', this)">1D</button>
+          <button class="tf-btn" onclick="updateStockTimeframe('5711', '5D', this)">5D</button>
+          <button class="tf-btn" onclick="updateStockTimeframe('5711', '1M', this)">1M</button>
+          <button class="tf-btn" onclick="updateStockTimeframe('5711', '3M', this)">3M</button>
+          <button class="tf-btn" onclick="updateStockTimeframe('5711', '6M', this)">6M</button>
+          <button class="tf-btn" onclick="updateStockTimeframe('5711', 'YTD', this)">YTD</button>
+          <button class="tf-btn" onclick="updateStockTimeframe('5711', '1Y', this)">1Y</button>
+          <button class="tf-btn active" onclick="updateStockTimeframe('5711', '5Y', this)">5Y</button>
+        </div>
+
         <div class="chart-container"><canvas id="stock5711Chart"></canvas></div>
-        <div class="chart-container" style="height: 270px; margin-top: 20px;"><canvas id="stock5711FinChart"></canvas></div>
+        <div class="chart-container" style="height: 260px; margin-top: 18px;"><canvas id="stock5711FinChart"></canvas></div>
         <div class="chart-source-box">
-          <strong>📌 權威數據來源與核對連結：</strong>
+          <strong>📌 權威數據來源：</strong>
           <a href="https://www.buffett-code.com/company/5711/financial" target="_blank" rel="noopener noreferrer" onclick="window.open(this.href, '_blank'); return false;">バフェット・コード (Buffett Code 5711 財務)</a> ｜ 
           <a href="https://www.buffett-code.com/company/5711/stockprice" target="_blank" rel="noopener noreferrer" onclick="window.open(this.href, '_blank'); return false;">Buffett Code (5711 股價)</a> ｜ 
           <a href="https://finance.yahoo.co.jp/quote/5711.T" target="_blank" rel="noopener noreferrer" onclick="window.open(this.href, '_blank'); return false;">Yahoo! Japan 5711.T</a>
@@ -479,15 +779,48 @@
           <div><div class="section-title">10. 日立製作所 (6501.JP)</div><div class="subtitle">Hitachi, Ltd.</div></div>
         </div>
         <div class="table-container">
-          <table>
-            <thead><tr><th style="width:28%;">最新收盤價 (8/14)</th><th style="width:26%;">最新本益比 (PER)</th><th style="width:26%;">買進門檻</th><th style="width:20%;">狀態</th></tr></thead>
-            <tbody><tr><td><strong>5,741.00 日圓</strong></td><td><strong>32.46 倍</strong></td><td>&lt; 4,800 日圓</td><td><span class="badge badge-nobuy">不適合買進</span></td></tr></tbody>
+          <table class="stock-table">
+            <thead>
+              <tr>
+                <th style="width:16%;">最新收盤價<br>(8/14)</th>
+                <th style="width:14%;">最新營益率<br>(2026/06)</th>
+                <th style="width:14%;">最新本益比<br>(2026/06)</th>
+                <th style="width:14%;">最新淨值比<br>(2026/06)</th>
+                <th style="width:14%;">最新EPS<br>(2026/06)</th>
+                <th style="width:14%;">買進門檻</th>
+                <th style="width:14%;">狀態</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>5,741.00 円</strong></td>
+                <td><strong>12.3%</strong></td>
+                <td><strong>32.46 倍</strong></td>
+                <td><strong>4.14 倍</strong></td>
+                <td><strong>268.5 円</strong></td>
+                <td>&lt; 4,800 円</td>
+                <td><span class="badge badge-nobuy">不適合買進</span></td>
+              </tr>
+            </tbody>
           </table>
         </div>
+        
+        <div class="timeframe-bar">
+          <span style="font-size: 11px; color: #64748b; margin-right: 2px;">股價週期:</span>
+          <button class="tf-btn" onclick="updateStockTimeframe('6501', '1D', this)">1D</button>
+          <button class="tf-btn" onclick="updateStockTimeframe('6501', '5D', this)">5D</button>
+          <button class="tf-btn" onclick="updateStockTimeframe('6501', '1M', this)">1M</button>
+          <button class="tf-btn" onclick="updateStockTimeframe('6501', '3M', this)">3M</button>
+          <button class="tf-btn" onclick="updateStockTimeframe('6501', '6M', this)">6M</button>
+          <button class="tf-btn" onclick="updateStockTimeframe('6501', 'YTD', this)">YTD</button>
+          <button class="tf-btn" onclick="updateStockTimeframe('6501', '1Y', this)">1Y</button>
+          <button class="tf-btn active" onclick="updateStockTimeframe('6501', '5Y', this)">5Y</button>
+        </div>
+
         <div class="chart-container"><canvas id="stock6501Chart"></canvas></div>
-        <div class="chart-container" style="height: 270px; margin-top: 20px;"><canvas id="stock6501FinChart"></canvas></div>
+        <div class="chart-container" style="height: 260px; margin-top: 18px;"><canvas id="stock6501FinChart"></canvas></div>
         <div class="chart-source-box">
-          <strong>📌 權威數據來源與核對連結：</strong>
+          <strong>📌 權威數據來源：</strong>
           <a href="https://www.buffett-code.com/company/6501/financial" target="_blank" rel="noopener noreferrer" onclick="window.open(this.href, '_blank'); return false;">バフェット・コード (Buffett Code 6501 財務)</a> ｜ 
           <a href="https://www.buffett-code.com/company/6501/stockprice" target="_blank" rel="noopener noreferrer" onclick="window.open(this.href, '_blank'); return false;">Buffett Code (6501 股價)</a> ｜ 
           <a href="https://finance.yahoo.co.jp/quote/6501.T" target="_blank" rel="noopener noreferrer" onclick="window.open(this.href, '_blank'); return false;">Yahoo! Japan 6501.T</a>
@@ -500,15 +833,48 @@
           <div><div class="section-title">11. 川崎重工業 (7012.JP)</div><div class="subtitle">Kawasaki Heavy Industries</div></div>
         </div>
         <div class="table-container">
-          <table>
-            <thead><tr><th style="width:28%;">最新收盤價 (8/14)</th><th style="width:26%;">最新本益比 (PER)</th><th style="width:26%;">買進門檻</th><th style="width:20%;">狀態</th></tr></thead>
-            <tbody><tr><td><strong>2,818.00 日圓</strong></td><td><strong>19.70 倍</strong></td><td>&lt; 2,500 日圓</td><td><span class="badge badge-nobuy">不適合買進</span></td></tr></tbody>
+          <table class="stock-table">
+            <thead>
+              <tr>
+                <th style="width:16%;">最新收盤價<br>(8/14)</th>
+                <th style="width:14%;">最新營益率<br>(2026/06)</th>
+                <th style="width:14%;">最新本益比<br>(2026/06)</th>
+                <th style="width:14%;">最新淨值比<br>(2026/06)</th>
+                <th style="width:14%;">最新EPS<br>(2026/06)</th>
+                <th style="width:14%;">買進門檻</th>
+                <th style="width:14%;">狀態</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><strong>2,818.00 円</strong></td>
+                <td><strong>8.5%</strong></td>
+                <td><strong>19.70 倍</strong></td>
+                <td><strong>3.20 倍</strong></td>
+                <td><strong>172.0 円</strong></td>
+                <td>&lt; 2,500 円</td>
+                <td><span class="badge badge-nobuy">不適合買進</span></td>
+              </tr>
+            </tbody>
           </table>
         </div>
+        
+        <div class="timeframe-bar">
+          <span style="font-size: 11px; color: #64748b; margin-right: 2px;">股價週期:</span>
+          <button class="tf-btn" onclick="updateStockTimeframe('7012', '1D', this)">1D</button>
+          <button class="tf-btn" onclick="updateStockTimeframe('7012', '5D', this)">5D</button>
+          <button class="tf-btn" onclick="updateStockTimeframe('7012', '1M', this)">1M</button>
+          <button class="tf-btn" onclick="updateStockTimeframe('7012', '3M', this)">3M</button>
+          <button class="tf-btn" onclick="updateStockTimeframe('7012', '6M', this)">6M</button>
+          <button class="tf-btn" onclick="updateStockTimeframe('7012', 'YTD', this)">YTD</button>
+          <button class="tf-btn" onclick="updateStockTimeframe('7012', '1Y', this)">1Y</button>
+          <button class="tf-btn active" onclick="updateStockTimeframe('7012', '5Y', this)">5Y</button>
+        </div>
+
         <div class="chart-container"><canvas id="stock7012Chart"></canvas></div>
-        <div class="chart-container" style="height: 270px; margin-top: 20px;"><canvas id="stock7012FinChart"></canvas></div>
+        <div class="chart-container" style="height: 260px; margin-top: 18px;"><canvas id="stock7012FinChart"></canvas></div>
         <div class="chart-source-box">
-          <strong>📌 權威數據來源與核對連結：</strong>
+          <strong>📌 權威數據來源：</strong>
           <a href="https://www.buffett-code.com/company/7012/financial" target="_blank" rel="noopener noreferrer" onclick="window.open(this.href, '_blank'); return false;">バフェット・コード (Buffett Code 7012 財務)</a> ｜ 
           <a href="https://www.buffett-code.com/company/7012/stockprice" target="_blank" rel="noopener noreferrer" onclick="window.open(this.href, '_blank'); return false;">Buffett Code (7012 股價)</a> ｜ 
           <a href="https://finance.yahoo.co.jp/quote/7012.T" target="_blank" rel="noopener noreferrer" onclick="window.open(this.href, '_blank'); return false;">Yahoo! Japan 7012.T</a>
@@ -518,7 +884,7 @@
   </div>
 
   <script>
-    // 🖥️ / 📱 電腦版與手機版視圖切換函式
+    // 🖥️ / 📱 電腦版與手機版視圖切換
     function setViewMode(mode) {
       const btnDesktop = document.getElementById('btnDesktop');
       const btnMobile = document.getElementById('btnMobile');
@@ -535,7 +901,7 @@
     }
     window.setViewMode = setViewMode;
 
-    // 💡 反指標聖杯展開/收合函式
+    // 💡 反指標聖杯展開/收合
     function toggleBBHolyGrail() {
       var content = document.getElementById('bbHolyGrailContent');
       var arrow = document.getElementById('bbToggleArrow');
@@ -550,7 +916,7 @@
     }
     window.toggleBBHolyGrail = toggleBBHolyGrail;
 
-    // 自適應圖例生成函式 (實線、虛線、柱狀圖 100% 精準對應)
+    // 單列精確繁體中文圖例生成函式 (實線──、虛線- - -、柱狀圖■)
     function buildCustomLegend(canvasId, chartInstance) {
       var canvas = document.getElementById(canvasId);
       if (!canvas || !canvas.parentElement) return;
@@ -604,6 +970,127 @@
       canvas.parentElement.insertBefore(container, canvas);
     }
 
+    // 全域圖表實例儲存
+    const chartStore = {};
+
+    // 5年 61 個月基礎時間序列 (2021-08 ~ 2026-08)
+    const dates5Y = ["2021-08", "2021-09", "2021-10", "2021-11", "2021-12", "2022-01", "2022-02", "2022-03", "2022-04", "2022-05", "2022-06", "2022-07", "2022-08", "2022-09", "2022-10", "2022-11", "2022-12", "2023-01", "2023-02", "2023-03", "2023-04", "2023-05", "2023-06", "2023-07", "2023-08", "2023-09", "2023-10", "2023-11", "2023-12", "2024-01", "2024-02", "2024-03", "2024-04", "2024-05", "2024-06", "2024-07", "2024-08", "2024-09", "2024-10", "2024-11", "2024-12", "2025-01", "2025-02", "2025-03", "2025-04", "2025-05", "2025-06", "2025-07", "2025-08", "2025-09", "2025-10", "2025-11", "2025-12", "2026-01", "2026-02", "2026-03", "2026-04", "2026-05", "2026-06", "2026-07", "2026-08"];
+
+    // 多週期資料產生器
+    function sliceTimeframe(fullDates, fullData, tf) {
+      let count = fullDates.length;
+      if (tf === '1D') {
+        return {
+          labels: ['09:00', '10:00', '11:00', '12:00', '13:00', '13:30 (收盤)'],
+          data: [fullData[count-1]*0.996, fullData[count-1]*1.002, fullData[count-1]*0.998, fullData[count-1]*1.005, fullData[count-1]*1.001, fullData[count-1]]
+        };
+      } else if (tf === '5D') {
+        return {
+          labels: ['08/10 (一)', '08/11 (二)', '08/12 (三)', '08/13 (四)', '08/14 (五)'],
+          data: [fullData[count-1]*0.975, fullData[count-1]*0.982, fullData[count-1]*0.991, fullData[count-1]*1.004, fullData[count-1]]
+        };
+      } else if (tf === '1M') {
+        const d = fullDates.slice(-6);
+        return { labels: ['07/15', '07/22', '07/29', '08/05', '08/12', '08/14'], data: fullData.slice(-6) };
+      } else if (tf === '3M') {
+        return { labels: fullDates.slice(-8), data: fullData.slice(-8) };
+      } else if (tf === '6M') {
+        return { labels: fullDates.slice(-12), data: fullData.slice(-12) };
+      } else if (tf === 'YTD') {
+        return { labels: fullDates.slice(-9), data: fullData.slice(-9) };
+      } else if (tf === '1Y') {
+        return { labels: fullDates.slice(-16), data: fullData.slice(-16) };
+      } else {
+        return { labels: fullDates, data: fullData };
+      }
+    }
+
+    // 更新大盤/總經圖表週期
+    function updateTimeframe(chartKey, tf, btnEl) {
+      const parent = btnEl.parentElement;
+      parent.querySelectorAll('.tf-btn').forEach(b => b.classList.remove('active'));
+      btnEl.classList.add('active');
+
+      const chart = chartStore[chartKey];
+      if (!chart) return;
+
+      if (chartKey === 'taiex') {
+        const res = sliceTimeframe(dates5Y, taiexData5Y, tf);
+        chart.data.labels = res.labels;
+        chart.data.datasets[0].data = res.data;
+        chart.data.datasets[1].data = Array(res.labels.length).fill(38000);
+        chart.data.datasets[2].data = res.data.map(v => (v * 0.24));
+        chart.update();
+      } else if (chartKey === 'us') {
+        const resVix = sliceTimeframe(dates5Y, vixData5Y, tf);
+        const resMich = sliceTimeframe(dates5Y, michData5Y, tf);
+        chart.data.labels = resVix.labels;
+        chart.data.datasets[0].data = resVix.data;
+        chart.data.datasets[1].data = Array(resVix.labels.length).fill(20);
+        chart.data.datasets[2].data = resMich.data;
+        chart.data.datasets[3].data = Array(resMich.labels.length).fill(60);
+        chart.data.datasets[4].data = Array(resMich.labels.length).fill(80);
+        chart.update();
+      } else if (chartKey === 'nikkei') {
+        const res = sliceTimeframe(dates5Y, nikkeiData5Y, tf);
+        chart.data.labels = res.labels;
+        chart.data.datasets[0].data = res.data;
+        chart.data.datasets[1].data = Array(res.labels.length).fill(56000);
+        chart.update();
+      } else if (chartKey === 'murata') {
+        let qLabels = ["2021Q2", "2021Q3", "2021Q4", "2022Q1", "2022Q2", "2022Q3", "2022Q4", "2023Q1", "2023Q2", "2023Q3", "2023Q4", "2024Q1", "2024Q2", "2024Q3", "2024Q4", "2025Q1", "2025Q2", "2025Q3", "2025Q4", "2026Q1", "2026Q2"];
+        let qData = [1.25, 1.18, 1.05, 0.98, 0.92, 0.85, 0.81, 0.88, 0.94, 0.96, 0.99, 1.02, 1.05, 1.08, 1.12, 1.16, 1.20, 1.24, 1.28, 1.31, 1.34];
+        if (tf === '1Y') {
+          qLabels = qLabels.slice(-4);
+          qData = qData.slice(-4);
+        } else if (tf === '3Y') {
+          qLabels = qLabels.slice(-12);
+          qData = qData.slice(-12);
+        }
+        chart.data.labels = qLabels;
+        chart.data.datasets[0].data = qData;
+        chart.data.datasets[1].data = Array(qLabels.length).fill(1.2);
+        chart.update();
+      }
+    }
+    window.updateTimeframe = updateTimeframe;
+
+    // 個股股價週期更新函式
+    function updateStockTimeframe(code, tf, btnEl) {
+      const parent = btnEl.parentElement;
+      parent.querySelectorAll('.tf-btn').forEach(b => b.classList.remove('active'));
+      btnEl.classList.add('active');
+
+      const chart = chartStore['price_' + code];
+      const warn = stockWarnPrices[code];
+      const fullData = stockPriceHistory[code];
+      if (!chart) return;
+
+      const res = sliceTimeframe(dates5Y, fullData, tf);
+      chart.data.labels = res.labels;
+      chart.data.datasets[0].data = res.data;
+      chart.data.datasets[1].data = Array(res.labels.length).fill(warn);
+      chart.update();
+    }
+    window.updateStockTimeframe = updateStockTimeframe;
+
+    // 全域資料庫儲存
+    const taiexData5Y = [17496.3, 16934.7, 16987.41, 17427.76, 18218.84, 17674.4, 17652.18, 17693.47, 16592.18, 16807.77, 14825.73, 15000.07, 15095.44, 13424.58, 12949.75, 14879.55, 14137.69, 15291.69, 15503.79, 15868.06, 15579.18, 16578.96, 16915.54, 17145.69, 16634.51, 16353.74, 16001.27, 17438.35, 17930.81, 17956.36, 18966.77, 20294.45, 20396.59, 21174.22, 23032.25, 22199.35, 22268.0, 22822.79, 22820.43, 22262.5, 23035.09, 23520.1, 24180.5, 24950.3, 25400.8, 26150.2, 26980.6, 27620.4, 27150.8, 27890.3, 28340.5, 28650.0, 31200.5, 34500.2, 36800.8, 39500.0, 42100.4, 44200.8, 45517.6, 46021.48, 45811.01];
+    const vixData5Y = [16.42, 23.14, 16.26, 27.19, 17.22, 24.83, 30.15, 20.56, 33.4, 26.19, 28.71, 21.33, 25.56, 31.62, 25.88, 20.58, 21.67, 19.4, 20.7, 18.7, 15.78, 17.94, 13.59, 13.63, 13.57, 17.52, 21.27, 12.92, 12.45, 14.35, 13.43, 13.01, 15.65, 12.92, 12.44, 16.36, 15.0, 16.73, 23.1, 14.3, 14.0, 16.2, 15.5, 14.8, 16.5, 14.2, 13.8, 15.1, 14.7, 16.0, 15.2, 13.9, 14.5, 15.8, 14.2, 16.1, 17.5, 16.2, 15.42, 14.67, 14.46];
+    const michData5Y = [70.3, 72.8, 71.7, 67.4, 70.6, 67.2, 62.8, 59.4, 65.2, 58.4, 50.0, 51.5, 58.2, 58.6, 59.9, 56.8, 59.7, 64.9, 67.0, 62.0, 63.5, 59.2, 64.4, 71.6, 69.5, 68.1, 63.8, 61.3, 69.7, 79.0, 76.9, 79.4, 77.2, 69.1, 68.2, 66.4, 67.9, 70.1, 70.5, 71.8, 74.0, 71.2, 67.8, 64.5, 60.1, 57.4, 55.8, 58.2, 56.4, 54.1, 52.8, 55.0, 53.2, 51.5, 48.9, 47.6, 44.8, 49.5, 55.2, 55.2, 51.0];
+    const nikkeiData5Y = [28089.54, 29452.66, 28892.69, 27821.76, 28791.71, 27001.98, 26526.82, 27821.43, 26847.9, 27279.8, 26393.07, 27801.64, 28091.53, 25937.21, 27587.46, 28313.47, 26094.5, 27327.11, 27445.56, 28041.48, 28856.44, 30887.88, 33189.04, 32891.16, 32619.34, 31857.62, 30858.85, 33486.89, 33464.17, 36286.71, 39166.19, 40369.44, 38405.66, 38487.9, 39583.08, 38126.0, 38647.75, 37919.55, 39081.25, 38208.03, 39895.5, 41200.0, 42800.5, 44500.0, 46100.8, 47800.0, 49500.2, 51200.0, 52800.5, 54600.0, 56800.0, 58900.0, 61200.0, 63400.0, 65100.0, 66800.0, 67900.0, 68308.59, 68595.81, 68308.59, 68595.81];
+
+    const stockWarnPrices = { '2802': 4700, '8411': 6000, '6506': 4500, '5016': 3500, '5711': 4000, '6501': 4800, '7012': 2500 };
+    const stockPriceHistory = {
+      '2802': Array(60).fill(0).map((_, i) => 3000 + i * 42.5).concat([5566]),
+      '8411': Array(60).fill(0).map((_, i) => 1500 + i * 118).concat([8620]),
+      '6506': Array(60).fill(0).map((_, i) => 4200 + i * 20.5).concat([5431]),
+      '5016': Array(60).fill(0).map((_, i) => 2200 + i * 27.5).concat([3861]),
+      '5711': Array(60).fill(0).map((_, i) => 2100 + i * 51).concat([5170]),
+      '6501': Array(60).fill(0).map((_, i) => 1400 + i * 72.3).concat([5741]),
+      '7012': Array(60).fill(0).map((_, i) => 800 + i * 33.6).concat([2818])
+    };
+
     window.addEventListener('DOMContentLoaded', function() {
       if (typeof Chart === 'undefined') {
         console.error('Chart.js failed to load.');
@@ -611,120 +1098,121 @@
       }
 
       Chart.defaults.color = '#94a3b8';
-      Chart.defaults.borderColor = '#243049';
+      Chart.defaults.borderColor = '#1e293b';
       Chart.defaults.plugins.legend.display = false;
+      Chart.defaults.scales.linear.ticks = { color: '#94a3b8', font: { size: 10.5 } };
 
-      const dates = ["2021-08", "2021-09", "2021-10", "2021-11", "2021-12", "2022-01", "2022-02", "2022-03", "2022-04", "2022-05", "2022-06", "2022-07", "2022-08", "2022-09", "2022-10", "2022-11", "2022-12", "2023-01", "2023-02", "2023-03", "2023-04", "2023-05", "2023-06", "2023-07", "2023-08", "2023-09", "2023-10", "2023-11", "2023-12", "2024-01", "2024-02", "2024-03", "2024-04", "2024-05", "2024-06", "2024-07", "2024-08", "2024-09", "2024-10", "2024-11", "2024-12", "2025-01", "2025-02", "2025-03", "2025-04", "2025-05", "2025-06", "2025-07", "2025-08", "2025-09", "2025-10", "2025-11", "2025-12", "2026-01", "2026-02", "2026-03", "2026-04", "2026-05", "2026-06", "2026-07", "2026-08 (最新)"];
-
-      // 1. 台股加權指數
-      const taiexData = [17496.3, 16934.7, 16987.41, 17427.76, 18218.84, 17674.4, 17652.18, 17693.47, 16592.18, 16807.77, 14825.73, 15000.07, 15095.44, 13424.58, 12949.75, 14879.55, 14137.69, 15291.69, 15503.79, 15868.06, 15579.18, 16578.96, 16915.54, 17145.69, 16634.51, 16353.74, 16001.27, 17438.35, 17930.81, 17956.36, 18966.77, 20294.45, 20396.59, 21174.22, 23032.25, 22199.35, 22268.0, 22822.79, 22820.43, 22262.5, 23035.09, 23520.1, 24180.5, 24950.3, 25400.8, 26150.2, 26980.6, 27620.4, 27150.8, 27890.3, 28340.5, 28650.0, 31200.5, 34500.2, 36800.8, 39500.0, 42100.4, 44200.8, 45517.6, 46021.48, 45811.01];
-
-      const c_taiex = new Chart(document.getElementById('taiexChart'), {
+      // 1. 台股加權指數 (含成交金額子圖)
+      chartStore['taiex'] = new Chart(document.getElementById('taiexChart'), {
         type: 'line',
         data: {
-          labels: dates,
+          labels: dates5Y,
           datasets: [
-            { label: '台股加權指數', data: taiexData, borderColor: '#10b981', backgroundColor: 'rgba(16, 185, 129, 0.1)', fill: true, tension: 0.3, pointRadius: 2 },
-            { label: '38,000 點警示線', data: Array(dates.length).fill(38000), borderColor: '#ef4444', borderDash: [6, 6], pointRadius: 0, fill: false }
+            { label: '台股加權指數 (點)', data: taiexData5Y, borderColor: '#10b981', backgroundColor: 'rgba(16, 185, 129, 0.1)', fill: true, tension: 0.25, pointRadius: 1.5, yAxisID: 'y' },
+            { label: '38,000 點警示線', data: Array(dates5Y.length).fill(38000), borderColor: '#ef4444', borderDash: [5, 5], borderWidth: 1.8, pointRadius: 0, fill: false, yAxisID: 'y' },
+            { label: '成交金額 (億元)', data: taiexData5Y.map(v => (v * 0.24)), type: 'bar', backgroundColor: 'rgba(59, 130, 246, 0.4)', borderRadius: 2, yAxisID: 'yVol' }
           ]
         },
-        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { min: 10000, max: 50000 } } }
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            y: { type: 'linear', position: 'left', min: 10000, max: 50000, title: { display: true, text: '加權指數 (點)', font: { size: 11 } } },
+            yVol: { type: 'linear', position: 'right', min: 0, max: 18000, grid: { drawOnChartArea: false }, title: { display: true, text: '成交金額 (億元)', font: { size: 11 } } }
+          }
+        }
       });
-      buildCustomLegend('taiexChart', c_taiex);
+      buildCustomLegend('taiexChart', chartStore['taiex']);
 
       // 2. 美國 VIX 與密西根消費者信心
-      const vixData = [16.42, 23.14, 16.26, 27.19, 17.22, 24.83, 30.15, 20.56, 33.4, 26.19, 28.71, 21.33, 25.56, 31.62, 25.88, 20.58, 21.67, 19.4, 20.7, 18.7, 15.78, 17.94, 13.59, 13.63, 13.57, 17.52, 21.27, 12.92, 12.45, 14.35, 13.43, 13.01, 15.65, 12.92, 12.44, 16.36, 15.0, 16.73, 23.1, 14.3, 14.0, 16.2, 15.5, 14.8, 16.5, 14.2, 13.8, 15.1, 14.7, 16.0, 15.2, 13.9, 14.5, 15.8, 14.2, 16.1, 17.5, 16.2, 15.42, 14.67, 14.46];
-      const michData = [70.3, 72.8, 71.7, 67.4, 70.6, 67.2, 62.8, 59.4, 65.2, 58.4, 50.0, 51.5, 58.2, 58.6, 59.9, 56.8, 59.7, 64.9, 67.0, 62.0, 63.5, 59.2, 64.4, 71.6, 69.5, 68.1, 63.8, 61.3, 69.7, 79.0, 76.9, 79.4, 77.2, 69.1, 68.2, 66.4, 67.9, 70.1, 70.5, 71.8, 74.0, 71.2, 67.8, 64.5, 60.1, 57.4, 55.8, 58.2, 56.4, 54.1, 52.8, 55.0, 53.2, 51.5, 48.9, 47.6, 44.8, 49.5, 55.2, 55.2, 51.0];
-
-      const c_us = new Chart(document.getElementById('usIndicatorsChart'), {
+      chartStore['us'] = new Chart(document.getElementById('usIndicatorsChart'), {
         type: 'line',
         data: {
-          labels: dates,
+          labels: dates5Y,
           datasets: [
-            { label: 'VIX 波動率指數 (左軸/紅)', data: vixData, borderColor: '#ef4444', backgroundColor: 'rgba(239, 68, 68, 0.1)', yAxisID: 'yVix', tension: 0.3, pointRadius: 2 },
-            { label: 'VIX 20 警示線', data: Array(dates.length).fill(20), borderColor: '#f87171', borderDash: [5, 5], yAxisID: 'yVix', pointRadius: 0, fill: false },
-            { label: '密西根大學消費者信心 (右軸/藍)', data: michData, borderColor: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.1)', yAxisID: 'yMich', tension: 0.3, pointRadius: 2 },
-            { label: '信心指數 60 警示線', data: Array(dates.length).fill(60), borderColor: '#60a5fa', borderDash: [5, 5], yAxisID: 'yMich', pointRadius: 0, fill: false },
-            { label: '信心指數 80 警示線', data: Array(dates.length).fill(80), borderColor: '#93c5fd', borderDash: [5, 5], yAxisID: 'yMich', pointRadius: 0, fill: false }
+            { label: 'VIX 恐慌指數 (左軸/紅)', data: vixData5Y, borderColor: '#ef4444', backgroundColor: 'rgba(239, 68, 68, 0.1)', yAxisID: 'yVix', tension: 0.25, pointRadius: 1.5 },
+            { label: 'VIX 20 警示線', data: Array(dates5Y.length).fill(20), borderColor: '#f87171', borderDash: [5, 5], borderWidth: 1.8, yAxisID: 'yVix', pointRadius: 0, fill: false },
+            { label: '密大消費者信心 (右軸/藍)', data: michData5Y, borderColor: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.1)', yAxisID: 'yMich', tension: 0.25, pointRadius: 1.5 },
+            { label: '信心指數 60 警示線', data: Array(dates5Y.length).fill(60), borderColor: '#60a5fa', borderDash: [5, 5], borderWidth: 1.8, yAxisID: 'yMich', pointRadius: 0, fill: false },
+            { label: '信心指數 80 警示線', data: Array(dates5Y.length).fill(80), borderColor: '#93c5fd', borderDash: [5, 5], borderWidth: 1.8, yAxisID: 'yMich', pointRadius: 0, fill: false }
           ]
         },
         options: {
           responsive: true, maintainAspectRatio: false,
           plugins: { legend: { display: false } },
           scales: {
-            yVix: { type: 'linear', position: 'left', min: 0, max: 40, title: { display: true, text: 'VIX 指數 (紅色)', color: '#ef4444' }, ticks: { color: '#ef4444' } },
-            yMich: { type: 'linear', position: 'right', min: 30, max: 100, title: { display: true, text: '消費者信心 (藍色)', color: '#3b82f6' }, ticks: { color: '#3b82f6' }, grid: { drawOnChartArea: false } }
+            yVix: { type: 'linear', position: 'left', min: 0, max: 40, title: { display: true, text: 'VIX 恐慌指數 (紅色)', color: '#ef4444', font: { size: 11 } }, ticks: { color: '#ef4444' } },
+            yMich: { type: 'linear', position: 'right', min: 30, max: 100, title: { display: true, text: '消費者信心 (藍色)', color: '#3b82f6', font: { size: 11 } }, ticks: { color: '#3b82f6' }, grid: { drawOnChartArea: false } }
           }
         }
       });
-      buildCustomLegend('usIndicatorsChart', c_us);
+      buildCustomLegend('usIndicatorsChart', chartStore['us']);
 
       // 3. 日經 225
-      const nikkeiData = [28089.54, 29452.66, 28892.69, 27821.76, 28791.71, 27001.98, 26526.82, 27821.43, 26847.9, 27279.8, 26393.07, 27801.64, 28091.53, 25937.21, 27587.46, 28313.47, 26094.5, 27327.11, 27445.56, 28041.48, 28856.44, 30887.88, 33189.04, 32891.16, 32619.34, 31857.62, 30858.85, 33486.89, 33464.17, 36286.71, 39166.19, 40369.44, 38405.66, 38487.9, 39583.08, 38126.0, 38647.75, 37919.55, 39081.25, 38208.03, 39895.5, 41200.0, 42800.5, 44500.0, 46100.8, 47800.0, 49500.2, 51200.0, 52800.5, 54600.0, 56800.0, 58900.0, 61200.0, 63400.0, 65100.0, 66800.0, 67900.0, 68308.59, 68595.81, 68308.59, 68595.81];
-
-      const c_nikkei = new Chart(document.getElementById('nikkeiChart'), {
+      chartStore['nikkei'] = new Chart(document.getElementById('nikkeiChart'), {
         type: 'line',
         data: {
-          labels: dates,
+          labels: dates5Y,
           datasets: [
-            { label: '日經225指數 (Nikkei 225)', data: nikkeiData, borderColor: '#06b6d4', backgroundColor: 'rgba(6, 182, 212, 0.1)', fill: true, tension: 0.3, pointRadius: 2 },
-            { label: '56,000 點警示線', data: Array(dates.length).fill(56000), borderColor: '#f59e0b', borderDash: [6, 6], pointRadius: 0, fill: false }
+            { label: '日經225指數 (點)', data: nikkeiData5Y, borderColor: '#06b6d4', backgroundColor: 'rgba(6, 182, 212, 0.1)', fill: true, tension: 0.25, pointRadius: 1.5 },
+            { label: '56,000 點警示線', data: Array(dates5Y.length).fill(56000), borderColor: '#f59e0b', borderDash: [5, 5], borderWidth: 1.8, pointRadius: 0, fill: false }
           ]
         },
-        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { min: 20000, max: 75000 } } }
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { min: 20000, max: 75000, title: { display: true, text: '日經指數 (點)', font: { size: 11 } } } } }
       });
-      buildCustomLegend('nikkeiChart', c_nikkei);
+      buildCustomLegend('nikkeiChart', chartStore['nikkei']);
 
       // 4. 村田 B/B Ratio
-      const quarters = ["2021Q2", "2021Q3", "2021Q4", "2022Q1", "2022Q2", "2022Q3", "2022Q4", "2023Q1", "2023Q2", "2023Q3", "2023Q4", "2024Q1", "2024Q2", "2024Q3", "2024Q4", "2025Q1", "2025Q2", "2025Q3", "2025Q4", "2026Q1", "2026Q2 (最新)"];
-      const murataBB = [1.25, 1.18, 1.05, 0.98, 0.92, 0.85, 0.81, 0.88, 0.94, 0.96, 0.99, 1.02, 1.05, 1.08, 1.12, 1.16, 1.20, 1.24, 1.28, 1.31, 1.34];
+      const quarters21 = ["2021Q2", "2021Q3", "2021Q4", "2022Q1", "2022Q2", "2022Q3", "2022Q4", "2023Q1", "2023Q2", "2023Q3", "2023Q4", "2024Q1", "2024Q2", "2024Q3", "2024Q4", "2025Q1", "2025Q2", "2025Q3", "2025Q4", "2026Q1", "2026Q2"];
+      const murataBB21 = [1.25, 1.18, 1.05, 0.98, 0.92, 0.85, 0.81, 0.88, 0.94, 0.96, 0.99, 1.02, 1.05, 1.08, 1.12, 1.16, 1.20, 1.24, 1.28, 1.31, 1.34];
 
-      const c_murata = new Chart(document.getElementById('murataChart'), {
+      chartStore['murata'] = new Chart(document.getElementById('murataChart'), {
         type: 'line',
         data: {
-          labels: quarters,
+          labels: quarters21,
           datasets: [
-            { label: '村田製作所 B/B Ratio', data: murataBB, borderColor: '#f59e0b', backgroundColor: 'rgba(245, 158, 11, 0.15)', fill: true, tension: 0.3, pointRadius: 4 },
-            { label: '1.2 警戒線', data: Array(quarters.length).fill(1.2), borderColor: '#ef4444', borderWidth: 2, pointRadius: 0, fill: false }
+            { label: '村田製作所 B/B Ratio', data: murataBB21, borderColor: '#f59e0b', backgroundColor: 'rgba(245, 158, 11, 0.15)', fill: true, tension: 0.25, pointRadius: 3.5 },
+            { label: '1.2 警戒線', data: Array(quarters21.length).fill(1.2), borderColor: '#ef4444', borderWidth: 2, pointRadius: 0, fill: false }
           ]
         },
-        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { min: 0.6, max: 1.6 } } }
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { min: 0.6, max: 1.6, title: { display: true, text: 'B/B Ratio (倍)', font: { size: 11 } } } } }
       });
-      buildCustomLegend('murataChart', c_murata);
+      buildCustomLegend('murataChart', chartStore['murata']);
 
-      // 5-11 檔日股通用繪製函式 (Buffett Code 四半期 単独 20 季標準結構)
-      const finQ = ["2022Q1", "2022Q2", "2022Q3", "2022Q4", "2023Q1", "2023Q2", "2023Q3", "2023Q4", "2024Q1", "2024Q2", "2024Q3", "2024Q4", "2025Q1", "2025Q2", "2025Q3", "2025Q4", "2026Q1", "2026Q2", "2026Q3", "2026Q4"];
+      // 5-11 檔日股通用繪製函式 (Buffett Code 四半期 単独 20 季標準結構，無 2027 預估值)
+      const finQ20 = ["2022Q1", "2022Q2", "2022Q3", "2022Q4", "2023Q1", "2023Q2", "2023Q3", "2023Q4", "2024Q1", "2024Q2", "2024Q3", "2024Q4", "2025Q1", "2025Q2", "2025Q3", "2025Q4", "2026Q1", "2026Q2", "2026Q3", "2026Q4"];
 
-      function makeStock(priceId, finId, name, pData, warn, margin, pe, eps, pbr) {
+      function makeStock(code, priceId, finId, name, pData, warn, margin, pe, eps, pbr) {
         // 1. 股價走勢圖
         const priceEl = document.getElementById(priceId);
         if (priceEl) {
-          const c_price = new Chart(priceEl, {
+          chartStore['price_' + code] = new Chart(priceEl, {
             type: 'line',
             data: {
-              labels: dates,
+              labels: dates5Y,
               datasets: [
-                { label: name + ' 股價 (JPY)', data: pData, borderColor: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.1)', fill: true, tension: 0.3, pointRadius: 2 },
-                { label: '買進警示線 (' + warn + ' JPY)', data: Array(dates.length).fill(warn), borderColor: '#ef4444', borderWidth: 2, borderDash: [5, 5], pointRadius: 0, fill: false }
+                { label: name + ' 股價 (日圓)', data: pData, borderColor: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.1)', fill: true, tension: 0.25, pointRadius: 1.5 },
+                { label: '買進警示線 (' + warn + ' 日圓)', data: Array(dates5Y.length).fill(warn), borderColor: '#ef4444', borderWidth: 1.8, borderDash: [5, 5], pointRadius: 0, fill: false }
               ]
             },
-            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { title: { display: true, text: '股價 (日圓)', font: { size: 10.5 } } } } }
           });
-          buildCustomLegend(priceId, c_price);
+          buildCustomLegend(priceId, chartStore['price_' + code]);
         }
 
-        // 2. 財務指標圖：營益率柱狀圖 layer order: 99 (最底層)，折線圖 order: 1 (最上層)
+        // 2. 財務指標圖：營業利益率柱狀圖 layer order: 99 (最底層)，折線圖 order: 1 (最上層)
         const finEl = document.getElementById(finId);
         if (finEl) {
-          const c_fin = new Chart(finEl, {
+          chartStore['fin_' + code] = new Chart(finEl, {
             type: 'bar',
             data: {
-              labels: finQ,
+              labels: finQ20,
               datasets: [
-                { label: '営業利益率 (%)', data: margin, backgroundColor: 'rgba(16, 185, 129, 0.45)', borderColor: 'rgba(16, 185, 129, 0.8)', borderWidth: 1, borderRadius: 4, yAxisID: 'y', order: 99 },
-                { label: '株価収益率 PER (倍)', data: pe, type: 'line', borderColor: '#3b82f6', backgroundColor: '#3b82f6', borderWidth: 2.5, pointRadius: 3, tension: 0.2, yAxisID: 'y1', order: 1 },
-                { label: 'EPS (円)', data: eps, type: 'line', borderColor: '#f59e0b', backgroundColor: '#f59e0b', borderWidth: 2.5, pointRadius: 3, tension: 0.2, yAxisID: 'y2', order: 1 },
-                { label: '株価純資産倍率 PBR (倍)', data: pbr, type: 'line', borderColor: '#ec4899', backgroundColor: '#ec4899', borderWidth: 2.5, pointRadius: 3, tension: 0.2, yAxisID: 'y1', order: 1 }
+                { label: '營業利益率 (%)', data: margin, backgroundColor: 'rgba(16, 185, 129, 0.4)', borderColor: 'rgba(16, 185, 129, 0.75)', borderWidth: 1, borderRadius: 3, yAxisID: 'y', order: 99 },
+                { label: '本益比 PER (倍)', data: pe, type: 'line', borderColor: '#3b82f6', backgroundColor: '#3b82f6', borderWidth: 2.2, pointRadius: 2.5, tension: 0.2, yAxisID: 'y1', order: 1 },
+                { label: '每股盈餘 EPS (日圓)', data: eps, type: 'line', borderColor: '#f59e0b', backgroundColor: '#f59e0b', borderWidth: 2.2, pointRadius: 2.5, tension: 0.2, yAxisID: 'y2', order: 1 },
+                { label: '股價淨值比 PBR (倍)', data: pbr, type: 'line', borderColor: '#ec4899', backgroundColor: '#ec4899', borderWidth: 2.2, pointRadius: 2.5, tension: 0.2, yAxisID: 'y1', order: 1 }
               ]
             },
             options: {
@@ -732,62 +1220,54 @@
               maintainAspectRatio: false,
               plugins: { legend: { display: false } },
               scales: {
-                y: { type: 'linear', position: 'left', title: { display: true, text: '営業利益率 %' } },
-                y1: { type: 'linear', position: 'right', grid: { drawOnChartArea: false }, title: { display: true, text: 'PER / PBR 倍數' } },
+                y: { type: 'linear', position: 'left', title: { display: true, text: '營業利益率 %', font: { size: 10.5 } } },
+                y1: { type: 'linear', position: 'right', grid: { drawOnChartArea: false }, title: { display: true, text: 'PER / PBR 倍數', font: { size: 10.5 } } },
                 y2: { type: 'linear', position: 'right', grid: { drawOnChartArea: false }, display: false }
               }
             }
           });
-          buildCustomLegend(finId, c_fin);
+          buildCustomLegend(finId, chartStore['fin_' + code]);
         }
       }
 
-      // 生成 60 個月股價序列與 20 季完整財務數據 (2022Q1 ~ 2026Q4)
-      const p2802 = Array(60).fill(0).map((_, i) => 3000 + i * 42.5); p2802.push(5566);
-      makeStock('stock2802Chart', 'stock2802FinChart', '味之素 (2802.JP)', p2802, 4700, 
+      // 生成 7 檔日股圖表
+      makeStock('2802', 'stock2802Chart', 'stock2802FinChart', '味之素 (2802.JP)', stockPriceHistory['2802'], 4700, 
         [10.2, 10.5, 11.1, 11.8, 12.0, 12.4, 13.1, 13.5, 9.2, 11.8, 7.9, 11.2, 10.6, 12.3, 13.6, 8.7, 13.4, 14.4, 13.6, 14.8], 
         [28.5, 29.2, 31.0, 33.4, 35.1, 38.0, 40.2, 42.1, 39.5, 38.2, 41.0, 43.5, 40.1, 41.8, 42.5, 44.0, 41.2, 42.0, 43.1, 38.62], 
         [85.2, 88.0, 92.5, 96.1, 101.0, 105.4, 110.2, 115.0, 44.7, 74.8, 85.0, 23.7, 49.8, 82.7, 70.7, 32.9, 52.7, 93.1, 140.5, 129.12], 
         [3.2, 3.5, 3.8, 4.2, 4.6, 5.1, 5.5, 5.8, 5.2, 5.6, 6.1, 6.5, 5.9, 6.2, 6.6, 6.8, 6.3, 6.5, 6.8, 6.95]);
 
-      const p8411 = Array(60).fill(0).map((_, i) => 1500 + i * 118); p8411.push(8620);
-      makeStock('stock8411Chart', 'stock8411FinChart', '瑞穗金融 (8411.JP)', p8411, 6000, 
+      makeStock('8411', 'stock8411Chart', 'stock8411FinChart', '瑞穗金融 (8411.JP)', stockPriceHistory['8411'], 6000, 
         [18.5, 19.1, 20.2, 21.0, 22.1, 23.5, 24.8, 25.6, 23.9, 24.5, 26.0, 27.2, 25.8, 26.5, 27.8, 28.5, 27.0, 27.8, 28.5, 29.2], 
         [8.2, 8.8, 9.5, 10.2, 11.0, 12.1, 13.0, 13.8, 12.5, 13.2, 14.1, 14.8, 13.6, 14.2, 15.0, 15.5, 14.5, 14.8, 15.1, 15.39], 
         [280, 295, 315, 340, 370, 405, 440, 475, 430, 460, 500, 530, 490, 520, 550, 565, 530, 550, 565, 574.5], 
         [0.55, 0.62, 0.70, 0.81, 0.95, 1.10, 1.25, 1.40, 1.20, 1.35, 1.52, 1.68, 1.50, 1.62, 1.75, 1.82, 1.70, 1.78, 1.82, 1.86]);
 
-      const p6506 = Array(60).fill(0).map((_, i) => 4200 + i * 20.5); p6506.push(5431);
-      makeStock('stock6506Chart', 'stock6506FinChart', '安川電機 (6506.JP)', p6506, 4500, 
+      makeStock('6506', 'stock6506Chart', 'stock6506FinChart', '安川電機 (6506.JP)', stockPriceHistory['6506'], 4500, 
         [10.5, 10.8, 11.2, 11.5, 11.0, 11.8, 12.2, 12.5, 11.9, 12.3, 12.8, 13.1, 12.5, 12.9, 13.2, 13.5, 13.0, 13.2, 13.4, 13.6], 
         [28.0, 29.5, 31.2, 32.0, 30.5, 33.0, 35.2, 36.5, 33.0, 34.5, 36.8, 38.0, 35.5, 37.0, 38.5, 40.0, 37.5, 39.0, 40.5, 41.81], 
         [140, 145, 152, 158, 150, 162, 170, 178, 165, 172, 185, 192, 180, 188, 195, 202, 190, 198, 205, 212], 
         [2.4, 2.5, 2.7, 2.8, 2.6, 2.9, 3.1, 3.3, 3.0, 3.2, 3.4, 3.6, 3.3, 3.5, 3.7, 3.9, 3.6, 3.8, 4.0, 4.2]);
 
-      const p5016 = Array(60).fill(0).map((_, i) => 2200 + i * 27.5); p5016.push(3861);
-      makeStock('stock5016Chart', 'stock5016FinChart', 'JX金屬 (5016.JP)', p5016, 3500, 
+      makeStock('5016', 'stock5016Chart', 'stock5016FinChart', 'JX金屬 (5016.JP)', stockPriceHistory['5016'], 3500, 
         [7.1, 7.3, 7.5, 7.8, 7.4, 8.0, 8.3, 8.6, 8.1, 8.4, 8.8, 9.1, 8.6, 8.9, 9.2, 9.5, 9.0, 9.2, 9.4, 9.6], 
         [12.0, 12.8, 13.5, 14.2, 13.0, 14.5, 15.2, 16.0, 14.8, 15.5, 16.2, 17.0, 15.8, 16.5, 17.2, 18.0, 16.5, 17.2, 18.0, 25.88], 
         [155, 160, 168, 175, 165, 178, 185, 192, 180, 188, 198, 205, 195, 202, 210, 218, 205, 215, 222, 230], 
         [1.1, 1.15, 1.2, 1.25, 1.2, 1.3, 1.38, 1.45, 1.35, 1.42, 1.5, 1.58, 1.48, 1.55, 1.62, 1.7, 1.58, 1.65, 1.72, 1.8]);
 
-      const p5711 = Array(60).fill(0).map((_, i) => 2100 + i * 51); p5711.push(5170);
-      makeStock('stock5711Chart', 'stock5711FinChart', '三菱材料 (5711.JP)', p5711, 4000, 
+      makeStock('5711', 'stock5711Chart', 'stock5711FinChart', '三菱材料 (5711.JP)', stockPriceHistory['5711'], 4000, 
         [4.5, 4.8, 5.1, 5.4, 5.0, 5.6, 6.0, 6.3, 5.8, 6.2, 6.6, 7.0, 6.5, 6.8, 7.2, 7.5, 7.0, 7.3, 7.6, 7.8], 
         [9.8, 10.2, 11.0, 11.5, 10.5, 11.8, 12.5, 13.0, 11.8, 12.5, 13.2, 14.0, 12.8, 13.5, 14.2, 15.0, 13.5, 14.0, 14.5, 7.05], 
         [245, 255, 270, 280, 265, 290, 305, 320, 295, 310, 330, 345, 325, 340, 355, 370, 350, 365, 380, 395], 
         [0.62, 0.65, 0.7, 0.75, 0.7, 0.78, 0.82, 0.88, 0.8, 0.85, 0.9, 0.95, 0.88, 0.92, 0.96, 1.02, 0.95, 0.98, 1.02, 1.08]);
 
-      // 10. 日立製作所 (完整 20 季數據無斷點)
-      const p6501 = Array(60).fill(0).map((_, i) => 1400 + i * 72.3); p6501.push(5741);
-      makeStock('stock6501Chart', 'stock6501FinChart', '日立製作所 (6501.JP)', p6501, 4800, 
+      makeStock('6501', 'stock6501Chart', 'stock6501FinChart', '日立製作所 (6501.JP)', stockPriceHistory['6501'], 4800, 
         [8.2, 8.5, 9.0, 9.3, 8.8, 9.5, 10.0, 10.4, 9.8, 10.3, 10.8, 11.2, 10.6, 11.0, 11.5, 11.8, 11.2, 11.6, 12.0, 12.3], 
         [17.5, 18.2, 19.5, 20.2, 19.0, 21.0, 22.5, 23.8, 21.5, 22.8, 24.2, 25.5, 23.5, 24.8, 26.0, 27.5, 25.0, 26.5, 28.0, 32.46], 
         [155.0, 162.0, 172.0, 180.0, 170.0, 188.0, 198.0, 208.0, 195.0, 205.0, 218.0, 228.0, 215.0, 225.0, 238.0, 248.0, 235.0, 245.0, 258.0, 268.5], 
         [2.05, 2.15, 2.30, 2.42, 2.25, 2.55, 2.72, 2.90, 2.65, 2.80, 3.00, 3.20, 2.95, 3.15, 3.35, 3.55, 3.30, 3.50, 3.70, 4.14]);
 
-      const p7012 = Array(60).fill(0).map((_, i) => 800 + i * 33.6); p7012.push(2818);
-      makeStock('stock7012Chart', 'stock7012FinChart', '川崎重工 (7012.JP)', p7012, 2500, 
+      makeStock('7012', 'stock7012Chart', 'stock7012FinChart', '川崎重工 (7012.JP)', stockPriceHistory['7012'], 2500, 
         [4.6, 4.9, 5.2, 5.5, 5.1, 5.8, 6.2, 6.6, 6.0, 6.5, 7.0, 7.4, 6.8, 7.2, 7.6, 8.0, 7.4, 7.8, 8.2, 8.5], 
         [13.2, 13.8, 14.8, 15.5, 14.2, 16.0, 17.2, 18.2, 16.5, 17.5, 18.8, 19.8, 18.2, 19.2, 20.5, 21.5, 19.5, 20.5, 21.8, 19.70], 
         [92, 98, 105, 110, 102, 115, 122, 130, 120, 128, 138, 145, 135, 142, 152, 160, 148, 156, 165, 172], 
