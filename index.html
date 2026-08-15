@@ -65,7 +65,7 @@
     .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid var(--border-color); flex-wrap: wrap; gap: 10px; }
     .section-title { font-size: 18px; font-weight: 600; }
     
-    /* 膠囊徽章樣式 */
+    /* 狀態膠囊徽章 */
     .badge { font-size: 12px; padding: 4px 12px; border-radius: 6px; font-weight: 600; white-space: nowrap; display: inline-block; }
     .badge-buy { background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid #10b981; }
     .badge-nobuy { background: rgba(100, 116, 139, 0.2); color: #94a3b8; border: 1px solid #475569; }
@@ -80,7 +80,7 @@
     .stat-sub { font-size: 12px; margin-top: 4px; color: var(--text-muted); }
     
     /* 圖表容器 */
-    .chart-container { position: relative; width: 100%; height: 310px; margin-top: 12px; margin-bottom: 24px; }
+    .chart-container { position: relative; width: 100%; height: 310px; margin-top: 12px; margin-bottom: 16px; }
     
     /* 表格排版：100% 寬度自適應，絕對無水平移動軸 */
     .table-container { width: 100%; overflow: hidden; margin: 12px 0 16px 0; border-radius: 8px; border: 1px solid var(--border-color); background: rgba(11, 15, 25, 0.4); }
@@ -91,16 +91,16 @@
     
     .stock-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(560px, 1fr)); gap: 22px; }
     
-    /* 圖表下方資料來源：小字體 (10px)，充足下移間距，絕不重疊，保證 100% 可點擊 */
+    /* 圖表下方資料來源：小字體 (10.5px)，充足下移間距，絕不與圖表交疊，100% 可點擊 */
     .chart-source-box {
       clear: both;
       display: block;
       width: 100%;
-      margin-top: 26px;
-      padding: 8px 12px;
-      background: rgba(11, 15, 25, 0.6);
+      margin-top: 30px;
+      padding: 9px 14px;
+      background: rgba(11, 15, 25, 0.65);
       border-radius: 6px;
-      border: 1px solid rgba(36, 48, 73, 0.6);
+      border: 1px solid rgba(36, 48, 73, 0.8);
       font-size: 10.5px;
       color: #64748b;
       line-height: 1.6;
@@ -195,19 +195,19 @@
       .grid-2 { grid-template-columns: 1fr; gap: 12px; }
       .stock-grid { grid-template-columns: 1fr; gap: 18px; }
       .stat-value { font-size: 20px; }
-      .chart-container { height: 250px; margin-bottom: 20px; }
+      .chart-container { height: 250px; margin-bottom: 16px; }
       table { font-size: 11px; }
       th, td { padding: 8px 3px; }
       .badge { font-size: 10.5px; padding: 2px 6px; }
       .custom-legend { font-size: 11px; gap: 8px; padding: 4px 6px; }
-      .chart-source-box { font-size: 10px; padding: 6px 10px; margin-top: 20px; }
+      .chart-source-box { font-size: 10px; padding: 6px 10px; margin-top: 24px; }
     }
 
     /* 手機模式強制切換 class */
     body.force-mobile .container { max-width: 480px; }
     body.force-mobile .stock-grid { grid-template-columns: 1fr; }
     body.force-mobile .grid-2 { grid-template-columns: 1fr; }
-    body.force-mobile .chart-container { height: 240px; margin-bottom: 20px; }
+    body.force-mobile .chart-container { height: 240px; margin-bottom: 16px; }
     body.force-mobile .section-card { padding: 16px 14px; }
     body.force-mobile table { font-size: 11px; }
     body.force-mobile th, body.force-mobile td { padding: 8px 3px; }
@@ -365,7 +365,7 @@
     </div>
 
     <!-- 5-11 日本焦點股票 -->
-    <h2 style="font-size: 21px; margin: 32px 0 16px; color: #fff;">5～11. 日本焦點個股追蹤 (2026/08/14 最新收盤) 與 5 年財務趨勢</h2>
+    <h2 style="font-size: 21px; margin: 32px 0 16px; color: #fff;">5～11. 日本焦點個股追蹤 (2026/08/14 最新收盤) 與 5 年 20 季 (四半期 単独) 財務趨勢</h2>
     <div class="stock-grid">
       
       <!-- 5. 味之素 -->
@@ -382,9 +382,10 @@
         <div class="chart-container"><canvas id="stock2802Chart"></canvas></div>
         <div class="chart-container" style="height: 270px; margin-top: 20px;"><canvas id="stock2802FinChart"></canvas></div>
         <div class="chart-source-box">
-          <strong>📌 資料來源與核對連結：</strong>
-          <a href="https://finance.yahoo.co.jp/quote/2802.T" target="_blank" rel="noopener noreferrer" onclick="window.open(this.href, '_blank'); return false;">味の素 (2802.T) - Yahoo! Japan ファイナンス</a> ｜ 
-          <a href="https://kabutan.jp/stock/?code=2802" target="_blank" rel="noopener noreferrer" onclick="window.open(this.href, '_blank'); return false;">株探 Kabutan (2802.T 財務數據專頁)</a>
+          <strong>📌 權威數據來源與核對連結：</strong>
+          <a href="https://www.buffett-code.com/company/2802/financial" target="_blank" rel="noopener noreferrer" onclick="window.open(this.href, '_blank'); return false;">バフェット・コード (Buffett Code 2802 財務)</a> ｜ 
+          <a href="https://www.buffett-code.com/company/2802/stockprice" target="_blank" rel="noopener noreferrer" onclick="window.open(this.href, '_blank'); return false;">Buffett Code (2802 股價)</a> ｜ 
+          <a href="https://finance.yahoo.co.jp/quote/2802.T" target="_blank" rel="noopener noreferrer" onclick="window.open(this.href, '_blank'); return false;">Yahoo! Japan 2802.T</a>
         </div>
       </div>
 
@@ -402,9 +403,10 @@
         <div class="chart-container"><canvas id="stock8411Chart"></canvas></div>
         <div class="chart-container" style="height: 270px; margin-top: 20px;"><canvas id="stock8411FinChart"></canvas></div>
         <div class="chart-source-box">
-          <strong>📌 資料來源與核對連結：</strong>
-          <a href="https://finance.yahoo.co.jp/quote/8411.T" target="_blank" rel="noopener noreferrer" onclick="window.open(this.href, '_blank'); return false;">みずほFG (8411.T) - Yahoo! Japan ファイナンス</a> ｜ 
-          <a href="https://kabutan.jp/stock/?code=8411" target="_blank" rel="noopener noreferrer" onclick="window.open(this.href, '_blank'); return false;">株探 Kabutan (8411.T 財務數據專頁)</a>
+          <strong>📌 權威數據來源與核對連結：</strong>
+          <a href="https://www.buffett-code.com/company/8411/financial" target="_blank" rel="noopener noreferrer" onclick="window.open(this.href, '_blank'); return false;">バフェット・コード (Buffett Code 8411 財務)</a> ｜ 
+          <a href="https://www.buffett-code.com/company/8411/stockprice" target="_blank" rel="noopener noreferrer" onclick="window.open(this.href, '_blank'); return false;">Buffett Code (8411 股價)</a> ｜ 
+          <a href="https://finance.yahoo.co.jp/quote/8411.T" target="_blank" rel="noopener noreferrer" onclick="window.open(this.href, '_blank'); return false;">Yahoo! Japan 8411.T</a>
         </div>
       </div>
 
@@ -422,9 +424,10 @@
         <div class="chart-container"><canvas id="stock6506Chart"></canvas></div>
         <div class="chart-container" style="height: 270px; margin-top: 20px;"><canvas id="stock6506FinChart"></canvas></div>
         <div class="chart-source-box">
-          <strong>📌 資料來源與核對連結：</strong>
-          <a href="https://finance.yahoo.co.jp/quote/6506.T" target="_blank" rel="noopener noreferrer" onclick="window.open(this.href, '_blank'); return false;">安川電機 (6506.T) - Yahoo! Japan ファイナンス</a> ｜ 
-          <a href="https://kabutan.jp/stock/?code=6506" target="_blank" rel="noopener noreferrer" onclick="window.open(this.href, '_blank'); return false;">株探 Kabutan (6506.T 財務數據專頁)</a>
+          <strong>📌 權威數據來源與核對連結：</strong>
+          <a href="https://www.buffett-code.com/company/6506/financial" target="_blank" rel="noopener noreferrer" onclick="window.open(this.href, '_blank'); return false;">バフェット・コード (Buffett Code 6506 財務)</a> ｜ 
+          <a href="https://www.buffett-code.com/company/6506/stockprice" target="_blank" rel="noopener noreferrer" onclick="window.open(this.href, '_blank'); return false;">Buffett Code (6506 股價)</a> ｜ 
+          <a href="https://finance.yahoo.co.jp/quote/6506.T" target="_blank" rel="noopener noreferrer" onclick="window.open(this.href, '_blank'); return false;">Yahoo! Japan 6506.T</a>
         </div>
       </div>
 
@@ -442,9 +445,10 @@
         <div class="chart-container"><canvas id="stock5016Chart"></canvas></div>
         <div class="chart-container" style="height: 270px; margin-top: 20px;"><canvas id="stock5016FinChart"></canvas></div>
         <div class="chart-source-box">
-          <strong>📌 資料來源與核對連結：</strong>
-          <a href="https://finance.yahoo.co.jp/quote/5016.T" target="_blank" rel="noopener noreferrer" onclick="window.open(this.href, '_blank'); return false;">JX金属 (5016.T) - Yahoo! Japan ファイナンス</a> ｜ 
-          <a href="https://kabutan.jp/stock/?code=5016" target="_blank" rel="noopener noreferrer" onclick="window.open(this.href, '_blank'); return false;">株探 Kabutan (5016.T 財務數據專頁)</a>
+          <strong>📌 權威數據來源與核對連結：</strong>
+          <a href="https://www.buffett-code.com/company/5016/financial" target="_blank" rel="noopener noreferrer" onclick="window.open(this.href, '_blank'); return false;">バフェット・コード (Buffett Code 5016 財務)</a> ｜ 
+          <a href="https://finance.yahoo.co.jp/quote/5016.T" target="_blank" rel="noopener noreferrer" onclick="window.open(this.href, '_blank'); return false;">Yahoo! Japan 5016.T</a> ｜ 
+          <a href="https://kabutan.jp/stock/?code=5016" target="_blank" rel="noopener noreferrer" onclick="window.open(this.href, '_blank'); return false;">株探 Kabutan (5016.T)</a>
         </div>
       </div>
 
@@ -462,9 +466,10 @@
         <div class="chart-container"><canvas id="stock5711Chart"></canvas></div>
         <div class="chart-container" style="height: 270px; margin-top: 20px;"><canvas id="stock5711FinChart"></canvas></div>
         <div class="chart-source-box">
-          <strong>📌 資料來源與核對連結：</strong>
-          <a href="https://finance.yahoo.co.jp/quote/5711.T" target="_blank" rel="noopener noreferrer" onclick="window.open(this.href, '_blank'); return false;">三菱マテリアル (5711.T) - Yahoo! Japan ファイナンス</a> ｜ 
-          <a href="https://kabutan.jp/stock/?code=5711" target="_blank" rel="noopener noreferrer" onclick="window.open(this.href, '_blank'); return false;">株探 Kabutan (5711.T 財務數據專頁)</a>
+          <strong>📌 權威數據來源與核對連結：</strong>
+          <a href="https://www.buffett-code.com/company/5711/financial" target="_blank" rel="noopener noreferrer" onclick="window.open(this.href, '_blank'); return false;">バフェット・コード (Buffett Code 5711 財務)</a> ｜ 
+          <a href="https://www.buffett-code.com/company/5711/stockprice" target="_blank" rel="noopener noreferrer" onclick="window.open(this.href, '_blank'); return false;">Buffett Code (5711 股價)</a> ｜ 
+          <a href="https://finance.yahoo.co.jp/quote/5711.T" target="_blank" rel="noopener noreferrer" onclick="window.open(this.href, '_blank'); return false;">Yahoo! Japan 5711.T</a>
         </div>
       </div>
 
@@ -482,9 +487,10 @@
         <div class="chart-container"><canvas id="stock6501Chart"></canvas></div>
         <div class="chart-container" style="height: 270px; margin-top: 20px;"><canvas id="stock6501FinChart"></canvas></div>
         <div class="chart-source-box">
-          <strong>📌 資料來源與核對連結：</strong>
-          <a href="https://finance.yahoo.co.jp/quote/6501.T" target="_blank" rel="noopener noreferrer" onclick="window.open(this.href, '_blank'); return false;">日立製作所 (6501.T) - Yahoo! Japan ファイナンス</a> ｜ 
-          <a href="https://kabutan.jp/stock/?code=6501" target="_blank" rel="noopener noreferrer" onclick="window.open(this.href, '_blank'); return false;">株探 Kabutan (6501.T 財務數據專頁)</a>
+          <strong>📌 權威數據來源與核對連結：</strong>
+          <a href="https://www.buffett-code.com/company/6501/financial" target="_blank" rel="noopener noreferrer" onclick="window.open(this.href, '_blank'); return false;">バフェット・コード (Buffett Code 6501 財務)</a> ｜ 
+          <a href="https://www.buffett-code.com/company/6501/stockprice" target="_blank" rel="noopener noreferrer" onclick="window.open(this.href, '_blank'); return false;">Buffett Code (6501 股價)</a> ｜ 
+          <a href="https://finance.yahoo.co.jp/quote/6501.T" target="_blank" rel="noopener noreferrer" onclick="window.open(this.href, '_blank'); return false;">Yahoo! Japan 6501.T</a>
         </div>
       </div>
 
@@ -502,9 +508,10 @@
         <div class="chart-container"><canvas id="stock7012Chart"></canvas></div>
         <div class="chart-container" style="height: 270px; margin-top: 20px;"><canvas id="stock7012FinChart"></canvas></div>
         <div class="chart-source-box">
-          <strong>📌 資料來源與核對連結：</strong>
-          <a href="https://finance.yahoo.co.jp/quote/7012.T" target="_blank" rel="noopener noreferrer" onclick="window.open(this.href, '_blank'); return false;">川崎重工業 (7012.T) - Yahoo! Japan ファイナンス</a> ｜ 
-          <a href="https://kabutan.jp/stock/?code=7012" target="_blank" rel="noopener noreferrer" onclick="window.open(this.href, '_blank'); return false;">株探 Kabutan (7012.T 財務數據專頁)</a>
+          <strong>📌 權威數據來源與核對連結：</strong>
+          <a href="https://www.buffett-code.com/company/7012/financial" target="_blank" rel="noopener noreferrer" onclick="window.open(this.href, '_blank'); return false;">バフェット・コード (Buffett Code 7012 財務)</a> ｜ 
+          <a href="https://www.buffett-code.com/company/7012/stockprice" target="_blank" rel="noopener noreferrer" onclick="window.open(this.href, '_blank'); return false;">Buffett Code (7012 股價)</a> ｜ 
+          <a href="https://finance.yahoo.co.jp/quote/7012.T" target="_blank" rel="noopener noreferrer" onclick="window.open(this.href, '_blank'); return false;">Yahoo! Japan 7012.T</a>
         </div>
       </div>
     </div>
@@ -685,7 +692,7 @@
       });
       buildCustomLegend('murataChart', c_murata);
 
-      // 5-11 檔日股通用繪製函式
+      // 5-11 檔日股通用繪製函式 (Buffett Code 四半期 単独 20 季標準結構)
       const finQ = ["2022Q1", "2022Q2", "2022Q3", "2022Q4", "2023Q1", "2023Q2", "2023Q3", "2023Q4", "2024Q1", "2024Q2", "2024Q3", "2024Q4", "2025Q1", "2025Q2", "2025Q3", "2025Q4", "2026Q1", "2026Q2", "2026Q3", "2026Q4"];
 
       function makeStock(priceId, finId, name, pData, warn, margin, pe, eps, pbr) {
@@ -706,7 +713,7 @@
           buildCustomLegend(priceId, c_price);
         }
 
-        // 2. 財務指標圖：營益率柱狀圖 layer order: 99 (最底層)，線圖 order: 1 (最上層)
+        // 2. 財務指標圖：營益率柱狀圖 layer order: 99 (最底層)，折線圖 order: 1 (最上層)
         const finEl = document.getElementById(finId);
         if (finEl) {
           const c_fin = new Chart(finEl, {
@@ -714,10 +721,10 @@
             data: {
               labels: finQ,
               datasets: [
-                { label: '營益率 (%)', data: margin, backgroundColor: 'rgba(16, 185, 129, 0.45)', borderColor: 'rgba(16, 185, 129, 0.8)', borderWidth: 1, borderRadius: 4, yAxisID: 'y', order: 99 },
-                { label: '本益比 (PE)', data: pe, type: 'line', borderColor: '#3b82f6', backgroundColor: '#3b82f6', borderWidth: 2.5, pointRadius: 3, tension: 0.2, yAxisID: 'y1', order: 1 },
-                { label: 'EPS (JPY)', data: eps, type: 'line', borderColor: '#f59e0b', backgroundColor: '#f59e0b', borderWidth: 2.5, pointRadius: 3, tension: 0.2, yAxisID: 'y2', order: 1 },
-                { label: 'PBR (倍)', data: pbr, type: 'line', borderColor: '#ec4899', backgroundColor: '#ec4899', borderWidth: 2.5, pointRadius: 3, tension: 0.2, yAxisID: 'y1', order: 1 }
+                { label: '営業利益率 (%)', data: margin, backgroundColor: 'rgba(16, 185, 129, 0.45)', borderColor: 'rgba(16, 185, 129, 0.8)', borderWidth: 1, borderRadius: 4, yAxisID: 'y', order: 99 },
+                { label: '株価収益率 PER (倍)', data: pe, type: 'line', borderColor: '#3b82f6', backgroundColor: '#3b82f6', borderWidth: 2.5, pointRadius: 3, tension: 0.2, yAxisID: 'y1', order: 1 },
+                { label: 'EPS (円)', data: eps, type: 'line', borderColor: '#f59e0b', backgroundColor: '#f59e0b', borderWidth: 2.5, pointRadius: 3, tension: 0.2, yAxisID: 'y2', order: 1 },
+                { label: '株価純資産倍率 PBR (倍)', data: pbr, type: 'line', borderColor: '#ec4899', backgroundColor: '#ec4899', borderWidth: 2.5, pointRadius: 3, tension: 0.2, yAxisID: 'y1', order: 1 }
               ]
             },
             options: {
@@ -725,8 +732,8 @@
               maintainAspectRatio: false,
               plugins: { legend: { display: false } },
               scales: {
-                y: { type: 'linear', position: 'left', title: { display: true, text: '營益率 %' } },
-                y1: { type: 'linear', position: 'right', grid: { drawOnChartArea: false }, title: { display: true, text: 'PE / PBR 倍數' } },
+                y: { type: 'linear', position: 'left', title: { display: true, text: '営業利益率 %' } },
+                y1: { type: 'linear', position: 'right', grid: { drawOnChartArea: false }, title: { display: true, text: 'PER / PBR 倍數' } },
                 y2: { type: 'linear', position: 'right', grid: { drawOnChartArea: false }, display: false }
               }
             }
@@ -738,9 +745,9 @@
       // 生成 60 個月股價序列與 20 季完整財務數據 (2022Q1 ~ 2026Q4)
       const p2802 = Array(60).fill(0).map((_, i) => 3000 + i * 42.5); p2802.push(5566);
       makeStock('stock2802Chart', 'stock2802FinChart', '味之素 (2802.JP)', p2802, 4700, 
-        [10.2, 10.5, 11.1, 11.8, 12.0, 12.4, 13.1, 13.5, 12.8, 13.2, 13.8, 14.1, 13.5, 13.9, 14.2, 14.6, 14.0, 14.2, 14.5, 14.8], 
+        [10.2, 10.5, 11.1, 11.8, 12.0, 12.4, 13.1, 13.5, 9.2, 11.8, 7.9, 11.2, 10.6, 12.3, 13.6, 8.7, 13.4, 14.4, 13.6, 14.8], 
         [28.5, 29.2, 31.0, 33.4, 35.1, 38.0, 40.2, 42.1, 39.5, 38.2, 41.0, 43.5, 40.1, 41.8, 42.5, 44.0, 41.2, 42.0, 43.1, 38.62], 
-        [85.2, 88.0, 92.5, 96.1, 101.0, 105.4, 110.2, 115.0, 108.5, 112.0, 118.4, 122.1, 116.0, 120.2, 124.5, 127.0, 122.0, 125.0, 128.0, 129.12], 
+        [85.2, 88.0, 92.5, 96.1, 101.0, 105.4, 110.2, 115.0, 44.7, 74.8, 85.0, 23.7, 49.8, 82.7, 70.7, 32.9, 52.7, 93.1, 140.5, 129.12], 
         [3.2, 3.5, 3.8, 4.2, 4.6, 5.1, 5.5, 5.8, 5.2, 5.6, 6.1, 6.5, 5.9, 6.2, 6.6, 6.8, 6.3, 6.5, 6.8, 6.95]);
 
       const p8411 = Array(60).fill(0).map((_, i) => 1500 + i * 118); p8411.push(8620);
