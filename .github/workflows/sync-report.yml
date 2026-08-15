@@ -21,7 +21,7 @@ jobs:
       - name: 從 Google Drive 專屬資料夾下載最新 HTML 報告
         run: |
           # 抓取專屬資料夾內最新報告檔案 (已修正圖例與按鈕)
-          FILE_ID="1TjJUf5l06P1grcEOA5tkaQ7jQ9nfkf51"
+          FILE_ID="1af_GQzlGd0JDMgh2IVjIjjKNJCDCt5rV"
           curl -L "https://drive.google.com/uc?export=download&id=${FILE_ID}" -o index.html
 
       - name: 部署至 GitHub Pages
