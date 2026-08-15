@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 每日全球市場與總經個股監控報告 — 純 GitHub Actions 自動化生成腳本
-由 GitHub Actions 每日定時在雲端執行，生成 index.html 並直接發布
+由 GitHub Actions 每日定時在雲端虛擬機直接執行，生成 index.html 並部署至 GitHub Pages
 """
 
 import json
@@ -23,43 +23,43 @@ p7012 = [488.6, 469.4, 500.2, 494.2, 471.6, 461.8, 410.4, 413.0, 415.6, 453.4, 4
 
 fin_quarters = ["2022.3", "2022.6", "2022.9", "2022.12", "2023.3", "2023.6", "2023.9", "2023.12", "2024.3", "2024.6", "2024.9", "2024.12", "2025.3", "2025.6", "2025.9", "2025.12", "2026.3", "2026.6"]
 
-# 2802 味之素 (Buffett Code 官方季度數值)
+# 2802 味之素 (Buffett Code official quarterly actuals)
 f2802_opm = [9.8, 10.4, 11.2, 11.6, 10.2, 10.5, 9.2, 11.8, 7.9, 11.2, 10.6, 12.3, 11.5, 13.6, 8.7, 13.4, 14.4, 13.6]
 f2802_per = [24.5, 26.2, 28.0, 29.8, 28.5, 29.2, 31.0, 33.4, 35.1, 38.0, 40.2, 42.1, 39.5, 38.2, 41.0, 43.5, 40.1, 38.62]
 f2802_eps = [48.2, 52.1, 56.4, 60.2, 55.4, 62.0, 44.7, 74.8, 85.0, 23.7, 49.8, 82.7, 70.7, 32.9, 52.7, 93.1, 140.5, 38.2]
 f2802_pbr = [2.65, 2.80, 3.10, 3.25, 3.20, 3.50, 3.80, 4.20, 4.60, 5.10, 5.50, 5.80, 5.20, 5.60, 6.10, 6.50, 6.80, 6.95]
 
-# 8411 瑞穗金融 (Buffett Code 官方季度數值)
+# 8411 瑞穗金融 (Buffett Code official quarterly actuals)
 f8411_opm = [18.2, 19.0, 20.1, 21.2, 22.0, 23.4, 24.5, 25.2, 23.8, 24.5, 26.0, 27.2, 25.8, 26.5, 27.8, 28.5, 27.0, 29.2]
 f8411_per = [8.1, 8.6, 9.2, 9.8, 10.5, 11.2, 12.0, 12.8, 11.5, 12.2, 13.0, 13.8, 12.6, 13.2, 14.0, 14.5, 14.8, 15.39]
 f8411_eps = [165.0, 180.2, 195.0, 210.5, 220.0, 235.0, 250.0, 265.0, 255.0, 270.0, 290.0, 310.0, 325.0, 340.0, 360.0, 380.0, 410.0, 574.5]
 f8411_pbr = [0.52, 0.58, 0.65, 0.72, 0.80, 0.88, 0.95, 1.05, 0.98, 1.05, 1.15, 1.25, 1.20, 1.30, 1.42, 1.55, 1.68, 1.86]
 
-# 6506 安川電機 (Buffett Code 官方季度數值)
+# 6506 安川電機 (Buffett Code official quarterly actuals)
 f6506_opm = [10.2, 10.8, 11.5, 11.9, 11.0, 11.8, 12.2, 12.5, 11.9, 12.3, 12.8, 13.1, 11.5, 10.8, 9.5, 11.2, 12.5, 13.6]
 f6506_per = [26.5, 28.0, 30.2, 31.5, 29.5, 32.0, 34.2, 35.5, 32.0, 33.5, 35.8, 37.0, 34.5, 36.0, 37.5, 39.0, 40.5, 41.81]
 f6506_eps = [135.0, 142.0, 148.0, 155.0, 145.0, 158.0, 165.0, 172.0, 160.0, 168.0, 178.0, 185.0, 175.0, 182.0, 190.0, 198.0, 205.0, 212.0]
 f6506_pbr = [2.30, 2.45, 2.60, 2.75, 2.55, 2.80, 3.00, 3.15, 2.90, 3.10, 3.30, 3.45, 3.20, 3.40, 3.60, 3.80, 4.00, 4.20]
 
-# 5016 JX ADVANCED METALS (Buffett Code 官方季度數值)
+# 5016 JX ADVANCED METALS (Buffett Code official quarterly actuals)
 f5016_opm = [6.8, 7.2, 7.5, 7.8, 7.2, 7.9, 8.2, 8.5, 8.0, 8.3, 8.7, 9.0, 8.5, 8.8, 9.1, 9.4, 9.2, 9.6]
 f5016_per = [11.5, 12.2, 13.0, 13.8, 12.5, 14.0, 14.8, 15.5, 14.2, 15.0, 15.8, 16.5, 15.2, 16.0, 16.8, 17.5, 21.0, 25.88]
 f5016_eps = [148.0, 155.0, 162.0, 170.0, 160.0, 172.0, 180.0, 188.0, 175.0, 185.0, 192.0, 200.0, 190.0, 198.0, 205.0, 215.0, 222.0, 230.0]
 f5016_pbr = [1.05, 1.10, 1.15, 1.20, 1.15, 1.25, 1.32, 1.40, 1.30, 1.38, 1.45, 1.52, 1.42, 1.50, 1.58, 1.65, 1.72, 1.80]
 
-# 5711 三菱材料 (Buffett Code 官方季度數值)
+# 5711 三菱材料 (Buffett Code official quarterly actuals)
 f5711_opm = [4.2, 4.6, 5.0, 5.3, 4.8, 5.4, 5.8, 6.1, 5.6, 6.0, 6.4, 6.8, 6.2, 6.6, 7.0, 7.3, 7.5, 7.8]
 f5711_per = [9.2, 9.8, 10.5, 11.0, 10.0, 11.2, 12.0, 12.5, 11.2, 12.0, 12.8, 13.5, 12.2, 13.0, 13.8, 14.2, 10.5, 7.05]
 f5711_eps = [235.0, 248.0, 260.0, 272.0, 255.0, 278.0, 292.0, 305.0, 285.0, 300.0, 318.0, 332.0, 310.0, 328.0, 342.0, 358.0, 375.0, 395.0]
 f5711_pbr = [0.58, 0.62, 0.68, 0.72, 0.68, 0.75, 0.80, 0.85, 0.78, 0.82, 0.88, 0.92, 0.85, 0.90, 0.95, 1.00, 1.04, 1.08]
 
-# 6501 日立製作所 (Buffett Code 官方季度數值)
+# 6501 日立製作所 (Buffett Code official quarterly actuals)
 f6501_opm = [7.8, 8.2, 8.8, 9.2, 8.5, 9.2, 9.8, 10.2, 9.5, 10.0, 10.5, 10.9, 10.2, 10.6, 11.2, 11.5, 11.8, 12.3]
 f6501_per = [16.8, 17.5, 18.8, 19.5, 18.2, 20.2, 21.8, 23.0, 20.8, 22.0, 23.5, 24.8, 22.8, 24.0, 25.2, 26.8, 29.5, 32.46]
 f6501_eps = [148.0, 156.0, 165.0, 174.0, 162.0, 180.0, 190.0, 200.0, 188.0, 198.0, 210.0, 220.0, 208.0, 218.0, 230.0, 240.0, 255.0, 268.5]
 f6501_pbr = [1.95, 2.05, 2.20, 2.35, 2.18, 2.45, 2.62, 2.80, 2.55, 2.70, 2.90, 3.10, 2.85, 3.05, 3.25, 3.45, 3.80, 4.14]
 
-# 7012 川崎重工業 (Buffett Code 官方季度數值)
+# 7012 川崎重工業 (Buffett Code official quarterly actuals)
 f7012_opm = [4.2, 4.6, 5.0, 5.3, 4.8, 5.5, 6.0, 6.4, 5.8, 6.3, 6.8, 7.2, 6.5, 7.0, 7.4, 7.8, 8.0, 8.5]
 f7012_per = [12.5, 13.2, 14.0, 14.8, 13.5, 15.2, 16.5, 17.5, 15.8, 16.8, 18.0, 19.0, 17.5, 18.5, 19.5, 20.8, 21.5, 19.70]
 f7012_eps = [88.0, 94.0, 100.0, 106.0, 98.0, 110.0, 118.0, 125.0, 115.0, 122.0, 132.0, 140.0, 130.0, 138.0, 146.0, 155.0, 162.0, 172.0]
@@ -1108,24 +1108,24 @@ html_template = f"""<!DOCTYPE html>
         const res = sliceTimeframe(dates5Y, taiexData5Y, tf);
         chart.data.labels = res.labels;
         chart.data.datasets[0].data = res.data;
-        chart.data.datasets.data = Array(res.labels.length).fill(38000);
-        chart.data.datasets.data = res.data.map(v => (v * 0.24));
+        chart.data.datasets[1].data = Array(res.labels.length).fill(38000);
+        chart.data.datasets[2].data = res.data.map(v => (v * 0.24));
         chart.update();
       }} else if (chartKey === 'us') {{
         const resVix = sliceTimeframe(dates5Y, vixData5Y, tf);
         chart.data.labels = resVix.labels;
         chart.data.datasets[0].data = resVix.data;
-        chart.data.datasets.data = Array(resVix.labels.length).fill(20);
+        chart.data.datasets[1].data = Array(resVix.labels.length).fill(20);
         const step = Math.max(1, Math.floor(michDataMonthly.length / resVix.labels.length));
-        chart.data.datasets.data = resVix.labels.map((_, i) => michDataMonthly[Math.min(michDataMonthly.length-1, i * step)]);
-        chart.data.datasets.data = Array(resVix.labels.length).fill(60);
-        chart.data.datasets.data = Array(resVix.labels.length).fill(80);
+        chart.data.datasets[2].data = resVix.labels.map((_, i) => michDataMonthly[Math.min(michDataMonthly.length-1, i * step)]);
+        chart.data.datasets[3].data = Array(resVix.labels.length).fill(60);
+        chart.data.datasets[4].data = Array(resVix.labels.length).fill(80);
         chart.update();
       }} else if (chartKey === 'nikkei') {{
         const res = sliceTimeframe(dates5Y, nikkeiData5Y, tf);
         chart.data.labels = res.labels;
         chart.data.datasets[0].data = res.data;
-        chart.data.datasets.data = Array(res.labels.length).fill(56000);
+        chart.data.datasets[1].data = Array(res.labels.length).fill(56000);
         chart.update();
       }} else if (chartKey === 'murata') {{
         let qLabels = {json.dumps(murata_quarters_21)};
@@ -1139,7 +1139,7 @@ html_template = f"""<!DOCTYPE html>
         }}
         chart.data.labels = qLabels;
         chart.data.datasets[0].data = qData;
-        chart.data.datasets.data = Array(qLabels.length).fill(1.2);
+        chart.data.datasets[1].data = Array(qLabels.length).fill(1.2);
         chart.update();
       }}
     }}
@@ -1159,7 +1159,7 @@ html_template = f"""<!DOCTYPE html>
       const res = sliceTimeframe(dates5Y, fullData, tf);
       chart.data.labels = res.labels;
       chart.data.datasets[0].data = res.data;
-      chart.data.datasets.data = Array(res.labels.length).fill(warn);
+      chart.data.datasets[1].data = Array(res.labels.length).fill(warn);
       chart.update();
     }}
     window.updateStockTimeframe = updateStockTimeframe;
@@ -1184,7 +1184,7 @@ html_template = f"""<!DOCTYPE html>
           labels: dates5Y,
           datasets: [
             {{ label: '台股加權指數 (點)', data: taiexData5Y, borderColor: '#10b981', backgroundColor: 'rgba(16, 185, 129, 0.1)', fill: true, tension: 0, pointRadius: 1.5, yAxisID: 'y' }},
-            {{ label: '38,000 點警示線', data: Array(dates5Y.length).fill(38000), borderColor: '#ef4444', borderDash:, borderWidth: 1.8, pointRadius: 0, fill: false, yAxisID: 'y' }},
+            {{ label: '38,000 點警示線', data: Array(dates5Y.length).fill(38000), borderColor: '#ef4444', borderDash: [5, 5], borderWidth: 1.8, pointRadius: 0, fill: false, yAxisID: 'y' }},
             {{ label: '成交金額 (億元)', data: taiexData5Y.map(v => (v * 0.24)), type: 'bar', backgroundColor: 'rgba(59, 130, 246, 0.4)', borderRadius: 2, yAxisID: 'yVol' }}
           ]
         }},
@@ -1209,10 +1209,10 @@ html_template = f"""<!DOCTYPE html>
           labels: dates5Y,
           datasets: [
             {{ label: 'VIX 恐慌指數 (左軸/紅)', data: vixData5Y, borderColor: '#ef4444', backgroundColor: 'rgba(239, 68, 68, 0.1)', yAxisID: 'yVix', tension: 0, pointRadius: 1.5 }},
-            {{ label: 'VIX 20 警示線', data: Array(dates5Y.length).fill(20), borderColor: '#f87171', borderDash:, borderWidth: 1.8, yAxisID: 'yVix', pointRadius: 0, fill: false }},
+            {{ label: 'VIX 20 警示線', data: Array(dates5Y.length).fill(20), borderColor: '#f87171', borderDash: [5, 5], borderWidth: 1.8, yAxisID: 'yVix', pointRadius: 0, fill: false }},
             {{ label: '密大消費者信心 (右軸/藍)', data: dates5Y.map((_, i) => michDataMonthly[Math.min(michDataMonthly.length-1, Math.floor(i * 61 / dates5Y.length))]), borderColor: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.1)', yAxisID: 'yMich', tension: 0, pointRadius: 1.5 }},
-            {{ label: '信心指數 60 警示線', data: Array(dates5Y.length).fill(60), borderColor: '#60a5fa', borderDash:, borderWidth: 1.8, yAxisID: 'yMich', pointRadius: 0, fill: false }},
-            {{ label: '信心指數 80 警示線', data: Array(dates5Y.length).fill(80), borderColor: '#93c5fd', borderDash:, borderWidth: 1.8, yAxisID: 'yMich', pointRadius: 0, fill: false }}
+            {{ label: '信心指數 60 警示線', data: Array(dates5Y.length).fill(60), borderColor: '#60a5fa', borderDash: [5, 5], borderWidth: 1.8, yAxisID: 'yMich', pointRadius: 0, fill: false }},
+            {{ label: '信心指數 80 警示線', data: Array(dates5Y.length).fill(80), borderColor: '#93c5fd', borderDash: [5, 5], borderWidth: 1.8, yAxisID: 'yMich', pointRadius: 0, fill: false }}
           ]
         }},
         options: {{
@@ -1235,7 +1235,7 @@ html_template = f"""<!DOCTYPE html>
           labels: dates5Y,
           datasets: [
             {{ label: '日經225指數 (點)', data: nikkeiData5Y, borderColor: '#06b6d4', backgroundColor: 'rgba(6, 182, 212, 0.1)', fill: true, tension: 0, pointRadius: 1.5 }},
-            {{ label: '56,000 點警示線', data: Array(dates5Y.length).fill(56000), borderColor: '#f59e0b', borderDash:, borderWidth: 1.8, pointRadius: 0, fill: false }}
+            {{ label: '56,000 點警示線', data: Array(dates5Y.length).fill(56000), borderColor: '#f59e0b', borderDash: [5, 5], borderWidth: 1.8, pointRadius: 0, fill: false }}
           ]
         }},
         options: {{
@@ -1285,7 +1285,7 @@ html_template = f"""<!DOCTYPE html>
               labels: dates5Y,
               datasets: [
                 {{ label: name + ' 股價 (日圓)', data: pData, borderColor: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.1)', fill: true, tension: 0, pointRadius: 1.5 }},
-                {{ label: '買進警示線 (' + warn + ' 日圓)', data: Array(dates5Y.length).fill(warn), borderColor: '#ef4444', borderWidth: 1.8, borderDash:, pointRadius: 0, fill: false }}
+                {{ label: '買進警示線 (' + warn + ' 日圓)', data: Array(dates5Y.length).fill(warn), borderColor: '#ef4444', borderWidth: 1.8, borderDash: [5, 5], pointRadius: 0, fill: false }}
               ]
             }},
             options: {{
@@ -1370,6 +1370,3 @@ with open('index.html', 'w', encoding='utf-8') as f:
     f.write(html_template)
 
 print('generate_report.py executed successfully! index.html generated with size:', len(html_template))
-EOF
-python3 /working_dir/c_d537d573044b3eb4/generate_report.py
-}}
