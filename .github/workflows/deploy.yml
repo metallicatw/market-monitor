@@ -1,0 +1,45 @@
+name: 每日自動生成並發布市場監控報告
+
+on:
+  schedule:
+    # 台灣時間每週一至週五 07:15 自動執行 (對應 UTC Sun-Thu 23:15)
+    - cron: '15 23 * * 0-4'
+  workflow_dispatch: # 支援在 GitHub 網頁上手動一鍵立即更新
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 簽出儲存庫
+        uses: actions/checkout@v4
+
+      - name: 設定 Python 環境
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 執行 Python 生成最新 HTML 報告
+        run: |
+          python generate_report.py
+          ls -la index.html
+
+      - name: 設定 GitHub Pages 環境
+        uses: actions/configure-pages@v5
+
+      - name: 上傳網頁成品
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: '.'
+
+      - name: 官方直接部署至 GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
