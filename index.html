@@ -72,7 +72,64 @@
     @media (max-width: 650px) { .stock-grid { grid-template-columns: 1fr; } }
     a { color: var(--accent-cyan); text-decoration: none; }
     a:hover { text-decoration: underline; }
-  </style>
+  
+  .custom-legend {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    margin-bottom: 14px;
+    font-size: 13px;
+    color: #94a3b8;
+  }
+  .legend-item {
+    display: inline-flex;
+    align-items: center;
+    cursor: pointer;
+    padding: 3px 8px;
+    border-radius: 4px;
+    transition: all 0.2s;
+    user-select: none;
+    background: rgba(15, 23, 42, 0.4);
+    border: 1px solid rgba(51, 65, 85, 0.4);
+  }
+  .legend-item:hover {
+    background: rgba(51, 65, 85, 0.7);
+    color: #ffffff;
+    border-color: rgba(148, 163, 184, 0.5);
+  }
+  .legend-item.hidden-dataset {
+    text-decoration: line-through;
+    opacity: 0.35;
+    background: transparent;
+    border-color: transparent;
+  }
+  .legend-icon-solid {
+    display: inline-block;
+    width: 26px;
+    height: 0;
+    border-top-width: 3.5px;
+    border-top-style: solid;
+    margin-right: 8px;
+  }
+  .legend-icon-dashed {
+    display: inline-block;
+    width: 26px;
+    height: 0;
+    border-top-width: 2.5px;
+    border-top-style: dashed;
+    margin-right: 8px;
+  }
+  .legend-icon-bar {
+    display: inline-block;
+    width: 14px;
+    height: 14px;
+    border-radius: 2px;
+    margin-right: 8px;
+  }
+
+</style>
 </head>
 <body>
   <div class="container">
@@ -320,14 +377,69 @@
         return;
       }
 
+      function buildCustomLegend(canvasId, chartInstance) {
+        var canvas = document.getElementById(canvasId);
+        if (!canvas || !canvas.parentElement) return;
+
+        var existing = canvas.parentElement.querySelector('.custom-legend');
+        if (existing) existing.remove();
+
+        var container = document.createElement('div');
+        container.className = 'custom-legend';
+
+        chartInstance.data.datasets.forEach(function(ds, idx) {
+          var item = document.createElement('div');
+          item.className = 'legend-item';
+
+          var color = ds.borderColor || ds.backgroundColor || '#94a3b8';
+          var isDashed = ds.borderDash && ds.borderDash.length > 0;
+          var isBar = ds.type === 'bar' || (!ds.type && chartInstance.config.type === 'bar');
+
+          var icon = document.createElement('span');
+          if (isBar) {
+            icon.className = 'legend-icon-bar';
+            icon.style.backgroundColor = ds.backgroundColor || color;
+          } else if (isDashed) {
+            icon.className = 'legend-icon-dashed';
+            icon.style.borderTopColor = color;
+          } else {
+            icon.className = 'legend-icon-solid';
+            icon.style.borderTopColor = color;
+          }
+
+          var label = document.createElement('span');
+          label.textContent = ds.label || ('項目 ' + (idx + 1));
+
+          item.appendChild(icon);
+          item.appendChild(label);
+
+          item.addEventListener('click', function() {
+            var visible = chartInstance.isDatasetVisible(idx);
+            chartInstance.setDatasetVisibility(idx, !visible);
+            chartInstance.update();
+            if (visible) {
+              item.classList.add('hidden-dataset');
+            } else {
+              item.classList.remove('hidden-dataset');
+            }
+          });
+
+          container.appendChild(item);
+        });
+
+        canvas.parentElement.insertBefore(container, canvas);
+      }
+
+
       Chart.defaults.color = '#94a3b8';
       Chart.defaults.borderColor = '#334155';
-      Chart.defaults.plugins.legend.labels.usePointStyle = true;
-      Chart.defaults.plugins.legend.labels.pointStyle = 'line';
-      Chart.defaults.plugins.legend.labels.pointStyleWidth = 28;
-      Chart.defaults.plugins.legend.labels.boxHeight = 6;
-      Chart.defaults.plugins.legend.labels.padding = 16;
-      Chart.defaults.plugins.legend.labels.font = { size: 12, family: '-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif' };
+      Chart.defaults.plugins.legend.display = false;
+      
+      
+      
+      
+      
+      
 
       const dates = ["2021-08", "2021-09", "2021-10", "2021-11", "2021-12", "2022-01", "2022-02", "2022-03", "2022-04", "2022-05", "2022-06", "2022-07", "2022-08", "2022-09", "2022-10", "2022-11", "2022-12", "2023-01", "2023-02", "2023-03", "2023-04", "2023-05", "2023-06", "2023-07", "2023-08", "2023-09", "2023-10", "2023-11", "2023-12", "2024-01", "2024-02", "2024-03", "2024-04", "2024-05", "2024-06", "2024-07", "2024-08", "2024-09", "2024-10", "2024-11", "2024-12", "2025-01", "2025-02", "2025-03", "2025-04", "2025-05", "2025-06", "2025-07", "2025-08", "2025-09", "2025-10", "2025-11", "2025-12", "2026-01", "2026-02", "2026-03", "2026-04", "2026-05", "2026-06", "2026-07", "2026-08 (\u6700\u65b0)"];
       const taiexData = [17496.3, 16934.7, 16987.41, 17427.76, 18218.84, 17674.4, 17652.18, 17693.47, 16592.18, 16807.77, 14825.73, 15000.07, 15095.44, 13424.58, 12949.75, 14879.55, 14137.69, 15291.69, 15503.79, 15868.06, 15579.18, 16578.96, 16915.54, 17145.69, 16634.51, 16353.74, 16001.27, 17438.35, 17930.81, 17956.36, 18966.77, 20294.45, 20396.59, 21174.22, 23032.25, 22199.35, 22268.0, 22822.79, 22820.43, 22262.5, 23035.09, 23520.1, 24180.5, 24950.3, 25400.8, 26150.2, 26980.6, 27620.4, 27150.8, 27890.3, 28340.5, 28650.2, 28963.6, 31250.4, 33680.2, 36450.8, 39210.5, 41850.3, 44200.6, 43119.75, 45811.01];
@@ -553,11 +665,13 @@
         });
       }
 
+      buildCustomLegend('murataChart', c_murata);
+
       // Helper for Stock charts
       function makeStock(priceId, finId, name, pData, warn, fLabels, margin, pe, eps, pbr) {
         const priceEl = document.getElementById(priceId);
         if (priceEl) {
-          new Chart(priceEl, {
+          const c_price = new Chart(priceEl, {
             type: 'line',
             data: {
               labels: ['2021', '2022', '2023', '2024', '2025', '2026/08 最新'],
@@ -566,18 +680,19 @@
                 { label: '買進警示線 (' + warn + ' JPY)', data: Array(6).fill(warn), borderColor: '#ef4444', borderWidth: 2, borderDash: [5, 5], pointRadius: 0 }
               ]
             },
-            options: { responsive: true, maintainAspectRatio: false, plugins: { title: { display: true, text: name + ' 5年股價歷史趨勢與進場警示線', color: '#fff' } } }
+            options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
           });
+          buildCustomLegend(priceId, c_price);
         }
 
         const finEl = document.getElementById(finId);
         if (finEl) {
-          new Chart(finEl, {
+          const c_fin = new Chart(finEl, {
             type: 'bar',
             data: {
               labels: fLabels,
               datasets: [
-                { label: '營益率 (%)', data: margin, backgroundColor: 'rgba(16, 185, 129, 0.7)', yAxisID: 'y' },
+                { label: '營益率 (%)', data: margin, backgroundColor: 'rgba(16, 185, 129, 0.75)', yAxisID: 'y' },
                 { label: '本益比 (PE)', data: pe, type: 'line', borderColor: '#3b82f6', yAxisID: 'y1' },
                 { label: 'EPS (JPY)', data: eps, type: 'line', borderColor: '#f59e0b', yAxisID: 'y2' },
                 { label: 'PBR (倍)', data: pbr, type: 'line', borderColor: '#ec4899', yAxisID: 'y1' }
@@ -586,14 +701,15 @@
             options: {
               responsive: true,
               maintainAspectRatio: false,
-              plugins: { title: { display: true, text: name + ' 財務指標趨勢 (營益率, PE, EPS, PBR)', color: '#fff' } },
+              plugins: { legend: { display: false } },
               scales: {
-                y: { type: 'linear', position: 'left', title: { display: true, text: '營益率 (%)' } },
-                y1: { type: 'linear', position: 'right', grid: { drawOnChartArea: false }, title: { display: true, text: 'PE / PBR' } },
-                y2: { display: false }
+                y: { type: 'linear', position: 'left', title: { display: true, text: '營益率 %' } },
+                y1: { type: 'linear', position: 'right', grid: { drawOnChartArea: false }, title: { display: true, text: 'PE / PBR 倍數' } },
+                y2: { type: 'linear', position: 'right', grid: { drawOnChartArea: false }, display: false }
               }
             }
           });
+          buildCustomLegend(finId, c_fin);
         }
       }
 
