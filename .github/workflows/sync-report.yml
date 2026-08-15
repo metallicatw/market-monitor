@@ -1,0 +1,31 @@
+name: 每日自動抓取 Google Drive 報告並發布
+
+on:
+  schedule:
+    # 每天早上 08:15 自動執行同步 (UTC 00:15)
+    - cron: '15 0 * * 1-6'
+  workflow_dispatch: # 支援在 GitHub 網頁上手動按一鍵立即更新
+
+permissions:
+  contents: write
+  pages: write
+  id-token: write
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 簽出儲存庫
+        uses: actions/checkout@v4
+
+      - name: 從 Google Drive 下載最新 HTML 報告
+        run: |
+          # 抓取您專屬資料夾內的最新報告檔案
+          FILE_ID="1vtEvj1s62MHISWJxZrrrCCAMe-eDFVTI"
+          curl -L "https://drive.google.com/uc?export=download&id=${FILE_ID}" -o index.html
+
+      - name: 部署至 GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./
