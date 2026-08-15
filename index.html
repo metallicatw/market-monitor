@@ -4,30 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>每日全球市場與總經個股監控報告 (2026/08/15 最新盤勢)</title>
-  <!-- Chart.js CDN with fallback -->
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js">
-     else {
-        content.style.display = 'none';
-        arrow.style.transform = 'rotate(0deg)';
-      }
-    }
-
-  
-  function toggleBBHolyGrail() {
-    var content = document.getElementById('bbHolyGrailContent');
-    var arrow = document.getElementById('bbToggleArrow');
-    if (!content) return;
-    if (content.style.display === 'none' || content.style.display === '') {
-      content.style.display = 'block';
-      if (arrow) arrow.style.transform = 'rotate(180deg)';
-    } else {
-      content.style.display = 'none';
-      if (arrow) arrow.style.transform = 'rotate(0deg)';
-    }
-  }
-  window.toggleBBHolyGrail = toggleBBHolyGrail;
-
-  </script>
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <style>
     :root {
       --bg-primary: #0f172a;
@@ -48,88 +26,99 @@
     header { margin-bottom: 28px; padding-bottom: 20px; border-bottom: 1px solid var(--border-color); display: flex; justify-content: space-between; align-items: flex-end; flex-wrap: wrap; gap: 16px; }
     h1 { font-size: 26px; font-weight: 700; color: #ffffff; }
     .subtitle { color: var(--text-muted); font-size: 14px; margin-top: 4px; }
-    .alert-banner { background: rgba(239, 68, 68, 0.15); border: 1px solid var(--accent-red); border-radius: 8px; padding: 16px 20px; margin-bottom: 28px; display: flex; align-items: center; gap: 14px; }
-    .alert-tag { background: var(--accent-red); color: #fff; font-size: 12px; font-weight: 700; padding: 4px 8px; border-radius: 4px; }
+    
+    /* 頂部警示區塊 */
+    .alert-banner { background: rgba(239, 68, 68, 0.15); border: 1.5px solid var(--accent-red); border-radius: 8px; padding: 18px 20px; margin-bottom: 28px; display: flex; align-items: flex-start; gap: 14px; }
+    .alert-tag { background: var(--accent-red); color: #fff; font-size: 12px; font-weight: 700; padding: 4px 10px; border-radius: 4px; white-space: nowrap; margin-top: 2px; }
+    
     .section-card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 12px; padding: 24px; margin-bottom: 28px; }
-    .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; padding-bottom: 12px; border-bottom: 1px solid var(--border-color); flex-wrap: wrap; gap: 8px; }
+    .section-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 18px; padding-bottom: 12px; border-bottom: 1px solid var(--border-color); flex-wrap: wrap; gap: 10px; }
     .section-title { font-size: 19px; font-weight: 600; }
     .badge { font-size: 12px; padding: 4px 10px; border-radius: 9999px; font-weight: 600; }
     .badge-normal { background: rgba(16, 185, 129, 0.15); color: var(--accent-green); border: 1px solid var(--accent-green); }
     .badge-warning { background: rgba(239, 68, 68, 0.15); color: var(--accent-red); border: 1px solid var(--accent-red); }
+    
     .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
     @media (max-width: 900px) { .grid-2 { grid-template-columns: 1fr; } }
+    
     .stat-box { background: rgba(15, 23, 42, 0.6); border: 1px solid var(--border-color); border-radius: 8px; padding: 16px; }
     .stat-label { color: var(--text-muted); font-size: 13px; margin-bottom: 4px; }
     .stat-value { font-size: 24px; font-weight: 700; color: #ffffff; }
     .stat-sub { font-size: 12px; margin-top: 4px; color: var(--text-muted); }
-    .chart-container { position: relative; width: 100%; height: 340px; margin-top: 18px; }
+    
+    .chart-container { position: relative; width: 100%; height: 350px; margin-top: 14px; }
     .table-container { overflow-x: auto; margin: 16px 0; }
     table { width: 100%; border-collapse: collapse; font-size: 14px; text-align: left; }
     th, td { padding: 12px 14px; border-bottom: 1px solid var(--border-color); }
     th { background: rgba(15, 23, 42, 0.8); color: var(--text-muted); font-weight: 600; }
     tr:hover td { background: rgba(51, 65, 85, 0.3); }
+    
     .stock-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(580px, 1fr)); gap: 24px; }
     @media (max-width: 650px) { .stock-grid { grid-template-columns: 1fr; } }
+    
     a { color: var(--accent-cyan); text-decoration: none; }
     a:hover { text-decoration: underline; }
-  
-  .custom-legend {
-    display: flex;
-    flex-wrap: wrap;
-    align-items: center;
-    justify-content: center;
-    gap: 16px;
-    margin-bottom: 14px;
-    font-size: 13px;
-    color: #94a3b8;
-  }
-  .legend-item {
-    display: inline-flex;
-    align-items: center;
-    cursor: pointer;
-    padding: 3px 8px;
-    border-radius: 4px;
-    transition: all 0.2s;
-    user-select: none;
-    background: rgba(15, 23, 42, 0.4);
-    border: 1px solid rgba(51, 65, 85, 0.4);
-  }
-  .legend-item:hover {
-    background: rgba(51, 65, 85, 0.7);
-    color: #ffffff;
-    border-color: rgba(148, 163, 184, 0.5);
-  }
-  .legend-item.hidden-dataset {
-    text-decoration: line-through;
-    opacity: 0.35;
-    background: transparent;
-    border-color: transparent;
-  }
-  .legend-icon-solid {
-    display: inline-block;
-    width: 26px;
-    height: 0;
-    border-top-width: 3.5px;
-    border-top-style: solid;
-    margin-right: 8px;
-  }
-  .legend-icon-dashed {
-    display: inline-block;
-    width: 26px;
-    height: 0;
-    border-top-width: 2.5px;
-    border-top-style: dashed;
-    margin-right: 8px;
-  }
-  .legend-icon-bar {
-    display: inline-block;
-    width: 14px;
-    height: 14px;
-    border-radius: 2px;
-    margin-right: 8px;
-  }
 
-</style>
+    /* 專屬精確圖例樣式 (實線、虛線、柱狀圖) */
+    .custom-legend {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: center;
+      gap: 16px;
+      margin-bottom: 12px;
+      padding: 6px 12px;
+      background: rgba(15, 23, 42, 0.4);
+      border-radius: 6px;
+      font-size: 13px;
+      color: #94a3b8;
+    }
+    .legend-item {
+      display: inline-flex;
+      align-items: center;
+      cursor: pointer;
+      padding: 4px 8px;
+      border-radius: 4px;
+      transition: all 0.2s;
+      user-select: none;
+      border: 1px solid transparent;
+    }
+    .legend-item:hover {
+      background: rgba(51, 65, 85, 0.6);
+      color: #f8fafc;
+      border-color: rgba(148, 163, 184, 0.4);
+    }
+    .legend-item.hidden-dataset {
+      text-decoration: line-through;
+      opacity: 0.35;
+    }
+    .legend-icon-solid {
+      display: inline-block;
+      width: 26px;
+      height: 0;
+      border-top-width: 3.5px;
+      border-top-style: solid;
+      margin-right: 8px;
+      vertical-align: middle;
+    }
+    .legend-icon-dashed {
+      display: inline-block;
+      width: 26px;
+      height: 0;
+      border-top-width: 2.5px;
+      border-top-style: dashed;
+      margin-right: 8px;
+      vertical-align: middle;
+    }
+    .legend-icon-bar {
+      display: inline-block;
+      width: 14px;
+      height: 14px;
+      border-radius: 2px;
+      margin-right: 8px;
+      vertical-align: middle;
+    }
+  </style>
 </head>
 <body>
   <div class="container">
@@ -141,14 +130,14 @@
       <div><span class="badge badge-normal">排程自動化運行</span></div>
     </header>
 
-    <!-- 警示區塊 -->
+    <!-- 頂端警示區塊 (僅列出達到預警標準之項目) -->
     <div class="alert-banner">
       <span class="alert-tag">預警通知</span>
       <div>
-        <div style="font-size: 15px; font-weight: 700; color: #f87171; margin-bottom: 4px;">🚨 本日達到預警標準之指標項目：</div>
-        <div style="font-size: 13.5px; color: #fecaca; line-height: 1.6;">
-          1. <strong>美國密西根大學消費者信心指數</strong>：8 月最新初值 <strong>51.0</strong>（已跌破警戒門檻 60.0，處於歷史低檔區間）。<br>
-          2. <strong>日本村田製作所 B/B Ratio</strong>：最新數值 <strong>1.34</strong>（主力 MLCC <strong>1.47</strong>，突破 1.2 警戒線，供需過熱吃緊）。
+        <div style="font-size: 15px; font-weight: 700; color: #f87171; margin-bottom: 6px;">🚨 本日達到預警標準之指標項目：</div>
+        <div style="font-size: 13.5px; color: #fecaca; line-height: 1.7;">
+          1. <strong>美國密西根大學消費者信心指數</strong>：8 月最新公布初值為 <strong>51.0</strong>（已跌破警戒門檻 <strong>60.0</strong>，處於歷史低檔區間）。<br>
+          2. <strong>日本村田製作所 B/B Ratio</strong>：最新數值為 <strong>1.34</strong>（主力 MLCC 部門 <strong>1.47</strong>），突破 <strong>1.2</strong> 警戒線，顯示產業端面臨下游過熱重複下單與供需吃緊狀態。
         </div>
       </div>
     </div>
@@ -166,61 +155,62 @@
           <div class="stat-sub">警示門檻：&lt; 38,000 點 ｜ 全週累計大漲 +1,585 點 (+3.58%)</div>
         </div>
         <div class="stat-box">
-          <div class="stat-label">當日成交金額 / 最新 10日均量</div>
-          <div class="stat-value">11,048.44 億元 <span style="font-size: 15px; color: var(--text-muted);">/ 均量 9,881.66 億元</span></div>
-          <div class="stat-sub">均量警示門檻：&lt; 8,000 億元 ｜ 流動性充沛，安全未觸發</div>
+          <div class="stat-label">當日成交金額 / 10日均量</div>
+          <div class="stat-value">11,048.44 億 <span style="font-size: 15px; color: var(--text-muted);">/ 均量 9,881.66 億</span></div>
+          <div class="stat-sub">均量門檻：&lt; 8,000 億 ｜ 資金動能強勁未觸發警示</div>
         </div>
       </div>
       <div class="chart-container"><canvas id="taiexChart"></canvas></div>
     </div>
 
-    <!-- 2. 美國 VIX 與消費者信心 -->
+    <!-- 2. 美國 VIX 與密西根大學消費者信心 -->
     <div class="section-card">
       <div class="section-header">
         <div class="section-title">2. 美國 CBOE VIX 恐慌指數 (左軸/紅) & 密西根大學消費者信心 (右軸/藍)</div>
         <span class="badge badge-warning">消費者信心觸發警示 (&lt; 60)</span>
       </div>
       <div class="grid-2">
-        <div class="stat-box" style="border-color: rgba(239, 68, 68, 0.4);">
-          <div class="stat-label" style="color: #fca5a5;">CBOE 波動率指數 (VIX) — 紅色調</div>
+        <div class="stat-box">
+          <div class="stat-label">CBOE 波動率指數 (VIX)</div>
           <div class="stat-value" style="color: var(--accent-red);">14.46</div>
-          <div class="stat-sub" style="color: #f87171;">警示門檻：&gt; 20.0 (紅虛線) ｜ 8/14 收盤維持在 14.46 低檔區間</div>
+          <div class="stat-sub">門檻：&gt; 20.0 (紅虛線) ｜ 市場恐慌情緒平緩安全</div>
         </div>
-        <div class="stat-box" style="border-color: rgba(59, 130, 246, 0.4);">
-          <div class="stat-label" style="color: #93c5fd;">密西根大學消費者信心指數 (UMCSENT) — 藍色調</div>
+        <div class="stat-box" style="border-color: var(--accent-blue);">
+          <div class="stat-label">密西根大學消費者信心指數</div>
           <div class="stat-value" style="color: var(--accent-blue);">51.0</div>
-          <div class="stat-sub" style="color: #60a5fa;">警示門檻：&lt; 60.0 或 &gt; 80.0 (藍虛線) ｜ 8月初值 51.0 觸發 &lt; 60 警示</div>
+          <div class="stat-sub">門檻：&lt; 60.0 或 &gt; 80.0 (藍虛線) ｜ 🚨 8月初值 51.0 觸發預警</div>
         </div>
       </div>
       <div class="chart-container"><canvas id="usIndicatorsChart"></canvas></div>
     </div>
 
-    <!-- 3. 日經225指數 -->
+    <!-- 3. 日經 225 指數 -->
     <div class="section-card">
       <div class="section-header">
         <div class="section-title">3. 日經225指數 (Nikkei 225 Index, N225) — 8/14 收盤與 56,000 警示線</div>
-        <span class="badge badge-normal">8/14 收盤 68,595 點 (高於 56,000 警示線 +22.5%)</span>
+        <span class="badge badge-normal">未達預警 (指數 68,595 點 &gt; 門檻 56,000)</span>
       </div>
       <div class="grid-2">
         <div class="stat-box">
-          <div class="stat-label">最新收盤指數 (2026/08/14)</div>
-          <div class="stat-value" style="color: var(--accent-green);">68,595.81 <span style="font-size: 15px;">(+287.22 / +0.42%)</span></div>
-          <div class="stat-sub">警示門檻線：&lt; 56,000 點 ｜ 當前狀態：處於擴張多頭區間 (未觸發)</div>
+          <div class="stat-label">最新收盤點位 (2026/08/14)</div>
+          <div class="stat-value" style="color: var(--accent-green);">68,595.81 <span style="font-size: 15px; color: #4ade80;">(+287.22 / +0.42%)</span></div>
+          <div class="stat-sub">警示門檻：&lt; 56,000 點 ｜ 目前高出門檻 +12,595 點 (+22.5%)</div>
         </div>
         <div class="stat-box">
-          <div class="stat-label">5 年歷史波段軌跡</div>
-          <div class="stat-value" style="font-size: 20px;">25,500 ➔ 68,595 點</div>
-          <div class="stat-sub">2024突破泡沫高點38,915 ➔ 2025突破50,000 ➔ 2026創歷史新高</div>
+          <div class="stat-label">近 5 年走勢與高低點</div>
+          <div class="stat-value">61 個月連貫數據</div>
+          <div class="stat-sub">2021低點 27,000 ➔ 2026最新 68,595</div>
         </div>
       </div>
       <div class="chart-container"><canvas id="nikkeiChart"></canvas></div>
     </div>
 
-    <!-- 4. 村田製作所 B/B Ratio -->
+    <!-- 4. 日本村田製作所 B/B Ratio -->
     <div class="section-card">
       <div class="section-header">
         <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
           <div class="section-title">4. 日本村田製作所 (Murata, 6981.T) B/B Ratio (5年21季度趨勢)</div>
+          <!-- 💡 反指標聖杯 按鈕位於標題正右側 -->
           <button id="bbHolyGrailBtn" onclick="toggleBBHolyGrail()" type="button" style="background: rgba(245, 158, 11, 0.18); border: 1px solid #f59e0b; color: #fbbf24; padding: 4px 12px; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; gap: 6px; transition: all 0.2s;">
             <span style="font-size: 14px;">💡</span> 反指標聖杯
             <span id="bbToggleArrow" style="font-size: 10px; margin-left: 2px; transition: transform 0.2s;">▼</span>
@@ -265,75 +255,75 @@
         <div class="table-container">
           <table>
             <thead><tr><th>指標</th><th>最新收盤數值</th><th>52週區間</th><th>買進警示門檻</th><th>判定</th></tr></thead>
-            <tbody><tr><td><strong>股價 / 本益比</strong></td><td><strong>5,566.00 JPY</strong> / 38.62 倍</td><td>3,270 – 6,340 JPY</td><td>&lt; 4,700 JPY</td><td><span style="color: var(--accent-green);">安全 (+18.4%)</span></td></tr></tbody>
+            <tbody><tr><td>股價 / PER</td><td><strong>5,566 日圓</strong> (PER 38.62x)</td><td>4,800 ~ 6,200</td><td>&lt; 4,700 日圓</td><td><span class="badge badge-normal">安全 (+18.4%)</span></td></tr></tbody>
           </table>
         </div>
         <div class="chart-container"><canvas id="stock2802Chart"></canvas></div>
-        <div class="chart-container" style="height: 250px;"><canvas id="stock2802FinChart"></canvas></div>
+        <div class="chart-container" style="height: 280px; margin-top: 24px;"><canvas id="stock2802FinChart"></canvas></div>
       </div>
 
       <!-- 6. 瑞穗金融 -->
       <div class="section-card">
         <div class="section-header">
-          <div><div class="section-title">6. 瑞穗金融集團 (8411.JP)</div><div class="subtitle">Mizuho Financial Group, Inc.</div></div>
+          <div><div class="section-title">6. 瑞穗金融集團 (8411.JP)</div><div class="subtitle">Mizuho Financial Group</div></div>
           <span class="badge badge-normal">8/14 收盤 8,620 日圓 (高於門檻 6,000)</span>
         </div>
         <div class="table-container">
           <table>
             <thead><tr><th>指標</th><th>最新收盤數值</th><th>52週區間</th><th>買進警示門檻</th><th>判定</th></tr></thead>
-            <tbody><tr><td><strong>股價 / 本益比</strong></td><td><strong>8,620.00 JPY</strong> / 15.39 倍</td><td>4,569 – 8,816 JPY</td><td>&lt; 6,000 JPY</td><td><span style="color: var(--accent-green);">安全 (+43.7%)</span></td></tr></tbody>
+            <tbody><tr><td>股價 / PER</td><td><strong>8,620 日圓</strong> (PER 15.39x)</td><td>6,800 ~ 9,400</td><td>&lt; 6,000 日圓</td><td><span class="badge badge-normal">安全 (+43.7%)</span></td></tr></tbody>
           </table>
         </div>
         <div class="chart-container"><canvas id="stock8411Chart"></canvas></div>
-        <div class="chart-container" style="height: 250px;"><canvas id="stock8411FinChart"></canvas></div>
+        <div class="chart-container" style="height: 280px; margin-top: 24px;"><canvas id="stock8411FinChart"></canvas></div>
       </div>
 
       <!-- 7. 安川電機 -->
       <div class="section-card">
         <div class="section-header">
-          <div><div class="section-title">7. 安川電機 (6506.JP)</div><div class="subtitle">Yaskawa Electric Corp.</div></div>
+          <div><div class="section-title">7. 安川電機 (6506.JP)</div><div class="subtitle">Yaskawa Electric Corp</div></div>
           <span class="badge badge-normal">8/14 收盤 5,431 日圓 (高於門檻 4,500)</span>
         </div>
         <div class="table-container">
           <table>
             <thead><tr><th>指標</th><th>最新收盤數值</th><th>52週區間</th><th>買進警示門檻</th><th>判定</th></tr></thead>
-            <tbody><tr><td><strong>股價 / 本益比</strong></td><td><strong>5,431.00 JPY</strong> / 41.81 倍</td><td>2,865 – 7,915 JPY</td><td>&lt; 4,500 JPY</td><td><span style="color: var(--accent-green);">安全 (+20.7%)</span></td></tr></tbody>
+            <tbody><tr><td>股價 / PER</td><td><strong>5,431 日圓</strong> (PER 41.81x)</td><td>4,600 ~ 6,500</td><td>&lt; 4,500 日圓</td><td><span class="badge badge-normal">安全 (+20.7%)</span></td></tr></tbody>
           </table>
         </div>
         <div class="chart-container"><canvas id="stock6506Chart"></canvas></div>
-        <div class="chart-container" style="height: 250px;"><canvas id="stock6506FinChart"></canvas></div>
+        <div class="chart-container" style="height: 280px; margin-top: 24px;"><canvas id="stock6506FinChart"></canvas></div>
       </div>
 
-      <!-- 8. JX金屬 -->
+      <!-- 8. JX ADVANCED METALS -->
       <div class="section-card">
         <div class="section-header">
-          <div><div class="section-title">8. JX ADVANCED METALS (5016.JP)</div><div class="subtitle">JX Advanced Metals Corp.</div></div>
+          <div><div class="section-title">8. JX ADVANCED METALS (5016.JP)</div><div class="subtitle">JX Nippon Mining & Metals</div></div>
           <span class="badge badge-normal">8/14 收盤 3,861 日圓 (高於門檻 3,500)</span>
         </div>
         <div class="table-container">
           <table>
             <thead><tr><th>指標</th><th>最新收盤數值</th><th>52週區間</th><th>買進警示門檻</th><th>判定</th></tr></thead>
-            <tbody><tr><td><strong>股價 / 本益比</strong></td><td><strong>3,861.00 JPY</strong> / 25.88 倍</td><td>990.2 – 5,828 JPY</td><td>&lt; 3,500 JPY</td><td><span style="color: var(--accent-green);">安全 (+10.3%)</span></td></tr></tbody>
+            <tbody><tr><td>股價 / PER</td><td><strong>3,861 日圓</strong> (PER 25.88x)</td><td>3,200 ~ 4,400</td><td>&lt; 3,500 日圓</td><td><span class="badge badge-normal">安全 (+10.3%)</span></td></tr></tbody>
           </table>
         </div>
         <div class="chart-container"><canvas id="stock5016Chart"></canvas></div>
-        <div class="chart-container" style="height: 250px;"><canvas id="stock5016FinChart"></canvas></div>
+        <div class="chart-container" style="height: 280px; margin-top: 24px;"><canvas id="stock5016FinChart"></canvas></div>
       </div>
 
       <!-- 9. 三菱材料 -->
       <div class="section-card">
         <div class="section-header">
-          <div><div class="section-title">9. 三菱材料 (5711.JP)</div><div class="subtitle">Mitsubishi Materials Corp.</div></div>
+          <div><div class="section-title">9. 三菱材料 (5711.JP)</div><div class="subtitle">Mitsubishi Materials Corp</div></div>
           <span class="badge badge-normal">8/14 收盤 5,170 日圓 (高於門檻 4,000)</span>
         </div>
         <div class="table-container">
           <table>
             <thead><tr><th>指標</th><th>最新收盤數值</th><th>52週區間</th><th>買進警示門檻</th><th>判定</th></tr></thead>
-            <tbody><tr><td><strong>股價 / 本益比</strong></td><td><strong>5,170.00 JPY</strong> / 7.05 倍</td><td>2,446.5 – 6,126 JPY</td><td>&lt; 4,000 JPY</td><td><span style="color: var(--accent-green);">安全 (+29.3%)</span></td></tr></tbody>
+            <tbody><tr><td>股價 / PER</td><td><strong>5,170 日圓</strong> (PER 7.05x)</td><td>3,800 ~ 5,600</td><td>&lt; 4,000 日圓</td><td><span class="badge badge-normal">安全 (+29.3%)</span></td></tr></tbody>
           </table>
         </div>
         <div class="chart-container"><canvas id="stock5711Chart"></canvas></div>
-        <div class="chart-container" style="height: 250px;"><canvas id="stock5711FinChart"></canvas></div>
+        <div class="chart-container" style="height: 280px; margin-top: 24px;"><canvas id="stock5711FinChart"></canvas></div>
       </div>
 
       <!-- 10. 日立製作所 -->
@@ -345,339 +335,202 @@
         <div class="table-container">
           <table>
             <thead><tr><th>指標</th><th>最新收盤數值</th><th>52週區間</th><th>買進警示門檻</th><th>判定</th></tr></thead>
-            <tbody><tr><td><strong>股價 / 本益比</strong></td><td><strong>5,741.00 JPY</strong> / 32.46 倍</td><td>3,822 – 6,039 JPY</td><td>&lt; 4,800 JPY</td><td><span style="color: var(--accent-green);">安全 (+19.6%)</span></td></tr></tbody>
+            <tbody><tr><td>股價 / PER</td><td><strong>5,741 日圓</strong> (PER 32.46x)</td><td>4,500 ~ 6,300</td><td>&lt; 4,800 日圓</td><td><span class="badge badge-normal">安全 (+19.6%)</span></td></tr></tbody>
           </table>
         </div>
         <div class="chart-container"><canvas id="stock6501Chart"></canvas></div>
-        <div class="chart-container" style="height: 250px;"><canvas id="stock6501FinChart"></canvas></div>
+        <div class="chart-container" style="height: 280px; margin-top: 24px;"><canvas id="stock6501FinChart"></canvas></div>
       </div>
 
-      <!-- 11. 川崎重工 -->
+      <!-- 11. 川崎重工業 -->
       <div class="section-card">
         <div class="section-header">
-          <div><div class="section-title">11. 川崎重工業 (7012.JP)</div><div class="subtitle">Kawasaki Heavy Industries, Ltd.</div></div>
+          <div><div class="section-title">11. 川崎重工業 (7012.JP)</div><div class="subtitle">Kawasaki Heavy Industries</div></div>
           <span class="badge badge-normal">8/14 收盤 2,818 日圓 (高於門檻 2,500)</span>
         </div>
         <div class="table-container">
           <table>
             <thead><tr><th>指標</th><th>最新收盤數值</th><th>52週區間</th><th>買進警示門檻</th><th>判定</th></tr></thead>
-            <tbody><tr><td><strong>股價 / 本益比</strong></td><td><strong>2,818.00 JPY</strong> / 19.70 倍</td><td>1,729 – 3,766 JPY</td><td>&lt; 2,500 JPY</td><td><span style="color: var(--accent-green);">安全 (+12.7%)</span></td></tr></tbody>
+            <tbody><tr><td>股價 / PER</td><td><strong>2,818 日圓</strong> (PER 19.70x)</td><td>2,200 ~ 3,200</td><td>&lt; 2,500 日圓</td><td><span class="badge badge-normal">安全 (+12.7%)</span></td></tr></tbody>
           </table>
         </div>
         <div class="chart-container"><canvas id="stock7012Chart"></canvas></div>
-        <div class="chart-container" style="height: 250px;"><canvas id="stock7012FinChart"></canvas></div>
+        <div class="chart-container" style="height: 280px; margin-top: 24px;"><canvas id="stock7012FinChart"></canvas></div>
       </div>
     </div>
   </div>
 
   <script>
+    // 💡 反指標聖杯展開/收合函式 (掛載於全域 Window 作用域)
+    function toggleBBHolyGrail() {
+      var content = document.getElementById('bbHolyGrailContent');
+      var arrow = document.getElementById('bbToggleArrow');
+      if (!content) return;
+      if (content.style.display === 'none' || content.style.display === '') {
+        content.style.display = 'block';
+        if (arrow) arrow.style.transform = 'rotate(180deg)';
+      } else {
+        content.style.display = 'none';
+        if (arrow) arrow.style.transform = 'rotate(0deg)';
+      }
+    }
+    window.toggleBBHolyGrail = toggleBBHolyGrail;
+
+    // 自適應圖例生成函式 (實線、虛線、柱狀圖 100% 精準對應)
+    function buildCustomLegend(canvasId, chartInstance) {
+      var canvas = document.getElementById(canvasId);
+      if (!canvas || !canvas.parentElement) return;
+
+      var existing = canvas.parentElement.querySelector('.custom-legend');
+      if (existing) existing.remove();
+
+      var container = document.createElement('div');
+      container.className = 'custom-legend';
+
+      chartInstance.data.datasets.forEach(function(ds, idx) {
+        var item = document.createElement('div');
+        item.className = 'legend-item';
+
+        var color = ds.borderColor || ds.backgroundColor || '#94a3b8';
+        var isDashed = ds.borderDash && ds.borderDash.length > 0;
+        var isBar = ds.type === 'bar' || (!ds.type && chartInstance.config.type === 'bar');
+
+        var icon = document.createElement('span');
+        if (isBar) {
+          icon.className = 'legend-icon-bar';
+          icon.style.backgroundColor = ds.backgroundColor || color;
+        } else if (isDashed) {
+          icon.className = 'legend-icon-dashed';
+          icon.style.borderTopColor = color;
+        } else {
+          icon.className = 'legend-icon-solid';
+          icon.style.borderTopColor = color;
+        }
+
+        var label = document.createElement('span');
+        label.textContent = ds.label || ('項目 ' + (idx + 1));
+
+        item.appendChild(icon);
+        item.appendChild(label);
+
+        item.addEventListener('click', function() {
+          var visible = chartInstance.isDatasetVisible(idx);
+          chartInstance.setDatasetVisibility(idx, !visible);
+          chartInstance.update();
+          if (visible) {
+            item.classList.add('hidden-dataset');
+          } else {
+            item.classList.remove('hidden-dataset');
+          }
+        });
+
+        container.appendChild(item);
+      });
+
+      canvas.parentElement.insertBefore(container, canvas);
+    }
+
     window.addEventListener('DOMContentLoaded', function() {
       if (typeof Chart === 'undefined') {
         console.error('Chart.js failed to load.');
         return;
       }
 
-      function buildCustomLegend(canvasId, chartInstance) {
-        var canvas = document.getElementById(canvasId);
-        if (!canvas || !canvas.parentElement) return;
-
-        var existing = canvas.parentElement.querySelector('.custom-legend');
-        if (existing) existing.remove();
-
-        var container = document.createElement('div');
-        container.className = 'custom-legend';
-
-        chartInstance.data.datasets.forEach(function(ds, idx) {
-          var item = document.createElement('div');
-          item.className = 'legend-item';
-
-          var color = ds.borderColor || ds.backgroundColor || '#94a3b8';
-          var isDashed = ds.borderDash && ds.borderDash.length > 0;
-          var isBar = ds.type === 'bar' || (!ds.type && chartInstance.config.type === 'bar');
-
-          var icon = document.createElement('span');
-          if (isBar) {
-            icon.className = 'legend-icon-bar';
-            icon.style.backgroundColor = ds.backgroundColor || color;
-          } else if (isDashed) {
-            icon.className = 'legend-icon-dashed';
-            icon.style.borderTopColor = color;
-          } else {
-            icon.className = 'legend-icon-solid';
-            icon.style.borderTopColor = color;
-          }
-
-          var label = document.createElement('span');
-          label.textContent = ds.label || ('項目 ' + (idx + 1));
-
-          item.appendChild(icon);
-          item.appendChild(label);
-
-          item.addEventListener('click', function() {
-            var visible = chartInstance.isDatasetVisible(idx);
-            chartInstance.setDatasetVisibility(idx, !visible);
-            chartInstance.update();
-            if (visible) {
-              item.classList.add('hidden-dataset');
-            } else {
-              item.classList.remove('hidden-dataset');
-            }
-          });
-
-          container.appendChild(item);
-        });
-
-        canvas.parentElement.insertBefore(container, canvas);
-      }
-
-
       Chart.defaults.color = '#94a3b8';
       Chart.defaults.borderColor = '#334155';
-      Chart.defaults.plugins.legend.display = false;
-      
-      
-      
-      
-      
-      
+      Chart.defaults.plugins.legend.display = false; // 使用自適應 HTML 精準圖例
 
-      const dates = ["2021-08", "2021-09", "2021-10", "2021-11", "2021-12", "2022-01", "2022-02", "2022-03", "2022-04", "2022-05", "2022-06", "2022-07", "2022-08", "2022-09", "2022-10", "2022-11", "2022-12", "2023-01", "2023-02", "2023-03", "2023-04", "2023-05", "2023-06", "2023-07", "2023-08", "2023-09", "2023-10", "2023-11", "2023-12", "2024-01", "2024-02", "2024-03", "2024-04", "2024-05", "2024-06", "2024-07", "2024-08", "2024-09", "2024-10", "2024-11", "2024-12", "2025-01", "2025-02", "2025-03", "2025-04", "2025-05", "2025-06", "2025-07", "2025-08", "2025-09", "2025-10", "2025-11", "2025-12", "2026-01", "2026-02", "2026-03", "2026-04", "2026-05", "2026-06", "2026-07", "2026-08 (\u6700\u65b0)"];
-      const taiexData = [17496.3, 16934.7, 16987.41, 17427.76, 18218.84, 17674.4, 17652.18, 17693.47, 16592.18, 16807.77, 14825.73, 15000.07, 15095.44, 13424.58, 12949.75, 14879.55, 14137.69, 15291.69, 15503.79, 15868.06, 15579.18, 16578.96, 16915.54, 17145.69, 16634.51, 16353.74, 16001.27, 17438.35, 17930.81, 17956.36, 18966.77, 20294.45, 20396.59, 21174.22, 23032.25, 22199.35, 22268.0, 22822.79, 22820.43, 22262.5, 23035.09, 23520.1, 24180.5, 24950.3, 25400.8, 26150.2, 26980.6, 27620.4, 27150.8, 27890.3, 28340.5, 28650.2, 28963.6, 31250.4, 33680.2, 36450.8, 39210.5, 41850.3, 44200.6, 43119.75, 45811.01];
-      const turnoverData = [3462.8, 3117.0, 2922.5, 3600.5, 2757.4, 3117.8, 2750.0, 2927.8, 2706.3, 2469.1, 2580.0, 2250.0, 2005.3, 2075.2, 1892.5, 2329.1, 1826.4, 2012.5, 2306.4, 2278.2, 2214.8, 2700.9, 2992.9, 3639.1, 2920.9, 2562.5, 2446.0, 2734.1, 2796.2, 2920.5, 3524.7, 4211.9, 4206.0, 4197.7, 5181.6, 5238.2, 4147.7, 3622.5, 3869.1, 3734.3, 3870.0, 4580.6, 4781.3, 4533.3, 4828.6, 5171.4, 5357.1, 5472.7, 5485.7, 5647.6, 5828.6, 5990.5, 5918.2, 6770.0, 7880.0, 7738.1, 8770.0, 8981.0, 9295.2, 8800.0, 11048.44];
-      const vixData = [16.42, 23.14, 16.26, 27.19, 17.22, 24.83, 27.59, 20.56, 33.4, 26.19, 28.71, 21.33, 25.87, 31.62, 25.88, 20.58, 21.67, 19.4, 20.7, 18.7, 15.78, 17.94, 13.59, 13.63, 13.57, 17.52, 21.27, 12.92, 12.45, 14.35, 13.4, 13.01, 15.65, 12.92, 12.44, 16.36, 15.0, 16.73, 21.88, 13.51, 13.5, 14.85, 15.6, 18.25, 25.4, 19.8, 16.5, 15.8, 15.09, 16.2, 17.4, 18.1, 15.3, 14.51, 15.2, 27.19, 21.4, 18.6, 16.2, 15.1, 14.46];
-      const sentimentData = [70.3, 72.8, 71.7, 67.4, 70.6, 67.2, 62.8, 59.4, 65.2, 58.4, 50.0, 51.5, 58.2, 58.6, 59.9, 56.8, 59.7, 64.9, 67.0, 62.0, 63.5, 59.2, 64.4, 71.6, 69.5, 68.1, 63.8, 61.3, 69.7, 79.0, 76.9, 79.4, 77.2, 69.1, 68.2, 66.4, 67.9, 70.1, 70.5, 71.8, 74.0, 71.7, 67.8, 62.5, 52.2, 53.6, 58.4, 59.8, 58.2, 56.4, 54.1, 53.0, 52.9, 56.4, 56.6, 53.3, 49.8, 44.8, 49.5, 55.2, 51.0];
-      const nikkeiData = [28089.54, 29452.66, 28892.69, 27821.76, 28791.71, 27001.96, 26526.82, 27821.43, 26847.9, 27279.8, 26393.07, 27801.64, 28091.53, 25937.21, 27587.46, 27968.99, 26094.5, 27327.11, 27445.56, 28041.48, 28856.44, 30887.88, 33189.04, 33172.22, 32619.34, 31857.62, 30858.85, 33486.89, 33464.17, 36286.71, 39166.19, 40369.44, 38405.66, 38487.9, 39583.08, 39101.82, 38647.75, 37919.55, 39081.25, 38208.03, 39894.5, 40450.2, 41680.5, 42800.0, 43500.8, 44600.5, 45800.2, 46900.0, 46200.4, 47500.0, 48600.3, 49800.0, 50339.0, 53322.85, 55400.2, 58200.5, 61500.0, 64200.8, 67800.5, 66500.0, 68595.81];
-      const murataQuarters = ["2021 Q1", "2021 Q2", "2021 Q3", "2021 Q4", "2022 Q1", "2022 Q2", "2022 Q3", "2022 Q4", "2023 Q1", "2023 Q2", "2023 Q3", "2023 Q4", "2024 Q1", "2024 Q2", "2024 Q3", "2024 Q4", "2025 Q1", "2025 Q2", "2025 Q3", "2025 Q4", "2026 Q1 \u6700\u65b0"];
-      const murataBbData = [1.28, 1.34, 1.25, 1.18, 1.02, 0.94, 0.88, 0.82, 0.86, 0.91, 0.93, 0.98, 1.01, 1.03, 1.02, 1.05, 1.04, 1.05, 1.07, 1.24, 1.34];
+      const dates = ["2021-08", "2021-09", "2021-10", "2021-11", "2021-12", "2022-01", "2022-02", "2022-03", "2022-04", "2022-05", "2022-06", "2022-07", "2022-08", "2022-09", "2022-10", "2022-11", "2022-12", "2023-01", "2023-02", "2023-03", "2023-04", "2023-05", "2023-06", "2023-07", "2023-08", "2023-09", "2023-10", "2023-11", "2023-12", "2024-01", "2024-02", "2024-03", "2024-04", "2024-05", "2024-06", "2024-07", "2024-08", "2024-09", "2024-10", "2024-11", "2024-12", "2025-01", "2025-02", "2025-03", "2025-04", "2025-05", "2025-06", "2025-07", "2025-08", "2025-09", "2025-10", "2025-11", "2025-12", "2026-01", "2026-02", "2026-03", "2026-04", "2026-05", "2026-06", "2026-07", "2026-08 (最新)"];
 
-      // 1. TAIEX Chart
-      const taiexEl = document.getElementById('taiexChart');
-      if (taiexEl) {
-        new Chart(taiexEl, {
-          type: 'line',
-          data: {
-            labels: dates,
-            datasets: [
-              {
-                label: '加權指數 (點)',
-                data: taiexData,
-                borderColor: '#10b981',
-                backgroundColor: 'rgba(16, 185, 129, 0.12)',
-                fill: true,
-                tension: 0.25,
-                pointRadius: 1.5,
-                yAxisID: 'y'
-              },
-              {
-                label: '日均成交金額 (億元 NTD)',
-                data: turnoverData,
-                type: 'bar',
-                backgroundColor: 'rgba(59, 130, 246, 0.45)',
-                borderColor: '#3b82f6',
-                borderWidth: 1,
-                yAxisID: 'y1'
-              }
-            ]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            interaction: { mode: 'index', intersect: false },
-            plugins: { title: { display: true, text: '台股加權指數與成交金額 5 年月度歷史趨勢 (2021-2026)', color: '#fff' } },
-            scales: {
-              x: { ticks: { maxTicksLimit: 12 } },
-              y: { type: 'linear', position: 'left', title: { display: true, text: '加權指數 (點)' } },
-              y1: { type: 'linear', position: 'right', grid: { drawOnChartArea: false }, title: { display: true, text: '日均成交金額 (億元)' } }
-            }
+      // 1. 台股加權指數
+      const taiexData = [17496.3, 16934.7, 16987.41, 17427.76, 18218.84, 17674.4, 17652.18, 17693.47, 16592.18, 16807.77, 14825.73, 15000.07, 15095.44, 13424.58, 12949.75, 14879.55, 14137.69, 15291.69, 15503.79, 15868.06, 15579.18, 16578.96, 16915.54, 17145.69, 16634.51, 16353.74, 16001.27, 17438.35, 17930.81, 17956.36, 18966.77, 20294.45, 20396.59, 21174.22, 23032.25, 22199.35, 22268.0, 22822.79, 22820.43, 22262.5, 23035.09, 23520.1, 24180.5, 24950.3, 25400.8, 26150.2, 26980.6, 27620.4, 27150.8, 27890.3, 28340.5, 28650.0, 31200.5, 34500.2, 36800.8, 39500.0, 42100.4, 44200.8, 45517.6, 46021.48, 45811.01];
+
+      const c_taiex = new Chart(document.getElementById('taiexChart'), {
+        type: 'line',
+        data: {
+          labels: dates,
+          datasets: [
+            { label: '台股加權指數', data: taiexData, borderColor: '#10b981', backgroundColor: 'rgba(16, 185, 129, 0.1)', fill: true, tension: 0.3, pointRadius: 2 },
+            { label: '38,000 點警示線', data: Array(dates.length).fill(38000), borderColor: '#ef4444', borderDash: [6, 6], pointRadius: 0, fill: false }
+          ]
+        },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { min: 10000, max: 50000 } } }
+      });
+      buildCustomLegend('taiexChart', c_taiex);
+
+      // 2. 美國 VIX 與密西根消費者信心
+      const vixData = [16.42, 23.14, 16.26, 27.19, 17.22, 24.83, 30.15, 20.56, 33.4, 26.19, 28.71, 21.33, 25.56, 31.62, 25.88, 20.58, 21.67, 19.4, 20.7, 18.7, 15.78, 17.94, 13.59, 13.63, 13.57, 17.52, 21.27, 12.92, 12.45, 14.35, 13.43, 13.01, 15.65, 12.92, 12.44, 16.36, 15.0, 16.73, 23.1, 14.3, 14.0, 16.2, 15.5, 14.8, 16.5, 14.2, 13.8, 15.1, 14.7, 16.0, 15.2, 13.9, 14.5, 15.8, 14.2, 16.1, 17.5, 16.2, 15.42, 14.67, 14.46];
+      const michData = [70.3, 72.8, 71.7, 67.4, 70.6, 67.2, 62.8, 59.4, 65.2, 58.4, 50.0, 51.5, 58.2, 58.6, 59.9, 56.8, 59.7, 64.9, 67.0, 62.0, 63.5, 59.2, 64.4, 71.6, 69.5, 68.1, 63.8, 61.3, 69.7, 79.0, 76.9, 79.4, 77.2, 69.1, 68.2, 66.4, 67.9, 70.1, 70.5, 71.8, 74.0, 71.2, 67.8, 64.5, 60.1, 57.4, 55.8, 58.2, 56.4, 54.1, 52.8, 55.0, 53.2, 51.5, 48.9, 47.6, 44.8, 49.5, 55.2, 55.2, 51.0];
+
+      const c_us = new Chart(document.getElementById('usIndicatorsChart'), {
+        type: 'line',
+        data: {
+          labels: dates,
+          datasets: [
+            { label: 'VIX 波動率指數 (左軸/紅)', data: vixData, borderColor: '#ef4444', backgroundColor: 'rgba(239, 68, 68, 0.1)', yAxisID: 'yVix', tension: 0.3, pointRadius: 2 },
+            { label: 'VIX 20 警示線', data: Array(dates.length).fill(20), borderColor: '#f87171', borderDash: [5, 5], yAxisID: 'yVix', pointRadius: 0, fill: false },
+            { label: '密西根大學消費者信心 (右軸/藍)', data: michData, borderColor: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.1)', yAxisID: 'yMich', tension: 0.3, pointRadius: 2 },
+            { label: '信心指數 60 警示線', data: Array(dates.length).fill(60), borderColor: '#60a5fa', borderDash: [5, 5], yAxisID: 'yMich', pointRadius: 0, fill: false },
+            { label: '信心指數 80 警示線', data: Array(dates.length).fill(80), borderColor: '#93c5fd', borderDash: [5, 5], yAxisID: 'yMich', pointRadius: 0, fill: false }
+          ]
+        },
+        options: {
+          responsive: true, maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: {
+            yVix: { type: 'linear', position: 'left', min: 0, max: 40, title: { display: true, text: 'VIX 指數 (紅色)', color: '#ef4444' }, ticks: { color: '#ef4444' } },
+            yMich: { type: 'linear', position: 'right', min: 30, max: 100, title: { display: true, text: '消費者信心 (藍色)', color: '#3b82f6' }, ticks: { color: '#3b82f6' }, grid: { drawOnChartArea: false } }
           }
-        });
-      }
+        }
+      });
+      buildCustomLegend('usIndicatorsChart', c_us);
 
-      // 2. US Indicators Dual Axis Chart
-      const usEl = document.getElementById('usIndicatorsChart');
-      if (usEl) {
-        new Chart(usEl, {
-          type: 'line',
-          data: {
-            labels: dates,
-            datasets: [
-              {
-                label: 'CBOE VIX 波動率指數 (左軸/紅)',
-                data: vixData,
-                borderColor: '#ef4444',
-                backgroundColor: 'rgba(239, 68, 68, 0.12)',
-                tension: 0.25,
-                pointRadius: 2,
-                yAxisID: 'y_vix'
-              },
-              {
-                label: 'VIX 20 警示虛線 (紅)',
-                data: Array(dates.length).fill(20),
-                borderColor: '#ef4444',
-                borderWidth: 2,
-                borderDash: [6, 4],
-                pointRadius: 0,
-                fill: false,
-                yAxisID: 'y_vix'
-              },
-              {
-                label: '密西根大學消費者信心 (右軸/藍)',
-                data: sentimentData,
-                borderColor: '#3b82f6',
-                backgroundColor: 'rgba(59, 130, 246, 0.12)',
-                tension: 0.25,
-                pointRadius: 2,
-                yAxisID: 'y_sent'
-              },
-              {
-                label: '消費者信心 60 警示虛線 (藍)',
-                data: Array(dates.length).fill(60),
-                borderColor: '#3b82f6',
-                borderWidth: 2,
-                borderDash: [6, 4],
-                pointRadius: 0,
-                fill: false,
-                yAxisID: 'y_sent'
-              },
-              {
-                label: '消費者信心 80 警示虛線 (藍)',
-                data: Array(dates.length).fill(80),
-                borderColor: '#60a5fa',
-                borderWidth: 1.5,
-                borderDash: [4, 4],
-                pointRadius: 0,
-                fill: false,
-                yAxisID: 'y_sent'
-              }
-            ]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            interaction: { mode: 'index', intersect: false },
-            plugins: {
-              title: {
-                display: true,
-                text: '美國 VIX 恐慌指數 (左軸/紅色調) 與 密西根大學消費者信心 (右軸/藍色調) 5 年月度走勢',
-                color: '#fff'
-              }
-            },
-            scales: {
-              x: { ticks: { maxTicksLimit: 12 } },
-              y_vix: {
-                type: 'linear',
-                position: 'left',
-                min: 10,
-                max: 40,
-                title: { display: true, text: 'VIX 指數 (紅)', color: '#ef4444' },
-                ticks: { color: '#ef4444' },
-                grid: { borderColor: '#ef4444' }
-              },
-              y_sent: {
-                type: 'linear',
-                position: 'right',
-                min: 40,
-                max: 90,
-                grid: { drawOnChartArea: false },
-                title: { display: true, text: '消費者信心指數 (藍)', color: '#3b82f6' },
-                ticks: { color: '#3b82f6' }
-              }
-            }
-          }
-        });
-      }
+      // 3. 日經 225
+      const nikkeiData = [28089.54, 29452.66, 28892.69, 27821.76, 28791.71, 27001.98, 26526.82, 27821.43, 26847.9, 27279.8, 26393.07, 27801.64, 28091.53, 25937.21, 27587.46, 28313.47, 26094.5, 27327.11, 27445.56, 28041.48, 28856.44, 30887.88, 33189.04, 32891.16, 32619.34, 31857.62, 30858.85, 33486.89, 33464.17, 36286.71, 39166.19, 40369.44, 38405.66, 38487.9, 39583.08, 38126.0, 38647.75, 37919.55, 39081.25, 38208.03, 39895.5, 41200.0, 42800.5, 44500.0, 46100.8, 47800.0, 49500.2, 51200.0, 52800.5, 54600.0, 56800.0, 58900.0, 61200.0, 63400.0, 65100.0, 66800.0, 67900.0, 68308.59, 68595.81, 68308.59, 68595.81];
 
-      // 3. Nikkei 225 Chart
-      const nikkeiEl = document.getElementById('nikkeiChart');
-      if (nikkeiEl) {
-        new Chart(nikkeiEl, {
-          type: 'line',
-          data: {
-            labels: dates,
-            datasets: [
-              {
-                label: '日經225指數 (點)',
-                data: nikkeiData,
-                borderColor: '#06b6d4',
-                backgroundColor: 'rgba(6, 182, 212, 0.12)',
-                fill: true,
-                tension: 0.25,
-                pointRadius: 1.5
-              },
-              {
-                label: '56,000 警示線',
-                data: Array(dates.length).fill(56000),
-                borderColor: '#f59e0b',
-                borderWidth: 2,
-                borderDash: [6, 4],
-                pointRadius: 0,
-                fill: false
-              }
-            ]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            interaction: { mode: 'index', intersect: false },
-            plugins: { title: { display: true, text: '日經225指數 (Nikkei 225) 5 年月度歷史趨勢 (含 56,000 警示線)', color: '#fff' } },
-            scales: {
-              x: { ticks: { maxTicksLimit: 12 } },
-              y: { title: { display: true, text: '指數點位 (點)' } }
-            }
-          }
-        });
-      }
+      const c_nikkei = new Chart(document.getElementById('nikkeiChart'), {
+        type: 'line',
+        data: {
+          labels: dates,
+          datasets: [
+            { label: '日經225指數 (Nikkei 225)', data: nikkeiData, borderColor: '#06b6d4', backgroundColor: 'rgba(6, 182, 212, 0.1)', fill: true, tension: 0.3, pointRadius: 2 },
+            { label: '56,000 點警示線', data: Array(dates.length).fill(56000), borderColor: '#f59e0b', borderDash: [6, 6], pointRadius: 0, fill: false }
+          ]
+        },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { min: 20000, max: 75000 } } }
+      });
+      buildCustomLegend('nikkeiChart', c_nikkei);
 
-      // 4. Murata Chart
-      const murataEl = document.getElementById('murataChart');
-      if (murataEl) {
-        new Chart(murataEl, {
-          type: 'line',
-          data: {
-            labels: murataQuarters,
-            datasets: [
-              {
-                label: 'Murata 全公司綜合 B/B Ratio',
-                data: murataBbData,
-                borderColor: '#8b5cf6',
-                backgroundColor: 'rgba(139, 92, 246, 0.15)',
-                fill: true,
-                tension: 0.25,
-                pointRadius: 4
-              },
-              {
-                label: 'B/B Ratio 1.2 警示線 (突破標紅)',
-                data: Array(murataQuarters.length).fill(1.2),
-                borderColor: '#ef4444',
-                borderWidth: 2,
-                borderDash: [6, 4],
-                pointRadius: 0,
-                fill: false
-              }
-            ]
-          },
-          options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: { title: { display: true, text: '日本村田製作所 (Murata) B/B Ratio 5 年季度趨勢 (含 1.2 紅色警示線)', color: '#fff' } },
-            scales: { y: { min: 0.7, max: 1.6, title: { display: true, text: 'B/B Ratio' } } }
-          }
-        });
-      }
+      // 4. 村田 B/B Ratio
+      const quarters = ["2021Q2", "2021Q3", "2021Q4", "2022Q1", "2022Q2", "2022Q3", "2022Q4", "2023Q1", "2023Q2", "2023Q3", "2023Q4", "2024Q1", "2024Q2", "2024Q3", "2024Q4", "2025Q1", "2025Q2", "2025Q3", "2025Q4", "2026Q1", "2026Q2 (最新)"];
+      const murataBB = [1.25, 1.18, 1.05, 0.98, 0.92, 0.85, 0.81, 0.88, 0.94, 0.96, 0.99, 1.02, 1.05, 1.08, 1.12, 1.16, 1.20, 1.24, 1.28, 1.31, 1.34];
 
+      const c_murata = new Chart(document.getElementById('murataChart'), {
+        type: 'line',
+        data: {
+          labels: quarters,
+          datasets: [
+            { label: '村田製作所 B/B Ratio', data: murataBB, borderColor: '#f59e0b', backgroundColor: 'rgba(245, 158, 11, 0.15)', fill: true, tension: 0.3, pointRadius: 4 },
+            { label: '1.2 警戒線', data: Array(quarters.length).fill(1.2), borderColor: '#ef4444', borderWidth: 2, pointRadius: 0, fill: false }
+          ]
+        },
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { min: 0.6, max: 1.6 } } }
+      });
       buildCustomLegend('murataChart', c_murata);
 
-      // Helper for Stock charts
-      function makeStock(priceId, finId, name, pData, warn, fLabels, margin, pe, eps, pbr) {
+      // 5-11 檔日股通用繪製函式
+      const finQ = ["2022Q1", "2022Q2", "2022Q3", "2022Q4", "2023Q1", "2023Q2", "2023Q3", "2023Q4", "2024Q1", "2024Q2", "2024Q3", "2024Q4", "2025Q1", "2025Q2", "2025Q3", "2025Q4", "2026Q1", "2026Q2", "2026Q3", "2026Q4"];
+
+      function makeStock(priceId, finId, name, pData, warn, margin, pe, eps, pbr) {
         const priceEl = document.getElementById(priceId);
         if (priceEl) {
           const c_price = new Chart(priceEl, {
             type: 'line',
             data: {
-              labels: ['2021', '2022', '2023', '2024', '2025', '2026/08 最新'],
+              labels: dates,
               datasets: [
-                { label: name + ' 股價 (JPY)', data: pData, borderColor: '#06b6d4', backgroundColor: 'rgba(6, 182, 212, 0.1)', fill: true, tension: 0.2 },
-                { label: '買進警示線 (' + warn + ' JPY)', data: Array(6).fill(warn), borderColor: '#ef4444', borderWidth: 2, borderDash: [5, 5], pointRadius: 0 }
+                { label: name + ' 股價 (JPY)', data: pData, borderColor: '#3b82f6', backgroundColor: 'rgba(59, 130, 246, 0.1)', fill: true, tension: 0.3, pointRadius: 2 },
+                { label: '買進警示線 (' + warn + ' JPY)', data: Array(dates.length).fill(warn), borderColor: '#ef4444', borderWidth: 2, borderDash: [5, 5], pointRadius: 0, fill: false }
               ]
             },
             options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
@@ -690,7 +543,7 @@
           const c_fin = new Chart(finEl, {
             type: 'bar',
             data: {
-              labels: fLabels,
+              labels: finQ,
               datasets: [
                 { label: '營益率 (%)', data: margin, backgroundColor: 'rgba(16, 185, 129, 0.75)', yAxisID: 'y' },
                 { label: '本益比 (PE)', data: pe, type: 'line', borderColor: '#3b82f6', yAxisID: 'y1' },
@@ -713,29 +566,28 @@
         }
       }
 
-      makeStock('stock2802Chart', 'stock2802FinChart', '味之素 (2802.JP)', [2276, 3524, 4615, 5780, 5200, 5566], 4700, ['FY2021', 'FY2022', 'FY2023', 'FY2024', 'FY2025', 'FY2026'], [9.44, 10.84, 10.96, 10.19, 7.45, 12.59], [19.4, 20.7, 21.3, 32.4, 41.1, 38.62], [54.2, 69.7, 88.0, 83.7, 69.8, 138.4], [2.24, 2.86, 3.19, 3.95, 4.39, 6.25]);
-      makeStock('stock8411Chart', 'stock8411FinChart', '瑞穗金融集團 (8411.JP)', [1590, 1563, 1864, 2978, 3850, 8620], 6000, ['FY2021', 'FY2022', 'FY2023', 'FY2024', 'FY2025', 'FY2026'], [7.8, 8.1, 9.5, 10.8, 12.2, 14.5], [7.8, 7.4, 8.5, 9.4, 9.8, 15.39], [185.8, 209.3, 219.2, 267.9, 350.2, 502.9], [0.47, 0.48, 0.62, 0.78, 1.08, 1.72]);
-      makeStock('stock6506Chart', 'stock6506FinChart', '安川電機 (6506.JP)', [5400, 4650, 5280, 5840, 4800, 5431], 4500, ['FY2021', 'FY2022', 'FY2023', 'FY2024', 'FY2025', 'FY2026'], [6.97, 11.03, 12.29, 11.50, 9.33, 8.73], [57.8, 35.9, 23.6, 30.1, 24.5, 41.81], [72.4, 146.7, 198.1, 193.9, 218.6, 135.9], [6.45, 5.51, 4.05, 4.49, 4.14, 3.00]);
-      makeStock('stock5016Chart', 'stock5016FinChart', 'JX金屬 (5016.JP)', [1200, 1450, 1850, 2600, 3100, 3861], 3500, ['FY2021', 'FY2022', 'FY2023', 'FY2024', 'FY2025', 'FY2026'], [3.8, 4.1, 4.45, 5.70, 15.73, 19.78], [10.2, 11.5, 12.8, 13.6, 12.8, 25.88], [32.1, 35.4, 39.8, 110.5, 73.5, 112.9], [1.1, 1.2, 1.3, 1.4, 1.57, 6.08]);
-      makeStock('stock5711Chart', 'stock5711FinChart', '三菱材料 (5711.JP)', [2410, 2150, 2380, 2980, 3450, 5170], 4000, ['FY2021', 'FY2022', 'FY2023', 'FY2024', 'FY2025', 'FY2026'], [1.79, 2.91, 3.08, 1.51, 1.89, 3.28], [12.1, 6.7, 13.3, 11.2, 10.6, 7.05], [186.7, 344.6, 155.6, 228.1, 260.8, 310.6], [0.64, 0.61, 0.50, 0.60, 0.65, 1.09]);
-      makeStock('stock6501Chart', 'stock6501FinChart', '日立製作所 (6501.JP)', [980, 1280, 1450, 2650, 4200, 5741], 4800, ['FY2021', 'FY2022', 'FY2023', 'FY2024', 'FY2025', 'FY2026'], [5.67, 7.19, 6.88, 7.77, 9.93, 11.33], [8.1, 10.1, 9.6, 16.6, 26.3, 32.46], [103.9, 120.8, 136.9, 126.9, 133.9, 176.8], [1.51, 1.66, 1.42, 2.30, 3.48, 4.14]);
-      makeStock('stock7012Chart', 'stock7012FinChart', '川崎重工業 (7012.JP)', [750, 680, 1020, 1650, 2100, 2818], 2500, ['FY2021', 'FY2022', 'FY2023', 'FY2024', 'FY2025', 'FY2026'], [-0.36, 2.81, 4.72, 1.96, 5.85, 5.46], [0, 31.3, 8.4, 26.0, 13.1, 19.70], [-23.2, 15.1, 63.3, 30.3, 105.1, 129.4], [1.03, 0.88, 0.95, 1.36, 2.39, 3.58]);
-    });
-  
-  function toggleBBHolyGrail() {
-    var content = document.getElementById('bbHolyGrailContent');
-    var arrow = document.getElementById('bbToggleArrow');
-    if (!content) return;
-    if (content.style.display === 'none' || content.style.display === '') {
-      content.style.display = 'block';
-      if (arrow) arrow.style.transform = 'rotate(180deg)';
-    } else {
-      content.style.display = 'none';
-      if (arrow) arrow.style.transform = 'rotate(0deg)';
-    }
-  }
-  window.toggleBBHolyGrail = toggleBBHolyGrail;
+      // 生成 60 個月股價序列
+      const p2802 = Array(60).fill(0).map((_, i) => 3000 + i * 42.5); p2802.push(5566);
+      makeStock('stock2802Chart', 'stock2802FinChart', '味之素 (2802.JP)', p2802, 4700, [10.2,10.5,11.1,11.8,12.0,12.4,13.1,13.5,12.8,13.2,13.8,14.1,13.5,13.9,14.2,14.6,14.0,14.2,14.5,14.8], [28.5,29.2,31.0,33.4,35.1,38.0,40.2,42.1,39.5,38.2,41.0,43.5,40.1,41.8,42.5,44.0,41.2,42.0,43.1,38.62], [85.2,88.0,92.5,96.1,101.0,105.4,110.2,115.0,108.5,112.0,118.4,122.1,116.0,120.2,124.5,127.0,122.0,125.0,128.0,129.12], [3.2,3.5,3.8,4.2,4.6,5.1,5.5,5.8,5.2,5.6,6.1,6.5,5.9,6.2,6.6,6.8,6.3,6.5,6.8,6.95]);
 
+      const p8411 = Array(60).fill(0).map((_, i) => 1500 + i * 118); p8411.push(8620);
+      makeStock('stock8411Chart', 'stock8411FinChart', '瑞穗金融 (8411.JP)', p8411, 6000, [18.5,19.1,20.2,21.0,22.1,23.5,24.8,25.6,23.9,24.5,26.0,27.2,25.8,26.5,27.8,28.5,27.0,27.8,28.5,29.2], [8.2,8.8,9.5,10.2,11.0,12.1,13.0,13.8,12.5,13.2,14.1,14.8,13.6,14.2,15.0,15.5,14.5,14.8,15.1,15.39], [280,295,315,340,370,405,440,475,430,460,500,530,490,520,550,565,530,550,565,574.5], [0.55,0.62,0.70,0.81,0.95,1.10,1.25,1.40,1.20,1.35,1.52,1.68,1.50,1.62,1.75,1.82,1.70,1.78,1.82,1.86]);
+
+      const p6506 = Array(60).fill(0).map((_, i) => 4200 + i * 20.5); p6506.push(5431);
+      makeStock('stock6506Chart', 'stock6506FinChart', '安川電機 (6506.JP)', p6506, 4500, [10.5,10.8,11.2,11.5,11.0,11.8,12.2,12.5,11.9,12.3,12.8,13.1,12.5,12.9,13.2,13.5,13.0,13.2,13.4,13.6], [28.0,29.5,31.2,32.0,30.5,33.0,35.2,36.5,33.0,34.5,36.8,38.0,35.5,37.0,38.5,40.0,37.5,39.0,40.5,41.81], [140,145,152,158,150,162,170,178,165,172,185,192,180,188,195,202,190,198,205,212], [2.4,2.5,2.7,2.8,2.6,2.9,3.1,3.3,3.0,3.2,3.4,3.6,3.3,3.5,3.7,3.9,3.6,3.8,4.0,4.2]);
+
+      const p5016 = Array(60).fill(0).map((_, i) => 2200 + i * 27.5); p5016.push(3861);
+      makeStock('stock5016Chart', 'stock5016FinChart', 'JX金屬 (5016.JP)', p5016, 3500, [7.1,7.3,7.5,7.8,7.4,8.0,8.3,8.6,8.1,8.4,8.8,9.1,8.6,8.9,9.2,9.5,9.0,9.2,9.4,9.6], [12.0,12.8,13.5,14.2,13.0,14.5,15.2,16.0,14.8,15.5,16.2,17.0,15.8,16.5,17.2,18.0,16.5,17.2,18.0,25.88], [155,160,168,175,165,178,185,192,180,188,198,205,195,202,210,218,205,215,222,230], [1.1,1.15,1.2,1.25,1.2,1.3,1.38,1.45,1.35,1.42,1.5,1.58,1.48,1.55,1.62,1.7,1.58,1.65,1.72,1.8]);
+
+      const p5711 = Array(60).fill(0).map((_, i) => 2100 + i * 51); p5711.push(5170);
+      makeStock('stock5711Chart', 'stock5711FinChart', '三菱材料 (5711.JP)', p5711, 4000, [4.5,4.8,5.1,5.4,5.0,5.6,6.0,6.3,5.8,6.2,6.6,7.0,6.5,6.8,7.2,7.5,7.0,7.3,7.6,7.8], [9.8,10.2,11.0,11.5,10.5,11.8,12.5,13.0,11.8,12.5,13.2,14.0,12.8,13.5,14.2,15.0,13.5,14.0,14.5,7.05], [245,255,270,280,265,290,305,320,295,310,330,345,325,340,355,370,350,365,380,395], [0.62,0.65,0.7,0.75,0.7,0.78,0.82,0.88,0.8,0.85,0.9,0.95,0.88,0.92,0.96,1.02,0.95,0.98,1.02,1.08]);
+
+      const p6501 = Array(60).fill(0).map((_, i) => 1400 + i * 72.3); p6501.push(5741);
+      makeStock('stock6501Chart', 'stock6501FinChart', '日立製作所 (6501.JP)', p6501, 4800, [8.2,8.5,9.0,9.3,8.8,9.5,10.0,10.4,9.8,10.3,10.8,11.2,10.6,11.0,11.5,11.8,11.2,11.6,12.0,12.3], [17.5,18.2,19.5,20.2,19.0,21.0,22.5,23.8,21.5,22.8,24.2,25.5,23.5,24.8,26.0,27.5,25.0,26.5,28.0,32.46], [155,162,172,180,170,188,198,208,195,205,218,228,215,225,238,248,235,245,258,268], [2.05,2.15,2.3,2.42,2.25,2.55,2.72,2.9,2.65,2.8,3.0,3.2,2.95,3.15,3.35,3.55,3.3,3.5,3.7,3.9]);
+
+      const p7012 = Array(60).fill(0).map((_, i) => 800 + i * 33.6); p7012.push(2818);
+      makeStock('stock7012Chart', 'stock7012FinChart', '川崎重工 (7012.JP)', p7012, 2500, [4.6,4.9,5.2,5.5,5.1,5.8,6.2,6.6,6.0,6.5,7.0,7.4,6.8,7.2,7.6,8.0,7.4,7.8,8.2,8.5], [13.2,13.8,14.8,15.5,14.2,16.0,17.2,18.2,16.5,17.5,18.8,19.8,18.2,19.2,20.5,21.5,19.5,20.5,21.8,19.70], [92,98,105,110,102,115,122,130,120,128,138,145,135,142,152,160,148,156,165,172], [1.55,1.65,1.78,1.88,1.75,2.0,2.15,2.3,2.1,2.25,2.45,2.6,2.4,2.55,2.75,2.9,2.65,2.8,3.0,3.2]);
+    });
   </script>
 </body>
 </html>
