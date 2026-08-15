@@ -2,9 +2,9 @@ name: 每日自動生成並發布市場監控報告
 
 on:
   schedule:
-    # 台灣時間每週一至週五 07:15 自動執行 (對應 UTC Sun-Thu 23:15)
-    - cron: '15 23 * * 0-4'
-  workflow_dispatch: # 支援在 GitHub 網頁上手動一鍵立即更新
+    # 台灣時間每週一至週五 07:00 自動執行 (對應 UTC Sun-Thu 23:00)
+    - cron: '0 23 * * 0-4'
+  workflow_dispatch: # 支援在 GitHub 網頁上手動一鍵立即更新並測試寄信
 
 permissions:
   contents: write
@@ -27,7 +27,10 @@ jobs:
         with:
           python-version: '3.11'
 
-      - name: 執行 Python 生成最新 HTML 報告
+      - name: 執行 Python 生成報告並發送 Email
+        env:
+          GMAIL_USER: ${{ secrets.GMAIL_USER }}
+          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
         run: |
           python generate_report.py
           ls -la index.html
@@ -43,3 +46,4 @@ jobs:
       - name: 官方直接部署至 GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
+: 
