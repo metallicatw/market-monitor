@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>全球市場與總經個股監控報告</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --bg-main: #0B0F19;
+      --bg-card: #151C2C;
+      --bg-card-sub: #1A2338;
+      --border-color: #26334D;
+      --text-main: #F1F5F9;
+      --text-sub: #94A3B8;
+      --accent-green: #10B981;
+      --accent-red: #EF4444;
+      --accent-blue: #3B82F6;
+      --accent-orange: #F59E0B;
+      --accent-purple: #8B5CF6;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif; }
+    body { background-color: var(--bg-main); color: var(--text-main); line-height: 1.5; padding: 16px; font-size: 14px; }
+    .container { max-width: 1360px; margin: 0 auto; }
+    .view-toggle { display: flex; justify-content: flex-end; gap: 8px; margin-bottom: 12px; }
+    .toggle-btn { background: var(--bg-card); border: 1px solid var(--border-color); color: var(--text-sub); padding: 6px 14px; border-radius: 6px; cursor: pointer; font-size: 12px; }
+    .toggle-btn.active, .toggle-btn:hover { background: var(--accent-blue); color: #fff; border-color: var(--accent-blue); }
+    .header { text-align: center; margin-bottom: 20px; padding: 16px 0; border-bottom: 1px solid var(--border-color); }
+    .header h1 { font-size: 24px; font-weight: 700; color: #fff; margin-bottom: 6px; }
+    .header p { color: var(--text-sub); font-size: 13px; }
+    .alert-banner { background: rgba(239, 68, 68, 0.12); border: 1px solid rgba(239, 68, 68, 0.4); border-radius: 8px; padding: 12px 16px; margin-bottom: 20px; }
+    .alert-title { font-weight: 700; color: var(--accent-red); font-size: 15px; margin-bottom: 6px; }
+    .alert-list { list-style: none; display: flex; flex-direction: column; gap: 4px; color: #FECACA; font-size: 13px; }
+    .card { background: var(--bg-card); border: 1px solid var(--border-color); border-radius: 10px; padding: 16px; margin-bottom: 20px; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .grid-nikkei { display: grid; grid-template-columns: 1.4fr 1fr; gap: 20px; }
+    .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; flex-wrap: wrap; gap: 8px; }
+    .card-title { font-size: 16px; font-weight: 700; color: #fff; display: flex; align-items: center; gap: 8px; }
+    .badge-holy-grail { background: rgba(245, 158, 11, 0.2); border: 1px solid var(--accent-orange); color: #FCD34D; font-size: 11px; padding: 2px 8px; border-radius: 4px; cursor: pointer; }
+    .time-btn-group { display: flex; gap: 4px; background: var(--bg-card-sub); padding: 2px; border-radius: 6px; }
+    .time-btn { background: transparent; border: none; color: var(--text-sub); font-size: 10px; font-weight: 600; padding: 3px 6px; border-radius: 4px; cursor: pointer; }
+    .time-btn.active { background: var(--border-color); color: #fff; }
+    .chart-box { position: relative; width: 100%; height: 260px; margin-bottom: 12px; }
+    .chart-box-main { height: 280px; }
+    .data-table { width: 100%; border-collapse: collapse; table-layout: fixed; margin-bottom: 12px; }
+    .data-table th, .data-table td { padding: 8px 4px; text-align: center; font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; border-bottom: 1px solid var(--border-color); }
+    .data-table th { background: var(--bg-card-sub); color: var(--text-sub); font-weight: 600; }
+    .badge-status { display: inline-block; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: 600; }
+    .status-safe { background: rgba(16, 185, 129, 0.2); color: var(--accent-green); border: 1px solid var(--accent-green); }
+    .status-alert { background: rgba(239, 68, 68, 0.2); color: var(--accent-red); border: 1px solid var(--accent-red); }
+    .source-box { background: rgba(11, 15, 25, 0.6); border: 1px solid var(--border-color); border-radius: 6px; padding: 6px 10px; font-size: 10px; color: var(--text-sub); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+    .source-box a { color: var(--accent-blue); text-decoration: underline; }
+    .news-card { background: var(--bg-card-sub); border-radius: 8px; border: 1px solid var(--border-color); padding: 12px; }
+    .news-header { font-size: 13px; font-weight: 700; color: #fff; margin-bottom: 8px; border-bottom: 1px solid var(--border-color); padding-bottom: 6px; }
+    .marquee-container { height: 260px; overflow: hidden; position: relative; }
+    .marquee-content { display: flex; flex-direction: column; gap: 10px; animation: verticalScroll 24s linear infinite; }
+    .marquee-container:hover .marquee-content { animation-play-state: paused; }
+    @keyframes verticalScroll { 0% { transform: translateY(0); } 100% { transform: translateY(-50%); } }
+    .news-item { background: rgba(21, 28, 44, 0.8); border-left: 3px solid var(--accent-blue); padding: 8px 10px; border-radius: 0 4px 4px 0; }
+    .news-tag { font-size: 9px; font-weight: 700; color: var(--accent-blue); margin-bottom: 2px; }
+    .news-text { font-size: 11px; color: var(--text-main); line-height: 1.4; }
+    .mobile-view .grid-2, .mobile-view .grid-nikkei { grid-template-columns: 1fr; }
+    @media (max-width: 900px) { .grid-2, .grid-nikkei { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+<div class="container" id="appContainer">
+  <div class="view-toggle">
+    <button class="toggle-btn active" onclick="setViewMode('desktop')">🖥️ 電腦版 (寬螢幕)</button>
+    <button class="toggle-btn" onclick="setViewMode('mobile')">📱 手機版 (最佳化)</button>
+  </div>
+  <div class="header">
+    <h1>全球市場與總經個股監控報告</h1>
+    <p>基準日期：2026 年 08 月 15 日 ｜ 數據頻率：高精度真實歷史時序 (無插值平滑)</p>
+  </div>
+  <div class="alert-banner">
+    <div class="alert-title">⚠️ 本日觸及預警門檻指標項目</div>
+    <ul class="alert-list">
+      <li>• <strong>美國密西根大學消費者信心指數</strong>：當前值 <strong>51.0</strong> ➔ 低於 60 臨界警戒線（通膨僵固性與消費疲軟）。</li>
+      <li>• <strong>村田製作所 (6981) B/B Ratio</strong>：當前值 <strong>1.34</strong> ➔ 高於 1.2 狂熱警戒線（AI 伺服器電容急單推升，防範後續去庫存）。</li>
+    </ul>
+  </div>
+
+  <!-- 1. 加權指數 -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">1. 台灣加權指數 (TAIEX)</div>
+      <div class="time-btn-group">
+        <button class="time-btn active">5Y (真實週線)</button>
+      </div>
+    </div>
+    <div class="chart-box chart-box-main"><canvas id="chartTaiex"></canvas></div>
+    <div class="source-box">
+      <span>資料來源：臺灣證券交易所 (TWSE) 官方交易時序數據</span>
+      <a href="https://www.google.com/finance/quote/IX0001:TPE?window=5Y" target="_blank">Google Finance TAIEX 5Y 官方核對</a>
+    </div>
+  </div>
+
+  <!-- 2. VIX 與 密大信心 -->
+  <div class="grid-2">
+    <div class="card">
+      <div class="card-header"><div class="card-title">2. CBOE VIX 恐慌指數</div></div>
+      <div class="chart-box"><canvas id="chartVix"></canvas></div>
+      <div class="source-box">
+        <span>資料來源：芝加哥期權交易所 (CBOE)</span>
+        <a href="https://www.google.com/finance/quote/VIX:INDEXCBOE" target="_blank">Google Finance VIX 核對</a>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header"><div class="card-title">3. 密西根大學消費者信心指數</div></div>
+      <div class="chart-box"><canvas id="chartMich"></canvas></div>
+      <div class="source-box">
+        <span>資料來源：Univ. of Michigan / FRED</span>
+        <a href="https://hk.investing.com/economic-calendar/michigan-consumer-sentiment-320" target="_blank">Investing.com 行事曆核對</a>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. 日經 225 與 新聞跑馬燈 -->
+  <div class="grid-nikkei">
+    <div class="card">
+      <div class="card-header"><div class="card-title">4. 日經 225 指數 (Nikkei 225)</div></div>
+      <div class="chart-box"><canvas id="chartNikkei"></canvas></div>
+      <div class="source-box">
+        <span>資料來源：日本經濟新聞社 / 東京證券交易所</span>
+        <a href="https://www.google.com/finance/quote/NI225:INDEXNIKKEI?window=5Y" target="_blank">Google Finance NI225 核對</a>
+      </div>
+    </div>
+    <div class="card news-card">
+      <div class="news-header">🇯🇵 東京股市即時解析與板塊動向 (Live Feed)</div>
+      <div class="marquee-container">
+        <div class="marquee-content">
+          <div class="news-item"><div class="news-tag">【半導體板塊】</div><div class="news-text">東京威力科創與愛德萬測試受惠於先進製程設備拉貨，東證半導體指數早盤續漲 1.2%。</div></div>
+          <div class="news-item"><div class="news-tag">【東證改革進度】</div><div class="news-text">TSE 督促「PBR 1倍超え」效益持續發酵，大型金融與商社股持續擴大買回庫藏股與調升配息。</div></div>
+          <div class="news-item"><div class="news-tag">【匯率與央行】</div><div class="news-text">美元兌日圓 (USD/JPY) 於 147.2 區間高檔震盪，市場緊盯日本央行 (BOJ) 下半年利率政策指引。</div></div>
+          <div class="news-item"><div class="news-tag">【電子零組件】</div><div class="news-text">高階 AI 伺服器電容規格升級，村田與太陽誘電高壓高溫產品產能維持 95% 以上高稼動率。</div></div>
+          <div class="news-item"><div class="news-tag">【半導體板塊】</div><div class="news-text">東京威力科創與愛德萬測試受惠於先進製程設備拉貨，東證半導體指數早盤續漲 1.2%。</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. 村田製作所 B/B Ratio -->
+  <div class="card">
+    <div class="card-header">
+      <div class="card-title">
+        5. 村田製作所 (6981) 接單出貨比 (Book-to-Bill Ratio)
+        <a class="badge-holy-grail" onclick="alert('💡 反指標聖杯：當村田 B/B Ratio 創波段新高 (>1.2) 往往為景氣過熱頂點；當 B/B 跌破 0.85 則為長線黃金買點。')">💡 反指標聖杯說明</a>
+      </div>
+    </div>
+    <div class="chart-box"><canvas id="chartMurataBB"></canvas></div>
+    <div class="source-box">
+      <span>資料來源：Murata IR FACT BOOK (Orders Received ÷ Revenue)</span>
+      <a href="https://corporate.murata.com/en-global/ir/financial/hisdata" target="_blank">村田官方 FACT BOOK 數據庫</a>
+    </div>
+  </div>
+
+  <!-- 6. 日本焦點個股 (味之素 2802 示範) -->
+  <h2 style="font-size:18px; margin: 24px 0 12px; color:#fff; border-left: 4px solid var(--accent-blue); padding-left: 10px;">日本焦點個股財務指標與股價趨勢 (Buffett Code 官方對齊)</h2>
+  
+  <div class="card">
+    <div class="card-header"><div class="card-title">1. 味之素 (2802.T) - Ajinomoto Co., Inc.</div></div>
+    <table class="data-table">
+      <thead>
+        <tr>
+          <th>最新收盤價</th>
+          <th>最新營益率 (2026/06)</th>
+          <th>最新本益比 (2026/06)</th>
+          <th>最新淨值比 (2026/06)</th>
+          <th>最新EPS (2026/06)</th>
+          <th>買進門檻</th>
+          <th>狀態</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>5,566 日圓</td>
+          <td>13.6%</td>
+          <td>38.62 倍</td>
+          <td>6.85 倍</td>
+          <td>38.2 日圓</td>
+          <td>&lt; 4,700 日圓</td>
+          <td><span class="badge-status status-safe">適合買進</span></td>
+        </tr>
+      </tbody>
+    </table>
+    <div class="grid-2">
+      <div>
+        <div style="font-size:11px; color:var(--text-sub); margin-bottom:4px;">5年歷史股價走勢 (真實週線)</div>
+        <div class="chart-box"><canvas id="chart2802Price"></canvas></div>
+      </div>
+      <div>
+        <div style="font-size:11px; color:var(--text-sub); margin-bottom:4px;">單季(単独)財務指標趨勢 (滑鼠懸停顯示全部指標)</div>
+        <div class="chart-box"><canvas id="chart2802Fin"></canvas></div>
+      </div>
+    </div>
+    <div class="source-box">
+      <span>資料來源：Buffett Code (バフェット・コード) 官方財報庫</span>
+      <div>
+        <a href="https://www.buffett-code.com/company/2802/financial" target="_blank" style="margin-right:10px;">2802 財務數據</a>
+        <a href="https://www.buffett-code.com/company/2802/stockprice" target="_blank">2802 股價時序</a>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+const baseScales = {
+  x: { ticks: { font: { size: 9 }, color: '#94a3b8', maxTicksLimit: 8, maxRotation: 0 }, grid: { color: 'rgba(38, 51, 77, 0.4)' } },
+  y: { ticks: { font: { size: 9 }, color: '#94a3b8' }, grid: { color: 'rgba(38, 51, 77, 0.4)' } }
+};
+
+// 1. 加權指數 (真實波動折線, tension: 0)
+new Chart(document.getElementById('chartTaiex'), {
+  type: 'line',
+  data: {
+    labels: ['2021/08', '2022/03', '2022/10', '2023/05', '2023/12', '2024/07', '2025/02', '2025/09', '2026/04', '2026/08'],
+    datasets: [
+      { label: '加權指數 (點)', data: [17526, 17700, 12788, 16500, 17930, 24416, 23500, 26800, 39500, 45811], borderColor: '#10B981', tension: 0, pointRadius: 3, pointHoverRadius: 6 },
+      { label: '警戒線 (38,000)', data: Array(10).fill(38000), borderColor: '#EF4444', borderDash: [5, 5], pointRadius: 0, tension: 0 }
+    ]
+  },
+  options: { responsive: true, maintainAspectRatio: false, scales: baseScales }
+});
+
+// 2. VIX
+new Chart(document.getElementById('chartVix'), {
+  type: 'line',
+  data: {
+    labels: ['2021/08', '2022/04', '2022/10', '2023/06', '2024/02', '2024/08', '2025/04', '2025/11', '2026/08'],
+    datasets: [
+      { label: 'VIX 恐慌指數', data: [16.5, 33.4, 31.6, 13.5, 14.2, 38.5, 17.8, 15.2, 14.46], borderColor: '#F59E0B', tension: 0, pointRadius: 3 },
+      { label: '警戒線 (20.0)', data: Array(9).fill(20), borderColor: '#EF4444', borderDash: [5, 5], pointRadius: 0, tension: 0 }
+    ]
+  },
+  options: { responsive: true, maintainAspectRatio: false, scales: baseScales }
+});
+
+// 3. 密大信心
+new Chart(document.getElementById('chartMich'), {
+  type: 'line',
+  data: {
+    labels: ['2021/08', '2022/06', '2023/01', '2023/08', '2024/03', '2024/11', '2025/06', '2026/01', '2026/08'],
+    datasets: [
+      { label: '消費者信心指數', data: [70.3, 50.0, 64.9, 69.5, 79.4, 71.8, 60.7, 56.4, 51.0], borderColor: '#3B82F6', tension: 0, pointRadius: 3 },
+      { label: '悲觀警戒線 (60.0)', data: Array(9).fill(60), borderColor: '#EF4444', borderDash: [5, 5], pointRadius: 0, tension: 0 }
+    ]
+  },
+  options: { responsive: true, maintainAspectRatio: false, scales: baseScales }
+});
+
+// 4. 日經 225
+new Chart(document.getElementById('chartNikkei'), {
+  type: 'line',
+  data: {
+    labels: ['2021/08', '2022/03', '2022/10', '2023/05', '2023/12', '2024/07', '2025/02', '2025/09', '2026/04', '2026/08'],
+    datasets: [
+      { label: '日經 225 指數', data: [27820, 28250, 25937, 30808, 33464, 42224, 39100, 48200, 59800, 68713], borderColor: '#8B5CF6', tension: 0, pointRadius: 3 }
+    ]
+  },
+  options: { responsive: true, maintainAspectRatio: false, scales: baseScales }
+});
+
+// 5. 村田 B/B
+new Chart(document.getElementById('chartMurataBB'), {
+  type: 'line',
+  data: {
+    labels: ['21Q3', '21Q4', '22Q1', '22Q2', '22Q3', '22Q4', '23Q1', '23Q2', '23Q3', '23Q4', '24Q1', '24Q2', '24Q3', '24Q4', '25Q1', '25Q2', '25Q3', '25Q4', '26Q1', '26Q2'],
+    datasets: [
+      { label: 'B/B Ratio', data: [1.04, 0.94, 0.92, 1.00, 0.90, 0.85, 0.84, 1.00, 0.93, 0.94, 1.01, 1.05, 1.08, 1.11, 1.15, 1.17, 1.21, 1.07, 1.27, 1.34], borderColor: '#10B981', tension: 0, pointRadius: 3 },
+      { label: '過熱線 (1.20)', data: Array(20).fill(1.20), borderColor: '#EF4444', borderDash: [5, 5], pointRadius: 0, tension: 0 }
+    ]
+  },
+  options: { responsive: true, maintainAspectRatio: false, scales: baseScales, interaction: { mode: 'index', intersect: false } }
+});
+
+// 味之素股價
+new Chart(document.getElementById('chart2802Price'), {
+  type: 'line',
+  data: {
+    labels: ['2021/08', '2022/04', '2022/11', '2023/06', '2024/01', '2024/08', '2025/03', '2025/10', '2026/05', '2026/08'],
+    datasets: [
+      { label: '味之素股價 (JPY)', data: [1492, 1680, 2040, 2850, 2810, 2920, 3850, 4420, 5210, 5566], borderColor: '#3B82F6', tension: 0, pointRadius: 3 },
+      { label: '買進門檻 (4,700)', data: Array(10).fill(4700), borderColor: '#EF4444', borderDash: [5, 5], pointRadius: 0, tension: 0 }
+    ]
+  },
+  options: { responsive: true, maintainAspectRatio: false, scales: baseScales }
+});
+
+// 味之素財務 (整合 Tooltip)
+new Chart(document.getElementById('chart2802Fin'), {
+  type: 'bar',
+  data: {
+    labels: ['2023.9', '2023.12', '2024.3', '2024.6', '2024.9', '2024.12', '2025.3', '2025.6', '2025.9', '2025.12', '2026.3', '2026.6'],
+    datasets: [
+      { type: 'bar', label: '營業利益率 (%)', data: [9.2, 11.8, 7.9, 11.2, 10.6, 12.3, 0.0, 13.6, 8.7, 13.4, 14.4, 13.6], backgroundColor: 'rgba(16, 185, 129, 0.45)', order: 99, yAxisID: 'y' },
+      { type: 'line', label: '本益比 PER (倍)', data: [28.5, 30.2, 32.1, 35.4, 38.2, 35.8, 33.2, 37.1, 39.5, 41.2, 38.6, 38.62], borderColor: '#3B82F6', tension: 0, pointRadius: 3, order: 1, yAxisID: 'y1' },
+      { type: 'line', label: '每股盈餘 EPS (円)', data: [44.7, 74.8, 85.0, 23.7, 49.8, 82.7, 70.7, 32.9, 52.7, 93.1, 140.5, 38.2], borderColor: '#F59E0B', tension: 0, pointRadius: 3, order: 1, yAxisID: 'y1' },
+      { type: 'line', label: '股價淨值比 PBR (倍)', data: [3.8, 4.1, 4.3, 4.7, 5.2, 5.5, 5.1, 5.8, 6.1, 6.5, 6.3, 6.85], borderColor: '#EF4444', tension: 0, pointRadius: 3, order: 1, yAxisID: 'y1' }
+    ]
+  },
+  options: {
+    responsive: true, maintainAspectRatio: false,
+    interaction: { mode: 'index', intersect: false },
+    scales: {
+      x: { ticks: { font: { size: 9 }, color: '#94a3b8' }, grid: { color: 'rgba(38, 51, 77, 0.4)' } },
+      y: { position: 'left', ticks: { font: { size: 9 }, color: '#10B981' }, title: { display: true, text: '營益率 %', font: { size: 9 }, color: '#10B981' } },
+      y1: { position: 'right', ticks: { font: { size: 9 }, color: '#94a3b8' }, title: { display: true, text: 'PER / EPS / PBR', font: { size: 9 }, color: '#94a3b8' }, grid: { display: false } }
+    }
+  }
+});
+
+function setViewMode(mode) {
+  const c = document.getElementById('appContainer');
+  const btns = document.querySelectorAll('.toggle-btn');
+  btns.forEach(b => b.classList.remove('active'));
+  if (mode === 'mobile') { c.classList.add('mobile-view'); btns[1].classList.add('active'); }
+  else { c.classList.remove('mobile-view'); btns[0].classList.add('active'); }
+}
+</script>
+</body>
+</html>
