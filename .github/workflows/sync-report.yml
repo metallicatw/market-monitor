@@ -7,25 +7,39 @@ on:
   workflow_dispatch: # 支援在 GitHub 網頁上手動一鍵立即更新
 
 permissions:
-  contents: write
+  contents: read
   pages: write
   id-token: write
 
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
 jobs:
   deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     runs-on: ubuntu-latest
     steps:
       - name: 簽出儲存庫
         uses: actions/checkout@v4
 
-      - name: 從 Google Drive 專屬資料夾下載最新 HTML 報告
+      - name: 安裝 gdown 並下載真實報告 HTML
         run: |
-          # 抓取專屬資料夾內最新報告檔案 (已修正圖例與按鈕)
-          FILE_ID="1zL2F1MkNqPhPtZMsh3ZniFYk1sTpbV1b"
-          curl -L "https://drive.google.com/uc?export=download&id=${FILE_ID}" -o index.html
+          pip install --upgrade gdown
+          # 使用 gdown 確保 100% 完整下載 Google Drive 報告，絕不產生空白檔案
+          gdown --id "1zL2F1MkNqPhPtZMsh3ZniFYk1sTpbV1b" -O index.html
+          ls -la index.html
 
-      - name: 部署至 GitHub Pages
-        uses: peaceiris/actions-gh-pages@v3
+      - name: 設定 GitHub Pages 環境
+        uses: actions/configure-pages@v5
+
+      - name: 上傳網頁成品
+        uses: actions/upload-pages-artifact@v3
         with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./
+          path: '.'
+
+      - name: 官方直接部署至 GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
