@@ -34,6 +34,7 @@ jobs:
         env:
           GMAIL_USER: ${{ secrets.GMAIL_USER }}
           GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
+          FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
         run: |
           python generate_report.py
           ls -la index.html
