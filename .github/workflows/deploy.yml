@@ -27,6 +27,9 @@ jobs:
         with:
           python-version: '3.11'
 
+      - name: 安裝相依套件
+        run: pip install yfinance
+
       - name: 執行 Python 生成報告並發送 Email
         env:
           GMAIL_USER: ${{ secrets.GMAIL_USER }}
