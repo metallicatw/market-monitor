@@ -35,18 +35,32 @@ jobs:
           GMAIL_USER: ${{ secrets.GMAIL_USER }}
           GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
           FRED_API_KEY: ${{ secrets.FRED_API_KEY }}
+          SEND_EMAIL: ${{ github.ref == 'refs/heads/main' && 'true' || 'false' }}
         run: |
           python generate_report.py
           ls -la index.html
 
+      # ===== 以下只在 main 分支執行：正式部署到 GitHub Pages =====
       - name: 設定 GitHub Pages 環境
+        if: github.ref == 'refs/heads/main'
         uses: actions/configure-pages@v5
 
       - name: 上傳網頁成品
+        if: github.ref == 'refs/heads/main'
         uses: actions/upload-pages-artifact@v3
         with:
           path: '.'
 
       - name: 官方直接部署至 GitHub Pages
+        if: github.ref == 'refs/heads/main'
         id: deployment
         uses: actions/deploy-pages@v4
+
+      # ===== 以下只在非 main 分支執行：僅產生可下載的測試檔案 =====
+      - name: 上傳測試用 index.html（非 main 分支）
+        if: github.ref != 'refs/heads/main'
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-report-${{ github.run_number }}
+          path: index.html
+          retention-days: 7
