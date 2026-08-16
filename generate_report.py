@@ -888,4 +888,8 @@ def send_summary_email():
 
 
 if __name__ == "__main__":
-    send_summary_email()
+    send_email = os.environ.get('SEND_EMAIL', 'true').lower() != 'false'
+    if send_email:
+        send_summary_email()
+    else:
+        print("⚠️ SEND_EMAIL=false，測試模式，略過寄信步驟。")
