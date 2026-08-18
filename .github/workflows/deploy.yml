@@ -1,7 +1,7 @@
 name: 每日自動生成並發布市場監控報告
 
 on:
-  schedule:
+ # schedule:
     # 台灣時間每週一至週五 07:00 (UTC Sun-Thu 23:00)
     - cron: '0 23 * * 0-4'
   workflow_dispatch: # ⭐️ 這行是讓 Actions 頁面出現手動執行按鈕的關鍵
