@@ -31,6 +31,9 @@ import argparse
 import json
 import os
 from datetime import datetime
+from zoneinfo import ZoneInfo
+
+TAIPEI_TZ = ZoneInfo("Asia/Taipei")
 
 from config_loader import load_thresholds, load_jp_stocks, effective_per_buy
 
@@ -1627,7 +1630,7 @@ def collect_alerts(taiex, vix, nikkei, michigan, murata, jp_stocks):
 
 
 def render_page_header(alerts, taiex):
-    now_disp = datetime.now().strftime("%Y-%m-%d %H:%M")
+    now_disp = datetime.now(TAIPEI_TZ).strftime("%Y-%m-%d %H:%M")
     baseline_disp = taiex["dates"][-1].replace("-", "/") if taiex else "N/A"
 
     if alerts:
