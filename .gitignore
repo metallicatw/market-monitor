@@ -1,0 +1,16 @@
+# 帳號密碼絕對不要進版控
+secrets.json
+
+# 本地測試產物
+local_test/
+*.bak
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+# 系統檔
+.DS_Store
+Thumbs.db

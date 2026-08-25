@@ -1,0 +1,19 @@
+{
+  "name": "花王 (Kao)",
+  "code": "4452.T",
+  "source": "2026年12月期 第2四半期（中間期）決算短信〔IFRS〕（連結）官方公布數字",
+  "source_urls": [
+    "https://www.kao.com/content/dam/sites/kao/www-kao-com/jp/ja/corporate/investor-relations/pdf/kao-earnings-fy2025q2-jp.pdf"
+  ],
+  "fetched_at": "2026-08-17",
+  "disclosure_date": "2026-08-05",
+  "note": "此資料為最新一季（FY2026/12 Q2，2026年4-6月）官方決算短信數字，與下方季度趨勢圖最後一筆完全一致（分割調整後基準）。EPS/PBR/營益率/淨利數字跟趨勢圖同步，不會再有兩邊對不上的問題。PER 改用近四季EPS合計(148.7円)計算，比單季×4更接近真實本益比。每季財報公布後需人工同步更新兩份檔案。 （shares_outstanding欄位因股票分割已不具直接參考意義，暫留null，PER/EPS皆已用分割調整後基準計算，不受影響。）",
+  "fiscal_period": "FY2026/12 Q2（2026年4-6月）実績",
+  "revenue_oku_jpy": 4587.1,
+  "operating_margin_pct": 11.1,
+  "net_income_oku_jpy": 346.63,
+  "shares_outstanding": null,
+  "eps_jpy": 38.3,
+  "per_x": 23.9,
+  "pbr_x": 2.87
+}

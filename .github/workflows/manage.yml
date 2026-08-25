@@ -1,0 +1,106 @@
+name: 管理追蹤名單
+
+# 這個流程專門給手機用。到 Actions 分頁按「Run workflow」，
+# 填好欄位送出，雲端就會幫你改設定、抓資料、重新產生報告並推上線。
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: "要做什麼"
+        required: true
+        default: "只更新報告"
+        type: choice
+        options:
+          - 只更新報告
+          - 新增個股
+          - 新增個股並建立季報
+          - 建立或重建季報
+          - 隱藏個股
+          - 恢復顯示
+          - 移除個股
+          - 列出目前名單
+      code:
+        description: "股票代號或檔名代號（例如 4063 或 shinetsu）"
+        required: false
+        type: string
+      price_buy:
+        description: "股價布局參考線（選填，新增個股時用）"
+        required: false
+        type: string
+      per_buy:
+        description: "本益比布局參考線（選填，留空用預設 20）"
+        required: false
+        type: string
+      years:
+        description: "季報回溯年數（預設 2）"
+        required: false
+        default: "2"
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: market-monitor-write
+  cancel-in-progress: false
+
+jobs:
+  manage:
+    runs-on: ubuntu-latest
+    env:
+      JQUANTS_API_KEY: ${{ secrets.JQUANTS_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: 執行指定的動作
+        run: |
+          set -e
+          ACTION="${{ inputs.action }}"
+          CODE="${{ inputs.code }}"
+          YEARS="${{ inputs.years }}"
+          EXTRA=""
+          if [ -n "${{ inputs.price_buy }}" ]; then EXTRA="$EXTRA --price-buy ${{ inputs.price_buy }}"; fi
+          if [ -n "${{ inputs.per_buy }}" ]; then EXTRA="$EXTRA --per-buy ${{ inputs.per_buy }}"; fi
+
+          case "$ACTION" in
+            "新增個股")
+              python manage_stock.py add "$CODE" $EXTRA ;;
+            "新增個股並建立季報")
+              python manage_stock.py add "$CODE" --build --years "$YEARS" $EXTRA ;;
+            "建立或重建季報")
+              python manage_stock.py build "$CODE" --years "$YEARS" ;;
+            "隱藏個股")
+              python manage_stock.py hide "$CODE" ;;
+            "恢復顯示")
+              python manage_stock.py show "$CODE" ;;
+            "移除個股")
+              python manage_stock.py remove "$CODE" ;;
+            "列出目前名單")
+              python manage_stock.py list ;;
+            *)
+              echo "只更新報告，不改名單" ;;
+          esac
+
+      - name: 目前名單
+        run: python manage_stock.py list
+
+      - name: 更新資料並產生報告
+        if: inputs.action != '列出目前名單'
+        run: python run.py update
+
+      - name: 有變動才提交
+        if: inputs.action != '列出目前名單'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --staged --quiet; then
+            echo "沒有變動，這次不提交。"
+          else
+            git commit -m "手機操作：${{ inputs.action }} ${{ inputs.code }}"
+            git push
+          fi

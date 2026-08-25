@@ -1,0 +1,15 @@
+{
+  "name": "川崎重工業 (Kawasaki Heavy Industries)",
+  "code": "7012.T",
+  "source": "2027年3月期第1四半期 決算短信〔IFRS〕（連結）官方公布數字",
+  "source_urls": [
+    "https://www.khi.co.jp/ir/pdf/sta_260807-1j.pdf"
+  ],
+  "fetched_at": "2026-08-22",
+  "note": "此資料為最新一季（FY27Q1，2026年4-6月）官方決算短信數字。PER/EPS/PBR/營益率由程式自動引用下方季度趨勢圖最後一筆算出來的數字，不另外重算，保證兩邊永遠一致。川崎重工業於2026年4月1日(基準日2026年3月31日)進行1股拆5股的股票分割，此快照的EPS/BVPS已是分割後基準。",
+  "fiscal_period": "FY27Q1（2026年4-6月）実績",
+  "disclosure_date": "2026-08-07",
+  "revenue_oku_jpy": 5435.76,
+  "net_income_oku_jpy": 156.63,
+  "operating_margin_pct": 6.4
+}

@@ -1,0 +1,20 @@
+{
+  "name": "三菱材料 (Mitsubishi Materials)",
+  "code": "5711.T",
+  "source": "2026年3月期 有価証券報告書 実績値 (きたい資本)",
+  "source_urls": [
+    "https://kitaishihon.com/company/5711/finance"
+  ],
+  "fetched_at": "2026-08-17",
+  "note": "此資料為人工從財報網站讀取，非自動化 API 抓取。EPS 為依據營業利益率、純利益率反推計算之估計值，並以配息/配息性向交叉核對（約310.6円，與估計值306.8円接近，數字合理）。每季財報公布後需人工更新。 2026-08-19更新：找到官方精確數字（營收18,440.53億/營業利益605.02億/淨利405.81億），已改用官方精確值並補上公布日期。",
+  "fiscal_period": "FY2026/3 実績",
+  "operating_margin_pct": 3.28,
+  "net_margin_pct": 2.2,
+  "shares_outstanding": 131489535,
+  "eps_jpy": 308.6,
+  "per_x": 15.5,
+  "pbr_x": 0.9,
+  "disclosure_date": "2026-05-13",
+  "revenue_oku_jpy": 18440.53,
+  "net_income_oku_jpy": 405.81
+}

@@ -1,0 +1,1634 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>監控報告設定台</title>
+<style>
+  :root{
+    --ink:#0b1120;
+    --panel:#141d2f;
+    --panel-2:#1b2740;
+    --rule:#27354e;
+    --text:#e6ecf5;
+    --muted:#8496ae;
+    --amber:#f0b429;       /* 校準／編輯中 */
+    --amber-dim:rgba(240,180,41,.14);
+    --teal:#2dd4bf;        /* 已儲存／正常 */
+    --red:#f87171;         /* 錯誤 */
+    --mono:ui-monospace,SFMono-Regular,"JetBrains Mono",Menlo,Consolas,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang TC","Microsoft JhengHei","Noto Sans TC",sans-serif;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--ink);color:var(--text);font-family:var(--sans);font-size:14px;line-height:1.6;padding:20px}
+  .shell{max-width:1440px;margin:0 auto}
+
+  /* ---- 頂部：狀態列 ---- */
+  .topbar{display:flex;flex-wrap:wrap;gap:14px;align-items:flex-end;justify-content:space-between;
+          border-bottom:1px solid var(--rule);padding-bottom:16px;margin-bottom:20px}
+  .brand h1{font-size:22px;font-weight:800;letter-spacing:.4px}
+  .brand p{font-size:12.5px;color:var(--muted);margin-top:3px}
+  .filebar{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+
+  .btn{font-family:var(--sans);font-size:12.5px;font-weight:700;padding:8px 15px;border-radius:8px;
+       border:1px solid var(--rule);background:var(--panel-2);color:var(--text);cursor:pointer;
+       transition:background .15s,border-color .15s,transform .1s}
+  .btn:hover{background:#243352;border-color:#3a4c6d}
+  .btn:active{transform:translateY(1px)}
+  .btn:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+  .btn.primary{background:var(--amber);color:#241a02;border-color:var(--amber)}
+  .btn.primary:hover{background:#ffc63d}
+  .btn.ghost{background:transparent}
+  .btn.danger{color:var(--red);border-color:rgba(248,113,113,.4)}
+  .btn.danger:hover{background:rgba(248,113,113,.12)}
+  .btn:disabled{opacity:.4;cursor:not-allowed}
+  .btn.small{padding:5px 10px;font-size:11.5px}
+  .btn.big{padding:12px 22px;font-size:14px}
+
+  .ops-row{display:flex;flex-wrap:wrap;gap:9px}
+  .statusgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-top:16px}
+  .stat{background:var(--ink);border:1px solid var(--rule);border-radius:9px;padding:11px 13px}
+  .stat .k{font-size:11px;color:var(--muted)}
+  .stat .v{font-family:var(--mono);font-size:14px;font-weight:700;margin-top:3px;font-variant-numeric:tabular-nums}
+  .stat .v.none{color:var(--muted);font-weight:400}
+
+  .console{font-family:var(--mono);font-size:11.5px;line-height:1.65;background:var(--ink);
+        border:1px solid var(--rule);border-radius:9px;padding:13px;max-height:340px;overflow:auto;
+        white-space:pre-wrap;word-break:break-word;color:#b9c7db}
+  .console.busy{border-color:var(--amber);color:var(--amber)}
+  .console.fail{border-color:var(--red)}
+
+  .spin{display:inline-block;width:11px;height:11px;border:2px solid rgba(240,180,41,.3);
+        border-top-color:var(--amber);border-radius:50%;animation:sp .7s linear infinite;margin-right:7px;vertical-align:-1px}
+  @keyframes sp{to{transform:rotate(360deg)}}
+
+  .fin-pick{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end}
+  .fin-pick label{font-size:11px;color:var(--muted);display:flex;flex-direction:column;gap:4px}
+  select{font-family:var(--sans);font-size:13px;background:var(--ink);color:var(--text);
+         border:1px solid var(--rule);border-radius:7px;padding:7px 10px;min-width:210px}
+  select:focus{outline:none;border-color:var(--amber);box-shadow:0 0 0 3px var(--amber-dim)}
+
+  .fin-current{margin-top:14px;font-size:12.5px;color:var(--muted)}
+  .fin-current table{width:100%;border-collapse:collapse;margin-top:8px;font-family:var(--mono);font-size:11.5px}
+  .fin-current th,.fin-current td{text-align:right;padding:5px 7px;border-top:1px solid var(--rule);white-space:nowrap}
+  .fin-current th{color:var(--muted);font-weight:600;text-align:right}
+  .fin-current th:first-child,.fin-current td:first-child{text-align:left}
+  .fin-current td.miss{color:var(--red)}
+  .fin-current .newrow td{color:var(--amber);border-top:1px dashed var(--amber)}
+
+  .fin-form{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:11px}
+  .fin-form label{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--text)}
+  .fin-form small{font-size:10.5px;color:var(--muted)}
+  .fin-form input[type=date]{font-family:var(--mono);font-size:12.5px;background:var(--ink);color:var(--text);
+        border:1px solid var(--rule);border-radius:7px;padding:6px 9px}
+  .fin-form input[type=date]:focus{outline:none;border-color:var(--amber);box-shadow:0 0 0 3px var(--amber-dim)}
+  .fin-note{display:flex;flex-direction:column;gap:4px;font-size:12px;margin-top:12px}
+  .creds-state{font-size:12px;color:var(--muted);margin-bottom:12px}
+  .ok-dot{color:var(--teal)} .warn-dot{color:var(--amber)}
+  .fin-calc{margin-top:12px;font-family:var(--mono);font-size:12px;color:var(--teal);min-height:18px}
+  .buildbar{height:4px;background:var(--rule);border-radius:2px;overflow:hidden;margin-top:14px}
+  .buildbar-fill{height:100%;width:35%;background:var(--amber);border-radius:2px;
+                 animation:slide 1.3s ease-in-out infinite}
+  @keyframes slide{0%{margin-left:-35%}100%{margin-left:100%}}
+  .buildbar.done .buildbar-fill{width:100%;margin-left:0;animation:none;background:var(--teal)}
+  .buildbar.fail .buildbar-fill{width:100%;margin-left:0;animation:none;background:var(--red)}
+
+  .filestate{font-family:var(--mono);font-size:11.5px;color:var(--muted);
+             padding:6px 11px;border:1px dashed var(--rule);border-radius:7px}
+  .filestate.live{color:var(--teal);border-style:solid;border-color:rgba(45,212,191,.35)}
+  .filestate.dirty{color:var(--amber);border-style:solid;border-color:rgba(240,180,41,.4)}
+
+  /* ---- 主體：左設定 右預覽 ---- */
+  /* min-width:0 是必要的：預覽區的 <pre> 不換行，沒有這行會把格線撐爆造成整頁橫向溢出 */
+  .grid{display:grid;grid-template-columns:1fr;gap:20px}
+  .grid > *{min-width:0}
+  @media(min-width:1120px){.grid{grid-template-columns:minmax(0,1fr) 420px}}
+
+  .tabs{display:flex;gap:4px;margin-bottom:16px;border-bottom:1px solid var(--rule)}
+  .tab{font-size:13px;font-weight:700;padding:9px 16px;border:none;background:none;color:var(--muted);
+       cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px}
+  .tab:hover{color:var(--text)}
+  .tab[aria-selected="true"]{color:var(--amber);border-bottom-color:var(--amber)}
+  .tab:focus-visible{outline:2px solid var(--amber);outline-offset:-2px}
+  .panel[hidden]{display:none}
+
+  .card{background:var(--panel);border:1px solid var(--rule);border-radius:12px;padding:18px}
+  .card + .card{margin-top:14px}
+  .card h2{font-size:13px;font-weight:800;letter-spacing:.6px;color:var(--amber);margin-bottom:4px}
+  .card .hint{font-size:12px;color:var(--muted);margin-bottom:14px}
+
+  /* ---- 門檻列 ---- */
+  .th-row{display:grid;grid-template-columns:1fr 130px;gap:12px;align-items:center;
+          padding:11px 0;border-top:1px solid var(--rule)}
+  .th-row:first-of-type{border-top:none}
+  .th-name{font-size:13px;font-weight:600}
+  .th-desc{font-size:11.5px;color:var(--muted);margin-top:1px}
+  input[type=number],input[type=text]{width:100%;font-family:var(--mono);font-size:13px;
+        font-variant-numeric:tabular-nums;background:var(--ink);color:var(--text);
+        border:1px solid var(--rule);border-radius:7px;padding:7px 10px;text-align:right}
+  .stock .c-price input,.stock .c-per input{text-align:center}
+  input[type=text]{text-align:left}
+  input:focus{outline:none;border-color:var(--amber);box-shadow:0 0 0 3px var(--amber-dim)}
+  input.bad{border-color:var(--red)}
+
+  /* ---- 個股列 ---- */
+  .stock{display:grid;grid-template-columns:34px 1fr 96px 96px 52px 34px;gap:9px;align-items:center;
+         background:var(--panel-2);border:1px solid var(--rule);border-radius:10px;
+         padding:10px 11px;margin-bottom:8px}
+  .stock.off{opacity:.45}
+  .stock.drag-over{border-color:var(--amber);box-shadow:0 0 0 3px var(--amber-dim)}
+  .stock.dragging{opacity:.3}
+  .grab{cursor:grab;color:var(--muted);text-align:center;font-size:15px;user-select:none;line-height:1}
+  .grab:active{cursor:grabbing}
+  .stock-id{min-width:0}
+  .stock-name{font-size:13.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .stock-meta{font-family:var(--mono);font-size:11px;color:var(--muted);margin-top:4px;
+              display:flex;flex-wrap:wrap;align-items:center;gap:5px}
+  .field-tag{font-family:var(--sans);font-size:10px;color:var(--muted);background:rgba(255,255,255,.05);
+             border-radius:4px;padding:1px 5px;letter-spacing:.5px;flex:none}
+  .mini-input{background:var(--ink)!important;border:1px solid var(--rule)!important;
+              border-radius:5px;color:var(--text)!important;text-align:left}
+  .mini-input:focus{border-color:var(--amber)!important;box-shadow:0 0 0 2px var(--amber-dim)}
+  .mini-input::placeholder{color:#5b6b82;font-style:italic}
+  .fin-badge{font-family:var(--sans);font-size:10.5px;padding:1px 7px;border-radius:5px;
+             cursor:pointer;white-space:nowrap;flex:none;background:transparent;
+             border:1px solid var(--rule);color:var(--muted);transition:background .15s}
+  .fin-badge:hover:not(:disabled){background:rgba(255,255,255,.06)}
+  .fin-badge.ok{border-color:rgba(45,212,191,.4);color:var(--teal)}
+  .fin-badge.missing{border-color:rgba(240,180,41,.5);color:var(--amber)}
+  .fin-badge.none{opacity:.4;cursor:not-allowed}
+  .build-offer{grid-column:1/-1;display:flex;flex-wrap:wrap;align-items:center;gap:8px;
+               margin-top:9px;padding:8px 11px;border-radius:8px;font-size:12px;
+               background:rgba(240,180,41,.10);border:1px solid rgba(240,180,41,.35);color:var(--text)}
+  .lookup-state{font-family:var(--sans);font-size:10.5px;color:var(--teal);flex:none;
+                max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .colhead{display:grid;grid-template-columns:34px 1fr 96px 96px 52px 34px;gap:9px;
+           padding:0 12px 7px;font-size:11px;color:var(--muted);font-weight:700}
+  .colhead span{display:block}
+  .colhead .h-price,.colhead .h-per,.colhead .h-show{text-align:center}
+
+  .switch{position:relative;display:flex;align-items:center;justify-content:center;gap:6px;
+          cursor:pointer;font-size:13px;color:var(--muted);margin:0 auto}
+  .switch .eye{font-size:17px;line-height:1;user-select:none;filter:grayscale(1) opacity(.55);
+               transition:filter .15s,transform .12s}
+  .switch input:checked ~ .eye{filter:none;opacity:1}
+  .switch:hover .eye{transform:scale(1.12)}
+  .switch input:focus-visible ~ .eye{outline:2px solid var(--amber);outline-offset:3px;border-radius:4px}
+  .switch input{position:absolute;opacity:0;width:0;height:0}
+  .track{width:34px;height:19px;border-radius:10px;background:#33405c;transition:background .18s;flex:none}
+  .knob{position:absolute;left:3px;top:3px;width:13px;height:13px;border-radius:50%;background:#8496ae;transition:transform .18s,background .18s}
+  .switch input:checked ~ .track{background:rgba(45,212,191,.35)}
+  .switch input:checked ~ .knob{transform:translateX(15px);background:var(--teal)}
+  .switch input:focus-visible ~ .track{outline:2px solid var(--amber);outline-offset:2px}
+
+  /* ---- 預覽 ---- */
+  .preview{position:sticky;top:20px;align-self:start}
+  .preview pre{font-family:var(--mono);font-size:11.5px;line-height:1.65;background:var(--ink);
+        border:1px solid var(--rule);border-radius:9px;padding:14px;max-height:70vh;overflow:auto;
+        white-space:pre;color:#b9c7db}
+  .preview .ln.changed{background:var(--amber-dim);display:block;margin:0 -14px;padding:0 14px;
+        border-left:2px solid var(--amber)}
+
+  .issues{margin-top:12px;font-size:12.5px}
+  .issue{display:flex;gap:7px;padding:7px 10px;border-radius:7px;margin-bottom:6px}
+  .issue.err{background:rgba(248,113,113,.12);color:#fca5a5}
+  .issue.ok{background:rgba(45,212,191,.1);color:var(--teal)}
+
+  .dropzone{border:2px dashed var(--rule);border-radius:12px;padding:34px 20px;text-align:center;color:var(--muted)}
+  .dropzone.over{border-color:var(--amber);background:var(--amber-dim);color:var(--text)}
+  .dropzone strong{display:block;color:var(--text);font-size:15px;margin-bottom:6px}
+  .dropzone code{font-family:var(--mono);font-size:12px;color:var(--amber)}
+
+  .toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%) translateY(80px);
+         background:var(--panel-2);border:1px solid var(--teal);color:var(--teal);
+         padding:11px 20px;border-radius:9px;font-size:13px;font-weight:700;
+         opacity:0;transition:opacity .22s,transform .22s;pointer-events:none;z-index:50}
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+  .toast.err{border-color:var(--red);color:var(--red)}
+
+  @media(prefers-reduced-motion:reduce){*{transition:none!important}}
+  @media(max-width:640px){
+    .stock,.colhead{grid-template-columns:28px 1fr 52px 34px}
+    .stock .c-price,.stock .c-per,.colhead .h-price,.colhead .h-per{display:none}
+    .stock .m-nums{display:block}
+  }
+  .m-nums{display:none;grid-column:1/-1;gap:8px;margin-top:8px}
+  @media(max-width:640px){.m-nums{display:grid;grid-template-columns:1fr 1fr}}
+  .m-nums label{font-size:11px;color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="shell">
+
+  <div class="topbar">
+    <div class="brand">
+      <h1>監控報告控制台</h1>
+      <p id="brandSub">更新資料、調整設定、產生報告</p>
+    </div>
+    <div class="filebar">
+      <span class="filestate" id="fileState">連線中…</span>
+      <button class="btn" id="btnOpen" hidden>開啟 config.json</button>
+      <button class="btn primary" id="btnSave" disabled>儲存設定</button>
+      <button class="btn ghost" id="btnDownload" disabled hidden>另存下載</button>
+    </div>
+  </div>
+
+  <div id="empty" hidden>
+    <div class="dropzone" id="dropzone">
+      <strong>把 config.json 拖進來，或按上方「開啟 config.json」</strong>
+      現在是直接開啟檔案的模式，只能編輯設定。<br>
+      想要一鍵更新資料與產生報告，請在專案資料夾執行 <code>python run.py</code>。<br><br>
+      <button class="btn" id="btnDefaults">從預設值開始</button>
+    </div>
+  </div>
+
+  <div class="grid" id="editor" hidden>
+    <div>
+      <div class="tabs" role="tablist">
+        <button class="tab" role="tab" aria-selected="true" data-tab="ops">每日操作</button>
+        <button class="tab" role="tab" aria-selected="false" data-tab="stocks">追蹤個股</button>
+        <button class="tab" role="tab" aria-selected="false" data-tab="financials">財報登錄</button>
+        <button class="tab" role="tab" aria-selected="false" data-tab="thresholds">警示門檻</button>
+      </div>
+
+      <section class="panel" id="panel-ops" role="tabpanel">
+        <div class="card">
+          <h2>一鍵更新</h2>
+          <p class="hint">抓最新股價，然後重新產生報告。平常只要按這一個按鈕。</p>
+          <div class="ops-row">
+            <button class="btn primary big" id="opUpdate">更新資料並產生報告</button>
+            <button class="btn" id="opOpenReport">開啟報告</button>
+          </div>
+          <div class="statusgrid" id="statusGrid"></div>
+        </div>
+
+        <div class="card">
+          <h2>單獨執行</h2>
+          <p class="hint">需要分開跑的時候用這裡。「發布正式版」會覆蓋 index.html，那是部署到 GitHub Pages 的檔案。</p>
+          <div class="ops-row">
+            <button class="btn" id="opFetch">只更新股價</button>
+            <button class="btn" id="opReport">只產生測試報告</button>
+            <button class="btn" id="opPublish">發布正式版</button>
+            <button class="btn" id="opEarnings">檢查財報公布窗口</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2>執行結果</h2>
+          <p class="hint">程式的輸出會顯示在這裡。</p>
+          <pre class="console" id="console">還沒有執行任何動作。</pre>
+        </div>
+      </section>
+
+      <section class="panel" id="panel-financials" role="tabpanel" hidden>
+        <div class="card">
+          <h2>新增一季財報</h2>
+          <p class="hint">季報公布後，把官方決算短信的數字填進來。六個欄位會同步寫入，營益率自動計算，不用自己對齊陣列。</p>
+          <div class="fin-pick">
+            <label>個股
+              <select id="finStock"></select>
+            </label>
+            <button class="btn small" id="finEarnings">哪幾檔該更新了？</button>
+          </div>
+          <div id="finCurrent" class="fin-current"></div>
+        </div>
+
+        <div class="card" id="finBuildCard">
+          <h2>自動建立歷史資料</h2>
+          <p class="hint">
+            向 J-Quants API（日本交易所集團 JPX 官方，資料源為決算短信 XBRL 摘要）抓取這檔的季報歷史，
+            自動把累計數字還原成單季並算出營益率。新加入的個股用這個一次把歷史補齊。
+          </p>
+          <div class="ops-row">
+            <label style="font-size:11px;color:var(--muted);display:flex;flex-direction:column;gap:4px">回溯年數
+              <select id="finYears">
+                <option value="">全部（依方案上限）</option>
+                <option value="3">近 3 年</option>
+                <option value="2" selected>近 2 年</option>
+              </select>
+            </label>
+            <button class="btn primary" id="finBuild" style="align-self:flex-end">開始建立</button>
+          </div>
+          <div class="buildbar" id="buildBar" hidden><div class="buildbar-fill"></div></div>
+          <pre class="console" id="buildLog" hidden></pre>
+        </div>
+
+        <div class="card">
+          <h2>J-Quants 帳號</h2>
+          <p class="hint">
+            自動建立歷史資料需要 J-Quants 的 API 金鑰。到
+            <a href="https://jpx-jquants.com/ja/dashboard" target="_blank" rel="noopener" style="color:var(--amber)">儀表板</a>
+            產生金鑰後貼進來（免費方案即可）。金鑰會存進 <code>secrets.json</code>，
+            該檔已列入 .gitignore，不會被推上 GitHub。
+          </p>
+          <div class="creds-state" id="credsState">檢查中…</div>
+          <div class="fin-form" style="grid-template-columns:1fr">
+            <label>API 金鑰<input type="password" id="jqKey" autocomplete="off" placeholder="貼上儀表板產生的 API Key"></label>
+          </div>
+          <div class="ops-row" style="margin-top:12px">
+            <button class="btn" id="jqSave">儲存金鑰</button>
+          </div>
+          <div class="issues" id="credsIssues"></div>
+        </div>
+
+        <div class="card" id="finFormCard" hidden>
+          <h2>填入數字</h2>
+          <p class="hint">單位是億円。沒有把握的欄位可以留白，報告會顯示為缺漏，不會亂填。</p>
+          <div class="fin-form" id="finForm">
+            <label>季別標籤<input type="text" id="fLabel" placeholder="FY27Q2"><small>接續上一季的命名</small></label>
+            <label>期末日<input type="date" id="fEnd"><small>該季最後一天</small></label>
+            <label>營收<input type="number" step="any" id="fRev"><small>億円</small></label>
+            <label>本業獲利<input type="number" step="any" id="fProf"><small>營業利益／事業利益</small></label>
+            <label>淨利<input type="number" step="any" id="fNi"><small>母公司股東應占</small></label>
+            <label>EPS<input type="number" step="any" id="fEps"><small>円，分割後基準</small></label>
+            <label>BVPS<input type="number" step="any" id="fBvps"><small>円，每股淨值</small></label>
+            <label>財報公布日<input type="date" id="fDisc"><small>選填</small></label>
+          </div>
+          <div class="fin-calc" id="finCalc"></div>
+          <label class="fin-note">備註（選填，會附加到資料來源說明）
+            <input type="text" id="fNote" placeholder="例：本季獲利採官方事業利益口徑">
+          </label>
+          <div class="ops-row" style="margin-top:14px">
+            <button class="btn primary" id="finSubmit">新增這一季</button>
+            <button class="btn ghost" id="finClear">清空</button>
+          </div>
+          <div class="issues" id="finIssues"></div>
+        </div>
+
+        <div class="card">
+          <h2>提醒</h2>
+          <p class="hint" style="margin:0">
+            各家公司的「本業獲利」科目定義不同——日立用調整後營業利益、川崎重工用事業利益、
+            味之素用營業利益、瑞穗（銀行）用經常利益。請務必核對官方決算短信的原始科目，
+            不要直接抄第三方網站的「經常益」欄位，那對 IFRS 公司填的是稅前利益。
+          </p>
+        </div>
+      </section>
+
+      <section class="panel" id="panel-thresholds" role="tabpanel" hidden>
+        <div class="card">
+          <h2>大盤與總經</h2>
+          <p class="hint">指數或指標跨過這些數值時，報告頁首會列出對應的布局機會或風險預警。</p>
+          <div id="thGlobal"></div>
+        </div>
+        <div class="card">
+          <h2>本益比布局</h2>
+          <p class="hint">這是所有個股共用的預設值。個別股票要用不同標準，到「追蹤個股」分頁單獨填。</p>
+          <div id="thPer"></div>
+        </div>
+      </section>
+
+      <section class="panel" id="panel-stocks" role="tabpanel" hidden>
+        <div class="card">
+          <h2>追蹤名單</h2>
+          <p class="hint">由上到下就是報告的顯示順序，拖曳左側握把可以調整。關掉開關等於暫時隱藏，資料會留著，隨時可以打開。</p>
+          <div class="colhead">
+            <span></span><span>個股</span>
+            <span class="h-price">股價布局</span><span class="h-per">本益比布局</span>
+            <span class="h-show" title="關掉就從報告中隱藏，資料仍會保留">顯示</span><span></span>
+          </div>
+          <div id="stockList"></div>
+          <div class="ops-row" style="margin-top:10px">
+            <button class="btn small" id="btnAdd">＋ 新增個股</button>
+            <button class="btn small" id="btnCnNames" title="用台灣財經媒體慣用的中文名稱更新名單">套用中文名稱</button>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <aside class="preview">
+      <div class="card">
+        <h2>將寫入的內容</h2>
+        <p class="hint">黃色標記是這次改動的行。確認無誤再按「存回檔案」。</p>
+        <pre id="previewBox"></pre>
+        <div class="issues" id="issues"></div>
+      </div>
+    </aside>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+const DEFAULT_CONFIG = {
+  "_說明": "這是唯一需要手動編輯的設定檔。改完直接重跑 fetch_market_data.py 與 generate_report_local.py 即可生效，不用改任何程式碼。",
+  thresholds: {
+    taiex_buy: 38000, taiex_volume_buy_bil: 8000, nikkei_buy: 56000,
+    vix_warn: 20, vix_panic: 30, michigan_warn: 60, murata_bb_warn: 1.2, per_buy_default: 20
+  },
+  jp_stocks: [
+    {key:"kao",code:"4452.T",name:"花王",enabled:true,price_buy:3200,per_buy:null},
+    {key:"towa",code:"6315.T",name:"TOWA CORP",enabled:true,price_buy:2500,per_buy:null},
+    {key:"ajinomoto",code:"2802.T",name:"味之素",enabled:true,price_buy:4700,per_buy:null},
+    {key:"mizuho",code:"8411.T",name:"瑞穗金融集團",enabled:true,price_buy:6000,per_buy:null},
+    {key:"yaskawa",code:"6506.T",name:"安川電機",enabled:true,price_buy:4500,per_buy:null},
+    {key:"jxadvanced",code:"5016.T",name:"JX ADVANCED METALS",enabled:true,price_buy:3500,per_buy:null},
+    {key:"mitsubishimaterials",code:"5711.T",name:"三菱材料",enabled:true,price_buy:4000,per_buy:null},
+    {key:"hitachi",code:"6501.T",name:"日立製作所",enabled:true,price_buy:4800,per_buy:null},
+    {key:"kawasakiheavy",code:"7012.T",name:"川崎重工業",enabled:true,price_buy:2500,per_buy:null},
+    {key:"organo",code:"6368.T",name:"ORGANO CORP",enabled:true,price_buy:15000,per_buy:null}
+  ]
+};
+
+const TH_META = {
+  taiex_buy:            ["台股加權指數","低於此點數 → 可以考慮布局"],
+  taiex_volume_buy_bil: ["台股 10 日均量","低於此金額（億元）→ 可以考慮布局"],
+  nikkei_buy:           ["日經 225 指數","低於此點數 → 可以考慮布局"],
+  vix_warn:             ["VIX 波動升溫","高於此值 → 風險預警"],
+  vix_panic:            ["VIX 高度恐慌","高於此值 → 強度更高的風險預警"],
+  michigan_warn:        ["密大消費者信心","低於此值 → 衰退警戒"],
+  murata_bb_warn:       ["村田 B/B Ratio","高於此值 → 反指標聖杯警示"]
+};
+
+let state = null;       // 目前編輯中的設定
+let originalText = "";  // 載入時的原始檔內容，用來標出改動行
+let fileHandle = null;  // File System Access 的檔案握把
+let dirty = false;
+
+const $ = s => document.querySelector(s);
+const supportsFS = 'showOpenFilePicker' in window;
+
+/* ---------- 序列化：維持與原檔一致的易讀排版 ---------- */
+/* ---------- 代號正規化 ----------
+   本專案的股價來源是 Yahoo Finance，日股一律用「4 位數字 + .T」（東證）。
+   常見的其他寫法（.JP / .JPN / .TO / .TYO）Yahoo 抓不到，這裡統一轉成 .T。 */
+function normalizeCode(raw){
+  let c = String(raw || "").trim().toUpperCase().replace(/\s+/g, "");
+  if(!c) return "";
+  // 日股代號是 4 碼，前 3 碼數字；2024 年起新上市公司第 4 碼可能是英文字母（例如 130A）
+  if(/^\d{3}[0-9A-Z]$/.test(c)) return c + ".T";               // 只填代號 → 補東證
+  c = c.replace(/\.(JP|JPN|TO|TYO|TSE)$/, ".T");               // 換成 Yahoo 的寫法
+  return c;
+}
+
+/* ---------- 伺服器模式 ----------
+   由 run.py 提供服務時，設定可以直接存回檔案，也能執行更新／產生報告等動作。
+   直接用瀏覽器開啟這個檔案時會退回「只能編輯設定」的模式。 */
+let serverMode = false;
+
+async function detectServer(){
+  try{
+    const r = await fetch("/api/ping", {cache:"no-store"});
+    if(!r.ok) return false;
+    const j = await r.json();
+    return !!j.ok;
+  }catch(e){ return false; }
+}
+
+function setModeUI(){
+  const tabbar = $("#panel-ops").parentElement;
+  tabbar.querySelector('[data-tab="ops"]').hidden = !serverMode;
+  tabbar.querySelector('[data-tab="financials"]').hidden = !serverMode;
+  $("#btnOpen").hidden = serverMode;
+  $("#btnDownload").hidden = serverMode;
+  $("#brandSub").textContent = serverMode
+    ? "更新資料、登錄財報、調整設定、產生報告"
+    : "只能編輯設定；想一鍵更新與登錄財報請執行 python run.py";
+  if(!serverMode){
+    selectTab("stocks");
+  }
+}
+
+function selectTab(name){
+  document.querySelectorAll(".tab").forEach(t=>t.setAttribute("aria-selected", String(t.dataset.tab===name)));
+  $("#panel-ops").hidden = name !== "ops";
+  $("#panel-stocks").hidden = name !== "stocks";
+  $("#panel-financials").hidden = name !== "financials";
+  $("#panel-thresholds").hidden = name !== "thresholds";
+  if(name === "financials" && serverMode){ fillFinStocks(); loadFinancials(); loadCreds(); }
+  if(name === "stocks" && serverMode){ refreshFinStatus(); }
+}
+
+function logConsole(text, state){
+  const c = $("#console");
+  c.textContent = text;
+  c.className = "console" + (state ? " " + state : "");
+  c.scrollTop = c.scrollHeight;
+}
+
+function renderStatus(st){
+  if(!st) return;
+  const box = $("#statusGrid");
+  const items = [
+    ["股價資料更新於", st.priceUpdated],
+    ["報告產生於", st.reportBuilt],
+    ["價格檔數", st.priceFiles ? st.priceFiles + " 個" : null],
+    ["財務檔數", st.finFiles ? st.finFiles + " 個" : null],
+  ];
+  box.innerHTML = "";
+  items.forEach(([k,v])=>{
+    const d = document.createElement("div"); d.className = "stat";
+    d.innerHTML = `<div class="k">${k}</div><div class="v${v?"":" none"}">${v||"還沒有"}</div>`;
+    box.appendChild(d);
+  });
+}
+
+async function refreshStatus(){
+  if(!serverMode) return;
+  try{
+    const r = await fetch("/api/status", {cache:"no-store"});
+    renderStatus(await r.json());
+  }catch(e){}
+}
+
+let running = false;
+async function doAction(action, label, extra){
+  if(running) return;
+  running = true;
+  document.querySelectorAll("#panel-ops .btn").forEach(b=> b.disabled = true);
+  logConsole(label + " 執行中…", "busy");
+  try{
+    const r = await fetch("/api/action", {
+      method:"POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify(Object.assign({action}, extra||{}))
+    });
+    const j = await r.json();
+    logConsole(j.output || "（沒有輸出）", j.ok ? "" : "fail");
+    renderStatus(j.status);
+    toast(j.ok ? label + "完成" : label + "失敗，請看執行結果", !j.ok);
+  }catch(e){
+    logConsole("無法連上控制台伺服器：" + e.message + "\n請確認 run.py 還在執行中。", "fail");
+    toast("連線中斷", true);
+  }finally{
+    running = false;
+    document.querySelectorAll("#panel-ops .btn").forEach(b=> b.disabled = false);
+  }
+}
+
+/* ---------- 財報登錄 ---------- */
+const FIN_COLS = [
+  ["revenue_oku_jpy","營收"], ["business_profit_oku_jpy","本業獲利"],
+  ["operating_margin_pct","營益率"], ["net_income_oku_jpy","淨利"],
+  ["eps_jpy","EPS"], ["bvps_jpy","BVPS"]
+];
+
+function fillFinStocks(){
+  const sel = $("#finStock");
+  const cur = sel.value;
+  sel.innerHTML = "";
+  state.jp_stocks.forEach(s=>{
+    const o = document.createElement("option");
+    o.value = s.key; o.textContent = s.name + (s.enabled ? "" : "（隱藏中）");
+    sel.appendChild(o);
+  });
+  if(cur) sel.value = cur;
+}
+
+async function loadFinancials(){
+  const key = $("#finStock").value;
+  const box = $("#finCurrent");
+  if(!key){ box.textContent = ""; return; }
+  box.innerHTML = '<span class="spin"></span>讀取中…';
+  try{
+    const r = await fetch("/api/financials?key=" + encodeURIComponent(key), {cache:"no-store"});
+    const d = await r.json();
+    if(!d.exists){
+      box.innerHTML = `這檔還沒有財報資料檔。<br>需要先建立 <code>data/stock_${key}_quarterly_financials.json</code>，可以複製現有個股的檔案來改。`;
+      $("#finFormCard").hidden = true;
+      return;
+    }
+    if(d.error){ box.textContent = d.error; $("#finFormCard").hidden = true; return; }
+
+    let html = `目前 <strong>${d.count}</strong> 季，最後一季是 <strong>${d.lastLabel}</strong>（期末 ${d.lastEnd}）`;
+    const gapNote = FIN_COLS.filter(([f])=> d.gaps[f] > 0).map(([f,n])=> `${n} 缺 ${d.gaps[f]}`).join("　");
+    if(gapNote) html += `<br><span style="color:var(--red)">既有缺漏：${gapNote}</span>`;
+
+    html += "<table><thead><tr><th>季別</th>" + FIN_COLS.map(([,n])=>`<th>${n}</th>`).join("") + "</tr></thead><tbody>";
+    d.rows.forEach(row=>{
+      html += `<tr><td>${row.label}</td>` + FIN_COLS.map(([f])=>{
+        const v = row[f];
+        return v === null || v === undefined ? '<td class="miss">—</td>' : `<td>${v}</td>`;
+      }).join("") + "</tr>";
+    });
+    html += '<tr class="newrow" id="finPreviewRow"></tr></tbody></table>';
+    box.innerHTML = html;
+    $("#finFormCard").hidden = false;
+    suggestNextQuarter(d);
+    updateFinCalc();
+  }catch(e){
+    box.textContent = "讀取失敗：" + e.message;
+    $("#finFormCard").hidden = true;
+  }
+}
+
+/* 依上一季推算下一季的標籤與期末日，減少手動輸入出錯 */
+function suggestNextQuarter(d){
+  if(!d.lastLabel || !d.lastEnd) return;
+  const m = d.lastLabel.match(/^FY(\d+)Q(\d)$/);
+  if(m){
+    let fy = Number(m[1]), q = Number(m[2]) + 1;
+    if(q > 4){ q = 1; fy += 1; }
+    $("#fLabel").value = `FY${fy}Q${q}`;
+  }
+  // 期末日 = 上一季期末 + 3 個月，取當月最後一天
+  const [y, mo, _] = d.lastEnd.split("-").map(Number);
+  const nd = new Date(y, mo - 1 + 3 + 1, 0);   // 下下個月的第 0 天 = 當月最後一天
+  $("#fEnd").value = `${nd.getFullYear()}-${String(nd.getMonth()+1).padStart(2,"0")}-${String(nd.getDate()).padStart(2,"0")}`;
+}
+
+function finVal(id){
+  const v = $(id).value.trim();
+  return v === "" ? null : Number(v);
+}
+
+function updateFinCalc(){
+  const rev = finVal("#fRev"), prof = finVal("#fProf");
+  const calc = $("#finCalc");
+  if(rev !== null && prof !== null && rev !== 0){
+    const m = Math.round(prof / rev * 100 * 100) / 100;
+    calc.textContent = `營益率會自動填入 ${m}%（${prof} ÷ ${rev} × 100）`;
+  } else {
+    calc.textContent = "填入營收與本業獲利後，這裡會顯示自動算出的營益率。";
+  }
+  const row = $("#finPreviewRow");
+  if(row){
+    const vals = {revenue_oku_jpy:rev, business_profit_oku_jpy:prof,
+      operating_margin_pct:(rev&&prof!==null)?Math.round(prof/rev*10000)/100:null,
+      net_income_oku_jpy:finVal("#fNi"), eps_jpy:finVal("#fEps"), bvps_jpy:finVal("#fBvps")};
+    row.innerHTML = `<td>${$("#fLabel").value||"新一季"}</td>` +
+      FIN_COLS.map(([f])=> `<td>${vals[f]===null||vals[f]===undefined?"—":vals[f]}</td>`).join("");
+  }
+}
+
+function finIssues(msgs, ok){
+  const box = $("#finIssues"); box.innerHTML = "";
+  msgs.forEach(t=>{
+    const d = document.createElement("div");
+    d.className = "issue " + (ok ? "ok" : "err");
+    d.innerHTML = `<span>${ok?"✓":"✕"}</span><span>${t}</span>`;
+    box.appendChild(d);
+  });
+}
+
+async function submitQuarter(){
+  const key = $("#finStock").value;
+  const label = $("#fLabel").value.trim();
+  const end = $("#fEnd").value;
+  const errs = [];
+  if(!label) errs.push("季別標籤要填，例如 FY27Q2");
+  if(!end) errs.push("期末日要填");
+  const rev = finVal("#fRev"), prof = finVal("#fProf");
+  if(rev === null && prof === null && finVal("#fNi") === null)
+    errs.push("營收、本業獲利、淨利至少要填一個，不然這一季沒有任何數字");
+  if(errs.length){ finIssues(errs, false); return; }
+
+  const btn = $("#finSubmit"); btn.disabled = true; btn.textContent = "寫入中…";
+  try{
+    const r = await fetch("/api/financials", {
+      method:"POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({
+        key, label, endDate: end,
+        revenue_oku_jpy: rev, business_profit_oku_jpy: prof,
+        net_income_oku_jpy: finVal("#fNi"), eps_jpy: finVal("#fEps"), bvps_jpy: finVal("#fBvps"),
+        disclosureDate: $("#fDisc").value || null,
+        note: $("#fNote").value.trim()
+      })
+    });
+    const j = await r.json();
+    finIssues([j.output.replace(/\n/g,"<br>")], j.ok);
+    if(j.ok){
+      toast("已新增 " + label);
+      clearFinForm(false);
+      loadFinancials();
+    } else {
+      toast("新增失敗", true);
+    }
+  }catch(e){
+    finIssues(["連線失敗：" + e.message], false);
+  }finally{
+    btn.disabled = false; btn.textContent = "新增這一季";
+  }
+}
+
+function clearFinForm(clearLabel=true){
+  if(clearLabel){ $("#fLabel").value = ""; $("#fEnd").value = ""; }
+  ["#fRev","#fProf","#fNi","#fEps","#fBvps","#fNote"].forEach(id=> $(id).value = "");
+  $("#fDisc").value = "";
+  updateFinCalc();
+}
+
+/* ---------- 日文新字體 → 繁體 ----------
+   Yahoo 若回傳日文漢字名稱（例如「信越化学工業」），直接填進去會夾雜日文簡化字。
+   這裡做常見字的對應，讓名稱貼近你既有的寫法（信越化學工業）。
+   意譯類的名稱（味の素 → 味之素）沒辦法自動處理，填好後自己改一下即可。 */
+const KANJI_MAP = {
+  "学":"學","会":"會","産":"產","鉄":"鐵","気":"氣","実":"實","発":"發","薬":"藥",
+  "済":"濟","変":"變","広":"廣","沢":"澤","体":"體","医":"醫","塩":"鹽","検":"檢",
+  "験":"驗","険":"險","総":"總","続":"續","経":"經","営":"營","転":"轉","伝":"傳",
+  "価":"價","両":"兩","労":"勞","効":"效","帰":"歸","権":"權","観":"觀","関":"關",
+  "図":"圖","団":"團","圧":"壓","声":"聲","売":"賣","読":"讀","麦":"麥","数":"數",
+  "対":"對","単":"單","担":"擔","拡":"擴","挙":"舉","満":"滿","湾":"灣","焼":"燒",
+  "荘":"莊","蔵":"藏","覚":"覺","訳":"譯","豊":"豐","辺":"邊","隠":"隱","顔":"顏",
+  "髄":"髓","竜":"龍","帯":"帶","庁":"廳","廃":"廢","従":"從","徳":"德","悪":"惡",
+  "戦":"戰","昼":"晝","暦":"曆","桜":"櫻","横":"橫","歩":"步","歯":"齒","残":"殘",
+  "渓":"溪","温":"溫","湿":"濕","争":"爭","献":"獻","状":"狀","独":"獨","畳":"疊",
+  "県":"縣","砕":"碎","礼":"禮","稲":"稻","粋":"粹","絵":"繪","継":"繼","縁":"緣",
+  "縄":"繩","聴":"聽","胆":"膽","脳":"腦","臓":"臟","芸":"藝","蛍":"螢","覧":"覽",
+  "触":"觸","誉":"譽","謡":"謠","譲":"讓","賛":"贊","軽":"輕","遅":"遲","郷":"鄉",
+  "酔":"醉","醸":"釀","鉱":"礦","銭":"錢","鋳":"鑄","録":"錄","闘":"鬥","陥":"陷",
+  "雑":"雜","静":"靜","頼":"賴","顕":"顯","鶏":"雞","麺":"麵","応":"應","児":"兒",
+  "写":"寫","処":"處","参":"參","当":"當","来":"來","楽":"樂","歳":"歲","毎":"每",
+  "画":"畫","黄":"黃","国":"國","囲":"圍","巌":"巖","塁":"壘","将":"將","歴":"歷","恵":"惠","徴":"徵","繊":"纖","蚕":"蠶","逓":"遞","届":"屆","峡":"峽","湾":"灣"
+};
+
+function toTraditional(text){
+  if(!text) return "";
+  return Array.from(text).map(ch => KANJI_MAP[ch] || ch).join("");
+}
+
+/* 台灣財經媒體慣用的中文名稱，用股票代號對照（比用名稱比對可靠）。
+   自動轉換只能處理漢字與常見片假名用語，像「ファナック→發那科」這種
+   音譯／意譯必須靠對照表。查不到的就退回自動轉換的結果。 */
+const CN_NAMES = {
+  "4063":"信越化學", "6954":"發那科", "6857":"愛德萬測試", "4062":"揖斐電",
+  "8035":"東京威力科創", "6146":"DISCO", "6920":"Lasertec", "6981":"村田製作所",
+  "6758":"Sony", "7203":"豐田汽車", "7267":"本田汽車", "7201":"日產汽車",
+  "6501":"日立製作所", "7011":"三菱重工", "7012":"川崎重工", "7013":"IHI",
+  "6503":"三菱電機", "6702":"富士通", "6752":"松下", "6971":"京瓷",
+  "6762":"TDK", "6963":"ROHM", "4901":"富士軟片", "4911":"資生堂",
+  "4519":"中外製藥", "4568":"第一三共", "4502":"武田藥品",
+  "6301":"小松製作所", "6326":"久保田", "6367":"大金工業", "6506":"安川電機",
+  "6273":"SMC", "7741":"HOYA", "7751":"佳能", "7731":"尼康", "7733":"奧林巴斯",
+  "8306":"三菱UFJ金融集團", "8316":"三井住友金融集團", "8411":"瑞穗金融集團",
+  "9432":"NTT", "9433":"KDDI", "9984":"軟銀集團",
+  "2802":"味之素", "4452":"花王", "5711":"三菱材料", "5401":"日本製鐵",
+  "5406":"神戶製鋼", "3407":"旭化成", "4188":"三菱化學集團", "4183":"三井化學",
+  "4005":"住友化學", "3402":"東麗", "5108":"普利司通", "6902":"電裝",
+  "7735":"SCREEN", "6315":"TOWA", "5016":"JX金屬", "6368":"ORGANO",
+  "6594":"尼得科", "6723":"瑞薩電子", "6976":"太陽誘電", "9983":"迅銷",
+  "5947":"林內", "6098":"Recruit", "6532":"BayCurrent", "4543":"泰爾茂",
+  "7269":"鈴木汽車", "7270":"速霸陸", "7261":"馬自達", "6113":"amada",
+  "6305":"日立建機", "6361":"荏原製作所", "6465":"Hoshizaki", "6479":"日本電產",
+  "8058":"三菱商事", "8031":"三井物產", "8053":"住友商事", "8001":"伊藤忠商事",
+  "8002":"丸紅", "9101":"日本郵船", "9104":"商船三井", "9107":"川崎汽船"
+};
+
+function cnNameFor(code){
+  const m = String(code || "").match(/^(\d{3}[0-9A-Z])/i);
+  return m ? (CN_NAMES[m[1].toUpperCase()] || "") : "";
+}
+
+/* 日文公司名常見的片假名商業用語，對到中文慣用寫法。
+   例如「三菱マテリアル」→「三菱材料」，正好符合既有的命名習慣。 */
+const KANA_TERMS = [
+  ["ホールディングス","控股"], ["ホールディング","控股"],
+  ["フィナンシャルグループ","金融集團"], ["フィナンシャル","金融"],
+  ["エレクトロニクス","電子"], ["エレクトリック","電機"],
+  ["テクノロジーズ","科技"], ["テクノロジー","科技"],
+  ["ソリューションズ","解決方案"], ["ソリューション","解決方案"],
+  ["コーポレーション",""], ["カンパニー",""],
+  ["インダストリーズ","工業"], ["インダストリー","工業"],
+  ["マテリアル","材料"], ["ケミカル","化學"], ["システムズ","系統"], ["システム","系統"],
+  ["グループ","集團"], ["サービス","服務"], ["エナジー","能源"], ["エネルギー","能源"],
+  ["トラスト","信託"], ["バンク","銀行"], ["セメント","水泥"], ["ガラス","玻璃"],
+  ["スチール","鋼鐵"], ["メタル","金屬"], ["ファーマ","製藥"], ["バイオ","生技"]
+];
+
+function hasCJK(s){ return /[\u3400-\u9FFF]/.test(s || ""); }
+function kanaRatio(s){
+  const t = String(s || "").replace(/\s/g, "");
+  if(!t) return 1;
+  const kana = (t.match(/[\u3040-\u30FF]/g) || []).length;
+  return kana / t.length;
+}
+
+/* 從候選名稱裡挑一個最適合填入的：優先漢字（JPX 官方名冊），其次英文。
+   日文名會清掉法人格與常見後綴，把片假名商業用語換成中文，再把新字體轉成繁體。
+   若換完仍以假名為主（例如「ファナック」這種純片假名商號），改用英文名，
+   因為那比夾雜假名更好讀，也貼近既有名單的寫法。 */
+function cleanJaName(n){
+  let t = String(n || "")
+    .replace(/株式会社/g, "")
+    .replace(/\(株\)|（株）/g, "")
+    .replace(/,?\s*(Inc|Ltd|Corp|Corporation|Co)\.?,?$/i, "")
+    .trim();
+  KANA_TERMS.forEach(([a, b])=>{ t = t.split(a).join(b); });
+  t = t.replace(/の/g, "之");          // 味の素 → 味之素
+  return toTraditional(t).trim();
+}
+
+function pickName(names, code){
+  const known = cnNameFor(code);
+  if(known) return known;                 // 台灣慣用譯名優先
+  if(!names || !names.length) return "";
+  const en = names.find(n => !hasCJK(n) && /[A-Za-z]/.test(n));
+  const ja = names.find(n => /[\u3040-\u9FFF]/.test(n));
+  if(ja){
+    const cleaned = cleanJaName(ja);
+    if(cleaned && kanaRatio(cleaned) <= 0.3) return cleaned;
+  }
+  return en || (ja ? cleanJaName(ja) : names[0]);
+}
+
+/* ---------- 自動建立歷史資料（長作業，輪詢進度） ---------- */
+let jobTimer = null;
+
+async function pollJob(){
+  try{
+    const r = await fetch("/api/job", {cache:"no-store"});
+    const j = await r.json();
+    const log = $("#buildLog"), bar = $("#buildBar");
+    log.hidden = false; bar.hidden = false;
+    log.textContent = j.output || "準備中…";
+    log.scrollTop = log.scrollHeight;
+
+    if(j.running){
+      bar.className = "buildbar";
+      log.className = "console busy";
+    } else if(j.done){
+      clearInterval(jobTimer); jobTimer = null;
+      bar.className = "buildbar " + (j.ok ? "done" : "fail");
+      log.className = "console" + (j.ok ? "" : " fail");
+      $("#finBuild").disabled = false;
+      $("#finBuild").textContent = "開始建立";
+      toast(j.ok ? "歷史資料建立完成" : "建立失敗，請看下方訊息", !j.ok);
+      if(j.ok){ loadFinancials(); refreshFinStatus(); }
+    }
+  }catch(e){
+    clearInterval(jobTimer); jobTimer = null;
+    $("#finBuild").disabled = false;
+    $("#finBuild").textContent = "開始建立";
+  }
+}
+
+async function startBuild(skipConfirm){
+  const key = $("#finStock").value;
+  if(!key){ toast("請先選擇個股", true); return; }
+  const yearsRaw = $("#finYears").value;
+  const years = yearsRaw ? Number(yearsRaw) : null;
+
+  const cur = state.jp_stocks.find(s=>s.key===key);
+  const label = cur ? cur.name : key;
+  if(skipConfirm !== true &&
+     !confirm(`要為「${label}」建立季報歷史嗎？\n\n若已有資料檔會先自動備份成 .bak，再以 J-Quants 的資料重建。`))
+    return;
+
+  const btn = $("#finBuild");
+  btn.disabled = true; btn.textContent = "建立中…";
+  $("#buildLog").hidden = false;
+  $("#buildLog").textContent = "送出請求…";
+  $("#buildBar").hidden = false;
+  $("#buildBar").className = "buildbar";
+
+  try{
+    const r = await fetch("/api/buildhistory", {
+      method:"POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({key, years})
+    });
+    const j = await r.json();
+    if(!j.ok){
+      $("#buildLog").textContent = j.error || "無法啟動";
+      $("#buildLog").className = "console fail";
+      $("#buildBar").className = "buildbar fail";
+      btn.disabled = false; btn.textContent = "開始建立";
+      return;
+    }
+    if(jobTimer) clearInterval(jobTimer);
+    jobTimer = setInterval(pollJob, 800);
+    pollJob();
+  }catch(e){
+    $("#buildLog").textContent = "連線失敗：" + e.message;
+    btn.disabled = false; btn.textContent = "開始建立";
+  }
+}
+
+/* ---------- J-Quants 帳號 ---------- */
+async function loadCreds(){
+  const box = $("#credsState");
+  try{
+    const r = await fetch("/api/creds", {cache:"no-store"});
+    const j = await r.json();
+    let html = "";
+    if(j.envConfigured){
+      html = '<span class="ok-dot">●</span> 已用環境變數設定，可以直接使用';
+    } else if(j.keySet){
+      html = `<span class="ok-dot">●</span> 已設定金鑰（${j.keyHint}，存於 secrets.json）`;
+    } else if(j.configHasCreds){
+      html = '<span class="warn-dot">●</span> 帳密目前在 config.json 裡，這個檔案會被推上 GitHub。'
+           + '請在下方重新填一次，系統會改存到安全的位置。';
+    } else {
+      html = '<span class="warn-dot">●</span> 尚未設定，填入金鑰後才能自動建立歷史資料';
+    }
+    box.innerHTML = html;
+  }catch(e){ box.textContent = "無法取得設定狀態"; }
+}
+
+async function saveCreds(){
+  const key = $("#jqKey").value.trim();
+  const box = $("#credsIssues"); box.innerHTML = "";
+  const show = (t, ok)=>{
+    const d = document.createElement("div");
+    d.className = "issue " + (ok ? "ok" : "err");
+    d.innerHTML = `<span>${ok?"✓":"✕"}</span><span>${t.replace(/\n/g,"<br>")}</span>`;
+    box.appendChild(d);
+  };
+  if(!key){ show("請貼上 API 金鑰", false); return; }
+
+  const btn = $("#jqSave"); btn.disabled = true; btn.textContent = "儲存中…";
+  try{
+    const r = await fetch("/api/creds", {
+      method:"POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({apiKey: key})
+    });
+    const j = await r.json();
+    show(j.ok ? j.output : (j.error || "儲存失敗"), j.ok);
+    if(j.ok){ $("#jqKey").value = ""; loadCreds(); toast("金鑰已儲存"); }
+  }catch(e){ show("連線失敗：" + e.message, false); }
+  finally{ btn.disabled = false; btn.textContent = "儲存金鑰"; }
+}
+
+/* ---------- 個股列的季報狀態 ---------- */
+let finCounts = {};
+
+async function refreshFinStatus(){
+  if(!serverMode) return;
+  try{
+    const r = await fetch("/api/finstatus", {cache:"no-store"});
+    const j = await r.json();
+    finCounts = j.counts || {};
+  }catch(e){ finCounts = {}; }
+  paintFinBadges();
+}
+
+function paintFinBadges(){
+  document.querySelectorAll(".fin-badge").forEach(b=>{
+    const k = b.dataset.key;
+    const n = k ? finCounts[k] : undefined;
+    if(!k){
+      b.textContent = "季報 —"; b.className = "fin-badge none"; b.disabled = true;
+      b.title = "先填好代號與檔名才能建立季報";
+    } else if(n === undefined || n === 0){
+      b.textContent = "建立季報"; b.className = "fin-badge missing"; b.disabled = false;
+      b.title = "這檔還沒有季報資料，點一下自動建立";
+    } else {
+      b.textContent = `季報 ${n} 季`; b.className = "fin-badge ok"; b.disabled = false;
+      b.title = `已有 ${n} 季資料。點一下可重新建立（原檔會先備份）`;
+    }
+  });
+}
+
+/* 查到名稱後，在該列跳出一條提示問要不要順手建立季報。
+   用列內提示而不是彈窗，是因為使用者可能還在連續新增，彈窗會一直打斷。 */
+function offerBuild(row, s){
+  if(!serverMode || !s.key || !s.code) return;
+  if(finCounts[s.key]) return;                 // 已經有季報就不用問
+  if(row.querySelector(".build-offer")) return;
+
+  const bar = document.createElement("div");
+  bar.className = "build-offer";
+  bar.innerHTML = `<span>「${s.name}」還沒有季報資料，要現在自動建立嗎？</span>`;
+
+  const yes = document.createElement("button");
+  yes.className = "btn small primary"; yes.textContent = "建立季報";
+  yes.addEventListener("click", ()=>{ bar.remove(); buildHistoryFor(s, true); });
+
+  const no = document.createElement("button");
+  no.className = "btn small ghost"; no.textContent = "稍後";
+  no.addEventListener("click", ()=> bar.remove());
+
+  bar.appendChild(yes); bar.appendChild(no);
+  row.appendChild(bar);
+}
+
+async function buildHistoryFor(stock, skipAsk){
+  if(!serverMode) return;
+  if(!stock.key || !stock.code){ toast("請先填好代號與檔名", true); return; }
+
+  // 建立季報會讀 config.json，所以先確保設定已經落地
+  if(dirty){ await autoSave(); }
+
+  const has = finCounts[stock.key];
+  if(!skipAsk){
+    const msg = has
+      ? `「${stock.name}」已有 ${has} 季資料，要重新建立嗎？\n\n原檔會先備份成 .bak。`
+      : `要為「${stock.name}」建立季報歷史嗎？\n\n會向 J-Quants 抓取並自動還原成單季。`;
+    if(!confirm(msg)) return;
+  }
+
+  selectTab("financials");
+  $("#finStock").value = stock.key;
+  await loadFinancials();
+  $("#finBuild").scrollIntoView({block:"center"});
+  startBuild(true);
+}
+
+/* 用對照表把既有名單的名稱換成台灣慣用的中文寫法。
+   先列出會變動的項目讓使用者確認，不會默默改掉。 */
+function applyChineseNames(){
+  const changes = [];
+  state.jp_stocks.forEach(s=>{
+    const cn = cnNameFor(s.code);
+    if(cn && cn !== s.name) changes.push({s, from: s.name, to: cn});
+  });
+  if(!changes.length){
+    toast("名單已經都是慣用的中文名稱了");
+    return;
+  }
+  const list = changes.map(c=> `　${c.from} → ${c.to}`).join("\n");
+  if(!confirm(`要更新以下 ${changes.length} 檔的名稱嗎？\n\n${list}`)) return;
+  changes.forEach(c=> c.s.name = c.to);
+  markDirty(); renderStocks(); fillFinStocks();
+  toast(`已更新 ${changes.length} 檔名稱`);
+}
+
+function serialize(cfg){
+  const lines = ["{"];
+  const topKeys = Object.keys(cfg);
+  topKeys.forEach((k,i)=>{
+    const last = i === topKeys.length-1;
+    if(k === "thresholds"){
+      lines.push('  "thresholds": {');
+      const tk = Object.keys(cfg.thresholds);
+      tk.forEach((t,j)=>{
+        lines.push(`    "${t}": ${cfg.thresholds[t]}${j===tk.length-1?"":","}`);
+      });
+      lines.push("  }" + (last?"":","));
+    } else if(k === "jp_stocks"){
+      lines.push('  "jp_stocks": [');
+      cfg.jp_stocks.forEach((s,j)=>{
+        const seg = `{ "key": ${JSON.stringify(s.key)}, "code": ${JSON.stringify(s.code)}, `
+          + `"name": ${JSON.stringify(s.name)}, "enabled": ${s.enabled}, `
+          + `"price_buy": ${s.price_buy===null?"null":s.price_buy}, `
+          + `"per_buy": ${s.per_buy===null?"null":s.per_buy} }`;
+        lines.push("    " + seg + (j===cfg.jp_stocks.length-1?"":","));
+      });
+      lines.push("  ]" + (last?"":","));
+    } else {
+      lines.push(`  ${JSON.stringify(k)}: ${JSON.stringify(cfg[k],null,2).split("\n").join("\n  ")}${last?"":","}`);
+    }
+  });
+  lines.push("}");
+  return lines.join("\n") + "\n";
+}
+
+/* ---------- 載入 ---------- */
+function normalize(raw){
+  const cfg = {};
+  for(const k of Object.keys(raw)) if(k!=="thresholds" && k!=="jp_stocks") cfg[k]=raw[k];
+  cfg.thresholds = Object.assign({}, DEFAULT_CONFIG.thresholds, raw.thresholds||{});
+  cfg.jp_stocks = (Array.isArray(raw.jp_stocks)?raw.jp_stocks:DEFAULT_CONFIG.jp_stocks).map(s=>({
+    key:s.key||"", code:s.code||"", name:s.name||s.key||"",
+    enabled:s.enabled!==false,
+    price_buy:(typeof s.price_buy==="number")?s.price_buy:null,
+    per_buy:(typeof s.per_buy==="number")?s.per_buy:null
+  }));
+  // 讓 thresholds 依固定順序輸出，檔案比較好讀
+  const order=["taiex_buy","taiex_volume_buy_bil","nikkei_buy","vix_warn","vix_panic","michigan_warn","murata_bb_warn","per_buy_default"];
+  const t={}; order.forEach(k=>{ if(k in cfg.thresholds) t[k]=cfg.thresholds[k]; });
+  Object.keys(cfg.thresholds).forEach(k=>{ if(!(k in t)) t[k]=cfg.thresholds[k]; });
+  cfg.thresholds=t;
+  return cfg;
+}
+
+function boot(cfg, text, handle){
+  state = normalize(cfg);
+  originalText = text !== undefined ? text : serialize(state);
+  fileHandle = handle || null;
+  dirty = false;
+  $("#empty").hidden = true;
+  $("#editor").hidden = false;
+  $("#btnDownload").disabled = false;
+  $("#btnSave").disabled = !fileHandle;
+  renderAll();
+  updateFileState(handle ? handle.name : "未連結檔案（改完請用另存下載）");
+}
+
+function updateFileState(label, flash){
+  const el = $("#fileState");
+  if(label !== undefined) el.dataset.label = label;
+  const name = el.dataset.label || "";
+  if(flash){
+    el.textContent = `${name}　${flash}`;
+    el.className = "filestate " + (flash.includes("失敗") ? "dirty" : "live");
+    clearTimeout(el._t);
+    el._t = setTimeout(()=> updateFileState(), 2500);
+    return;
+  }
+  el.textContent = dirty
+    ? `● ${name}　儲存中…`
+    : (serverMode ? `${name}　變更會自動儲存` : name);
+  el.className = "filestate " + (dirty ? "dirty" : (serverMode || fileHandle ? "live" : ""));
+}
+
+let autoSaveTimer = null;
+
+function markDirty(){
+  dirty = true;
+  updateFileState();
+  renderPreview();
+  scheduleAutoSave();
+}
+
+/* 設定改完自動存檔，不用記得按按鈕。
+   停手 1.2 秒後才寫，避免打字過程中一直寫檔。 */
+function scheduleAutoSave(){
+  if(!serverMode) return;          // 直接開檔模式沒有伺服器可寫，仍需手動另存
+  clearTimeout(autoSaveTimer);
+  autoSaveTimer = setTimeout(autoSave, 1200);
+}
+
+async function autoSave(){
+  if(!serverMode || !dirty) return;
+  const text = serialize(state);
+  try{
+    const r = await fetch("/api/config", {
+      method:"POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({text})
+    });
+    const j = await r.json();
+    if(!j.ok) throw new Error(j.error || "未知錯誤");
+    originalText = text; dirty = false;
+    updateFileState(undefined, "已自動儲存");
+    renderPreview();
+  }catch(e){
+    updateFileState(undefined, "自動儲存失敗，請按右上角儲存");
+  }
+}
+
+/* ---------- 畫面 ---------- */
+function numInput(val, onChange, opts={}){
+  const inp = document.createElement("input");
+  inp.type = "number"; inp.value = (val===null||val===undefined) ? "" : val;
+  if(opts.placeholder) inp.placeholder = opts.placeholder;
+  if(opts.step) inp.step = opts.step;
+  inp.addEventListener("input", ()=>{
+    const v = inp.value.trim();
+    onChange(v==="" ? null : Number(v));
+    markDirty();
+  });
+  return inp;
+}
+
+function renderThresholds(){
+  const g = $("#thGlobal"); g.innerHTML = "";
+  Object.keys(TH_META).forEach(k=>{
+    if(!(k in state.thresholds)) return;
+    const [name, desc] = TH_META[k];
+    const row = document.createElement("div"); row.className = "th-row";
+    row.innerHTML = `<div><div class="th-name">${name}</div><div class="th-desc">${desc}</div></div>`;
+    row.appendChild(numInput(state.thresholds[k], v=>{ state.thresholds[k] = v===null?0:v; },
+                    {step: k==="murata_bb_warn" ? "0.01" : "1"}));
+    g.appendChild(row);
+  });
+
+  const p = $("#thPer"); p.innerHTML = "";
+  const row = document.createElement("div"); row.className = "th-row";
+  row.innerHTML = `<div><div class="th-name">本益比預設門檻</div>
+                   <div class="th-desc">個股本益比低於此倍數 → 標示可以考慮布局</div></div>`;
+  row.appendChild(numInput(state.thresholds.per_buy_default, v=>{
+    state.thresholds.per_buy_default = v===null?20:v;
+    renderStocks();   // 個股列的提示文字要跟著更新
+  }));
+  p.appendChild(row);
+}
+
+function renderStocks(){
+  const list = $("#stockList"); list.innerHTML = "";
+  const perDefault = state.thresholds.per_buy_default;
+
+  state.jp_stocks.forEach((s, idx)=>{
+    const row = document.createElement("div");
+    row.className = "stock" + (s.enabled ? "" : " off");
+    row.draggable = true;
+    row.dataset.idx = idx;
+
+    const grab = document.createElement("div");
+    grab.className = "grab"; grab.textContent = "⠿"; grab.title = "拖曳調整順序";
+    row.appendChild(grab);
+
+    const idBox = document.createElement("div");
+    idBox.className = "stock-id";
+    const nameInp = document.createElement("input");
+    nameInp.type = "text"; nameInp.value = s.name; nameInp.className = "stock-name-input";
+    nameInp.style.cssText = "font-weight:700;font-size:13.5px;font-family:var(--sans);padding:4px 7px;background:transparent;border-color:transparent";
+    nameInp.addEventListener("input", ()=>{ s.name = nameInp.value; markDirty(); });
+    nameInp.addEventListener("focus", ()=> nameInp.style.borderColor = "var(--amber)");
+    nameInp.addEventListener("blur", ()=> nameInp.style.borderColor = "transparent");
+    const meta = document.createElement("div");
+    meta.className = "stock-meta";
+    const codeTag = document.createElement("span");
+    codeTag.className = "field-tag"; codeTag.textContent = "代號";
+    meta.appendChild(codeTag);
+
+    const codeInp = document.createElement("input");
+    codeInp.type = "text"; codeInp.value = s.code; codeInp.placeholder = "例 4063";
+    codeInp.className = "mini-input";
+    codeInp.title = "股票代號。日股填 4 位數字即可，會自動補上 .T（東證）";
+    codeInp.style.cssText = "font-family:var(--mono);font-size:11px;width:76px;padding:2px 6px;display:inline-block";
+    codeInp.addEventListener("input", ()=>{
+      s.code = codeInp.value.trim(); markDirty(); validate(); scheduleLookup();
+    });
+    codeInp.addEventListener("keydown", e=>{
+      if(e.key === "Enter"){ e.preventDefault(); doLookup(true); }
+    });
+    codeInp.addEventListener("blur", ()=>{
+      const fixed = normalizeCode(codeInp.value);
+      if(fixed !== s.code){ s.code = fixed; codeInp.value = fixed; markDirty(); }
+      // 檔名沒填就依代號自動產生，省得使用者還要想一個
+      if(!s.key && fixed){
+        s.key = "s" + fixed.replace(/\./g,"").toLowerCase();
+        const ki = meta.querySelector(".key-input");
+        if(ki) ki.value = s.key;
+        markDirty();
+      }
+      syncLook(); renderPreview(); validate();
+      doLookup(false);
+    });
+
+    /* ---- 輸入代號後自動帶出名稱與檔名 ---- */
+    let lookupTimer = null, lastLooked = "";
+    function scheduleLookup(){
+      clearTimeout(lookupTimer);
+      lookupTimer = setTimeout(()=> doLookup(false), 700);
+    }
+    async function doLookup(force){
+      if(!serverMode) return;
+      const code = normalizeCode(codeInp.value);
+      if(!code || !/^\d{3}[0-9A-Z]\.T$/i.test(code)) return;
+      if(!force && code === lastLooked) return;
+      lastLooked = code;
+
+      const nameInputEl = row.querySelector(".stock-name-input");
+      const nameIsPlaceholder = !nameInputEl.value || nameInputEl.value === "新個股";
+      const keyEl = meta.querySelector(".key-input");
+      const keyIsAuto = !s.key || /^s\d{3}[0-9a-z]?t?$/i.test(s.key);
+      if(!force && !nameIsPlaceholder && !keyIsAuto) return;  // 使用者已自己填過就別覆蓋
+
+      setLookupState("查詢中…");
+      try{
+        const r = await fetch("/api/lookup?code=" + encodeURIComponent(code), {cache:"no-store"});
+        const j = await r.json();
+        if(!j.ok){ setLookupState("✕ " + (j.error || "查不到"), true); return; }
+
+        const picked = j.suggestedName || pickName(j.names, code);
+        if(picked && (force || nameIsPlaceholder)){
+          nameInputEl.value = picked; s.name = picked;
+        }
+        if(j.suggestedKey && (force || keyIsAuto)){
+          keyEl.value = j.suggestedKey; s.key = j.suggestedKey;
+        }
+        const priceTxt = (typeof j.price === "number")
+          ? `　最新價 ${j.price.toLocaleString()} ${j.currency||""}` : "";
+        setLookupState(`✓ ${picked || code}${priceTxt}`);
+        markDirty(); validate(); renderPreview(); fillFinStocks();
+
+        // 名稱與檔名都齊了，接著問要不要順手把季報也建起來
+        setTimeout(()=> offerBuild(row, s), 400);
+      }catch(e){
+        setLookupState("✕ 查詢失敗", true);
+      }
+    }
+    function setLookupState(text, isErr){
+      let el = meta.querySelector(".lookup-state");
+      if(!el){
+        el = document.createElement("span");
+        el.className = "lookup-state";
+        meta.appendChild(el);
+      }
+      el.textContent = text;
+      el.style.color = isErr ? "var(--red)" : "var(--teal)";
+      if(!isErr && text.startsWith("✓")) setTimeout(()=>{ if(el) el.textContent = ""; }, 6000);
+    }
+    meta.appendChild(codeInp);
+
+    const look = document.createElement("button");
+    look.type = "button"; look.textContent = "查證";
+    look.title = "確認這個代號對應到哪一家公司";
+    look.style.cssText = "font-size:10.5px;color:var(--amber);background:transparent;cursor:pointer;border:1px solid rgba(240,180,41,.35);border-radius:5px;padding:1px 6px;margin-left:6px;white-space:nowrap;font-family:var(--sans)";
+    const syncLook = ()=>{
+      const c = normalizeCode(s.code);
+      look.style.display = c ? "inline-block" : "none";
+    };
+    syncLook();
+    codeInp.addEventListener("input", syncLook);
+    look.addEventListener("click", async ()=>{
+      const c = normalizeCode(s.code);
+      if(!c) return;
+      if(!serverMode){
+        window.open("https://finance.yahoo.co.jp/quote/" + encodeURIComponent(c), "_blank", "noopener");
+        return;
+      }
+      const old = look.textContent;
+      look.textContent = "查詢中"; look.disabled = true;
+      try{
+        const r = await fetch("/api/action", {
+          method:"POST", headers:{"Content-Type":"application/json"},
+          body: JSON.stringify({action:"verify", codes:[c]})
+        });
+        const j = await r.json();
+        selectTab("ops");
+        logConsole(j.output || "（沒有輸出）", j.ok ? "" : "fail");
+      }catch(e){
+        toast("查證失敗：" + e.message, true);
+      }finally{ look.textContent = old; look.disabled = false; }
+    });
+    meta.appendChild(look);
+
+    const keyTag = document.createElement("span");
+    keyTag.className = "field-tag"; keyTag.textContent = "檔名";
+    meta.appendChild(keyTag);
+
+    const keyInp = document.createElement("input");
+    keyInp.type = "text"; keyInp.value = s.key; keyInp.placeholder = "自動產生";
+    keyInp.className = "mini-input key-input";
+    keyInp.title = "資料檔名用的英文代號，例如 hitachi 對應 data/stock_hitachi.json，不可重複。留空會依代號自動產生。";
+    keyInp.style.cssText = "font-family:var(--mono);font-size:11px;width:158px;padding:2px 6px;display:inline-block";
+    keyInp.addEventListener("input", ()=>{
+      s.key = keyInp.value.trim().toLowerCase().replace(/[^a-z0-9_]/g,"");
+      if(keyInp.value !== s.key) keyInp.value = s.key;
+      markDirty(); validate();
+    });
+    meta.appendChild(keyInp);
+
+    /* ---- 季報狀態：直接在這一列顯示，需要時一鍵建立 ---- */
+    const finBadge = document.createElement("button");
+    finBadge.type = "button";
+    finBadge.className = "fin-badge";
+    finBadge.dataset.key = s.key || "";
+    finBadge.textContent = "季報 …";
+    finBadge.addEventListener("click", ()=> buildHistoryFor(s));
+    meta.appendChild(finBadge);
+    idBox.appendChild(nameInp); idBox.appendChild(meta);
+    row.appendChild(idBox);
+
+    const priceWrap = document.createElement("div"); priceWrap.className = "c-price";
+    priceWrap.appendChild(numInput(s.price_buy, v=>{ s.price_buy = v; }, {placeholder:"不判斷"}));
+    row.appendChild(priceWrap);
+
+    const perWrap = document.createElement("div"); perWrap.className = "c-per";
+    perWrap.appendChild(numInput(s.per_buy, v=>{ s.per_buy = v; }, {placeholder:"預設 "+perDefault}));
+    row.appendChild(perWrap);
+
+    const sw = document.createElement("label"); sw.className = "switch";
+    sw.title = s.enabled ? "目前顯示在報告中，點一下隱藏" : "目前已隱藏，點一下恢復顯示";
+    sw.innerHTML = `<input type="checkbox" ${s.enabled?"checked":""}>`
+                 + `<span class="eye">${s.enabled ? "👁" : "🙈"}</span>`;
+    sw.querySelector("input").addEventListener("change", e=>{
+      s.enabled = e.target.checked;
+      row.classList.toggle("off", !s.enabled);
+      sw.querySelector(".eye").textContent = s.enabled ? "👁" : "🙈";
+      sw.title = s.enabled ? "目前顯示在報告中，點一下隱藏" : "目前已隱藏，點一下恢復顯示";
+      markDirty();
+    });
+    row.appendChild(sw);
+
+    const del = document.createElement("button");
+    del.className = "btn danger small"; del.textContent = "✕"; del.title = "從名單移除";
+    del.addEventListener("click", ()=>{
+      if(confirm(`把「${s.name}」從追蹤名單移除？\n\ndata/ 底下的資料檔不會被刪除，之後想加回來還在。`)){
+        state.jp_stocks.splice(idx,1); markDirty(); renderStocks(); validate();
+      }
+    });
+    row.appendChild(del);
+
+    const m = document.createElement("div"); m.className = "m-nums";
+    const l1 = document.createElement("label"); l1.textContent = "股價布局";
+    const i1 = numInput(s.price_buy, v=>{ s.price_buy = v; }, {placeholder:"不判斷"});
+    const l2 = document.createElement("label"); l2.textContent = "本益比布局";
+    const i2 = numInput(s.per_buy, v=>{ s.per_buy = v; }, {placeholder:"預設 "+perDefault});
+    l1.appendChild(i1); l2.appendChild(i2); m.appendChild(l1); m.appendChild(l2);
+    row.appendChild(m);
+
+    list.appendChild(row);
+  });
+
+  enableDrag(list);
+  paintFinBadges();
+}
+
+function enableDrag(list){
+  let srcIdx = null;
+  list.querySelectorAll(".stock").forEach(row=>{
+    row.addEventListener("dragstart", e=>{
+      srcIdx = Number(row.dataset.idx); row.classList.add("dragging");
+      e.dataTransfer.effectAllowed = "move";
+    });
+    row.addEventListener("dragend", ()=>{
+      row.classList.remove("dragging");
+      list.querySelectorAll(".stock").forEach(r=>r.classList.remove("drag-over"));
+    });
+    row.addEventListener("dragover", e=>{ e.preventDefault(); row.classList.add("drag-over"); });
+    row.addEventListener("dragleave", ()=> row.classList.remove("drag-over"));
+    row.addEventListener("drop", e=>{
+      e.preventDefault();
+      const dstIdx = Number(row.dataset.idx);
+      if(srcIdx===null || srcIdx===dstIdx) return;
+      const [moved] = state.jp_stocks.splice(srcIdx,1);
+      state.jp_stocks.splice(dstIdx,0,moved);
+      markDirty(); renderStocks();
+    });
+  });
+}
+
+function validate(){
+  const box = $("#issues"); box.innerHTML = "";
+  const errs = [];
+  const seen = new Set();
+  state.jp_stocks.forEach((s,i)=>{
+    const who = s.name || ("第"+(i+1)+"檔");
+    // 常見誤填：把股票代號打到「檔名」欄，代號欄反而留空
+    if(!s.code && /^s?\d{3}[0-9a-z]?$/i.test(s.key || ""))
+      errs.push(`${who} 的代號欄是空的，你可能把「${s.key}」填到旁邊的檔名欄了`);
+    else if(!s.code) errs.push(`${who} 缺少代號，抓不到股價`);
+    else if(/\.(JP|JPN|TO|TYO|TSE)$/i.test(s.code))
+      errs.push(`${who} 的「${s.code}」是別家資料商的寫法，Yahoo 抓不到；日股要用 ${s.code.replace(/\.\w+$/,".T")}`);
+    else if(!/^\d{3}[0-9A-Z]\.T$/i.test(s.code))
+      errs.push(`${who} 的「${s.code}」不像日股代號，正確格式是 4 位數字加 .T，例如 4063.T（信越化學工業）`);
+
+    if(!s.key) errs.push(`${who} 缺少檔名代號，填好股票代號後會自動產生`);
+    else if(seen.has(s.key)) errs.push(`檔名「${s.key}」重複，只有第一筆會生效`);
+    else seen.add(s.key);
+  });
+  if(state.thresholds.vix_panic <= state.thresholds.vix_warn)
+    errs.push("VIX 高度恐慌值應該大於波動升溫值，否則永遠只會觸發其中一個");
+
+  if(errs.length){
+    errs.forEach(t=>{
+      const d = document.createElement("div"); d.className = "issue err";
+      d.innerHTML = `<span>✕</span><span>${t}</span>`; box.appendChild(d);
+    });
+  } else {
+    const n = state.jp_stocks.filter(s=>s.enabled).length;
+    const d = document.createElement("div"); d.className = "issue ok";
+    d.innerHTML = `<span>✓</span><span>設定沒有問題，報告會顯示 ${n} 檔個股</span>`;
+    box.appendChild(d);
+  }
+  return errs.length === 0;
+}
+
+function renderPreview(){
+  const text = serialize(state);
+  const oldLines = originalText.split("\n");
+  const newLines = text.split("\n");
+  const oldSet = new Set(oldLines.map(l=>l.trim()));
+  const box = $("#previewBox"); box.innerHTML = "";
+  newLines.forEach(l=>{
+    const span = document.createElement("span");
+    span.className = "ln" + (oldSet.has(l.trim()) ? "" : " changed");
+    span.textContent = l + "\n";
+    box.appendChild(span);
+  });
+  validate();
+}
+
+function renderAll(){ renderThresholds(); renderStocks(); renderPreview(); }
+
+/* ---------- 檔案動作 ---------- */
+function toast(msg, isErr){
+  const t = $("#toast"); t.textContent = msg;
+  t.className = "toast show" + (isErr ? " err" : "");
+  setTimeout(()=> t.className = "toast" + (isErr ? " err" : ""), 2600);
+}
+
+$("#btnOpen").addEventListener("click", async ()=>{
+  if(supportsFS){
+    try{
+      const [h] = await window.showOpenFilePicker({
+        types:[{description:"設定檔", accept:{"application/json":[".json"]}}]
+      });
+      const f = await h.getFile();
+      const text = await f.text();
+      boot(JSON.parse(text), text, h);
+      toast("已載入 " + h.name);
+    }catch(e){
+      if(e.name !== "AbortError") toast("讀取失敗：" + e.message, true);
+    }
+  } else {
+    const inp = document.createElement("input");
+    inp.type = "file"; inp.accept = ".json,application/json";
+    inp.onchange = async ()=>{
+      const f = inp.files[0]; if(!f) return;
+      const text = await f.text();
+      try{ boot(JSON.parse(text), text, null); toast("已載入 " + f.name); }
+      catch(e){ toast("這個檔案不是有效的 JSON：" + e.message, true); }
+    };
+    inp.click();
+  }
+});
+
+$("#btnDefaults").addEventListener("click", ()=>{
+  boot(JSON.parse(JSON.stringify(DEFAULT_CONFIG)), undefined, null);
+  dirty = true; updateFileState("未連結檔案（改完請用另存下載）"); renderPreview();
+});
+
+$("#btnSave").addEventListener("click", async ()=>{
+  if(!validate() && !confirm("設定還有問題沒解決，仍要儲存嗎？")) return;
+  const text = serialize(state);
+
+  if(serverMode){
+    try{
+      const r = await fetch("/api/config", {
+        method:"POST", headers:{"Content-Type":"application/json"},
+        body: JSON.stringify({text})
+      });
+      const j = await r.json();
+      if(!j.ok) throw new Error(j.error || "未知錯誤");
+      originalText = text; dirty = false; updateFileState(); renderPreview();
+      toast("設定已儲存");
+    }catch(e){ toast("儲存失敗：" + e.message, true); }
+    return;
+  }
+
+  if(!fileHandle){ toast("這個模式請用「另存下載」", true); return; }
+  try{
+    const w = await fileHandle.createWritable();
+    await w.write(text);
+    await w.close();
+    originalText = text; dirty = false; updateFileState(); renderPreview();
+    toast("已存回 " + fileHandle.name);
+  }catch(e){ toast("寫入失敗：" + e.message, true); }
+});
+
+$("#btnDownload").addEventListener("click", ()=>{
+  const blob = new Blob([serialize(state)], {type:"application/json"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob); a.download = "config.json";
+  a.click(); URL.revokeObjectURL(a.href);
+  toast("已下載 config.json，請覆蓋原本的檔案");
+});
+
+$("#btnAdd").addEventListener("click", ()=>{
+  state.jp_stocks.push({key:"", code:"", name:"新個股", enabled:true, price_buy:null, per_buy:null});
+  markDirty(); renderStocks();
+  const rows = $("#stockList").querySelectorAll(".stock");
+  const last = rows[rows.length-1];
+  last.scrollIntoView({block:"center"});
+  // 游標停在「代號」，那是使用者手上唯一確定的資訊；檔名可以自動產生
+  const codeField = last.querySelector(".stock-meta .mini-input");
+  if(codeField) codeField.focus();
+});
+
+document.querySelectorAll(".tab").forEach(tab=>{
+  tab.addEventListener("click", ()=> selectTab(tab.dataset.tab));
+});
+
+/* 每日操作按鈕 */
+$("#opUpdate").addEventListener("click", ()=> doAction("update","更新資料並產生報告",{local:true}));
+$("#opFetch").addEventListener("click", ()=> doAction("fetch","更新股價"));
+$("#opReport").addEventListener("click", ()=> doAction("report","產生測試報告",{local:true}));
+$("#opPublish").addEventListener("click", ()=>{
+  if(confirm("發布正式版會覆蓋 index.html，那是部署到 GitHub Pages 的檔案。要繼續嗎？"))
+    doAction("publish","發布正式版");
+});
+$("#opEarnings").addEventListener("click", ()=> doAction("earnings","檢查財報公布窗口"));
+$("#opOpenReport").addEventListener("click", ()=> window.open("/report","_blank"));
+
+/* 財報登錄 */
+$("#finStock").addEventListener("change", loadFinancials);
+$("#finSubmit").addEventListener("click", submitQuarter);
+$("#finClear").addEventListener("click", ()=> clearFinForm(true));
+$("#finEarnings").addEventListener("click", ()=> doAction("earnings","檢查財報公布窗口"));
+$("#finBuild").addEventListener("click", ()=> startBuild(false));
+$("#jqSave").addEventListener("click", saveCreds);
+$("#btnCnNames").addEventListener("click", applyChineseNames);
+["#fRev","#fProf","#fNi","#fEps","#fBvps","#fLabel"].forEach(id=>{
+  $(id).addEventListener("input", updateFinCalc);
+});
+
+/* 拖放檔案（僅在直接開檔模式用得到） */
+const dz = $("#dropzone");
+["dragenter","dragover"].forEach(ev=> dz.addEventListener(ev, e=>{ e.preventDefault(); dz.classList.add("over"); }));
+["dragleave","drop"].forEach(ev=> dz.addEventListener(ev, e=>{ e.preventDefault(); dz.classList.remove("over"); }));
+dz.addEventListener("drop", async e=>{
+  const f = e.dataTransfer.files[0]; if(!f) return;
+  const text = await f.text();
+  try{ boot(JSON.parse(text), text, null); toast("已載入 " + f.name); }
+  catch(err){ toast("這個檔案不是有效的 JSON", true); }
+});
+
+window.addEventListener("beforeunload", e=>{ if(dirty){ e.preventDefault(); e.returnValue = ""; } });
+
+/* ---------- 啟動 ---------- */
+(async ()=>{
+  serverMode = await detectServer();
+  setModeUI();
+
+  if(serverMode){
+    try{
+      const r = await fetch("/api/config", {cache:"no-store"});
+      if(r.ok){
+        const j = await r.json();
+        boot(JSON.parse(j.text), j.text, null);
+        $("#btnSave").disabled = false;
+        updateFileState("config.json");
+        selectTab("ops");
+        refreshStatus();
+        refreshFinStatus();
+        return;
+      }
+    }catch(e){}
+    // 伺服器在，但設定檔讀不到 → 用預設值起步，仍可直接儲存
+    boot(JSON.parse(JSON.stringify(DEFAULT_CONFIG)), undefined, null);
+    $("#btnSave").disabled = false;
+    updateFileState("config.json（尚未建立，儲存後就會產生）");
+    selectTab("ops");
+    refreshStatus();
+    return;
+  }
+
+  // 直接開檔模式：顯示載入畫面
+  $("#empty").hidden = false;
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,22 @@
+# 換行格式統一交給 Git 管理。
+#
+# 為什麼需要這個：這個專案會在兩種環境被修改——你的 Windows 電腦，
+# 以及 GitHub Actions 的 Linux 主機。兩邊的換行符不同（CRLF / LF），
+# 沒有這個檔案的話，同一份檔案可能被判定成「整份都改過」，
+# 產生一堆看不出實際差異的雜訊，也容易在合併時出問題。
+#
+# text=auto：Git 倉庫內一律存 LF，簽出到 Windows 時自動轉 CRLF。
+* text=auto
+
+# 這些格式明確指定，避免被誤判
+*.py    text
+*.json  text
+*.html  text
+*.md    text
+*.yml   text
+
+# 二進位檔不要做任何轉換
+*.png   binary
+*.jpg   binary
+*.pdf   binary
+*.xlsx  binary

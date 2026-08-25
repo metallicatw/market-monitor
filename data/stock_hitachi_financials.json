@@ -1,0 +1,15 @@
+{
+  "name": "日立製作所 (Hitachi)",
+  "code": "6501.T",
+  "source": "2027年3月期第1四半期 決算短信〔IFRS〕（連結）官方公布數字",
+  "source_urls": [
+    "https://www.hitachi.co.jp/IR/library/fr/"
+  ],
+  "fetched_at": "2026-08-22",
+  "note": "此資料為最新一季（FY27Q1，2026年4-6月）官方決算短信數字。PER/EPS/PBR/營益率由程式自動引用下方季度趨勢圖最後一筆算出來的數字，不另外重算，保證兩邊永遠一致。日立於2024年7月1日進行1股拆5股的股票分割，此快照的EPS/BVPS已是分割後基準。",
+  "fiscal_period": "FY27Q1（2026年4-6月）実績",
+  "disclosure_date": "2026-07-29",
+  "revenue_oku_jpy": 27095.86,
+  "net_income_oku_jpy": 1894.5,
+  "operating_margin_pct": 10.86
+}

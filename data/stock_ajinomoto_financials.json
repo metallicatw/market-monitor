@@ -1,0 +1,15 @@
+{
+  "name": "味之素 (Ajinomoto)",
+  "code": "2802.T",
+  "source": "2027年3月期第1四半期 決算短信〔IFRS〕（連結）官方公布數字",
+  "source_urls": [
+    "https://tdnet-pdf.kabutan.jp/20260806/140120260805509556.pdf"
+  ],
+  "fetched_at": "2026-08-21",
+  "note": "此資料為最新一季（FY27Q1，2026年4-6月）官方決算短信數字。PER/EPS/PBR/營益率由程式自動引用下方季度趨勢圖最後一筆算出來的數字，不另外重算，保證兩邊永遠一致。味之素已於2025/4/1執行一股分兩股股票分割，本檔與趨勢圖數字皆為分割調整後基準。",
+  "fiscal_period": "FY27Q1（2026年4-6月）実績",
+  "disclosure_date": "2026-08-06",
+  "revenue_oku_jpy": 4121.05,
+  "net_income_oku_jpy": 364.52,
+  "operating_margin_pct": 13.57
+}

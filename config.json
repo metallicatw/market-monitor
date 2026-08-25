@@ -1,0 +1,31 @@
+{
+  "_說明": "這是唯一需要手動編輯的設定檔。改完直接重跑 fetch_market_data.py 與 generate_report_local.py 即可生效，不用改任何程式碼。",
+  "thresholds": {
+    "taiex_buy": 38000,
+    "taiex_volume_buy_bil": 8000,
+    "nikkei_buy": 56000,
+    "vix_warn": 20,
+    "vix_panic": 30,
+    "michigan_warn": 60,
+    "murata_bb_warn": 1.2,
+    "per_buy_default": 20
+  },
+  "jp_stocks": [
+    { "key": "kao", "code": "4452.T", "name": "花王", "enabled": true, "price_buy": 3200, "per_buy": null },
+    { "key": "towa", "code": "6315.T", "name": "TOWA", "enabled": true, "price_buy": 2500, "per_buy": null },
+    { "key": "ajinomoto", "code": "2802.T", "name": "味之素", "enabled": true, "price_buy": 4700, "per_buy": null },
+    { "key": "mizuho", "code": "8411.T", "name": "瑞穗金融集團", "enabled": true, "price_buy": 6000, "per_buy": null },
+    { "key": "yaskawa", "code": "6506.T", "name": "安川電機", "enabled": true, "price_buy": 4500, "per_buy": null },
+    { "key": "jxadvanced", "code": "5016.T", "name": "JX金屬", "enabled": true, "price_buy": 3500, "per_buy": null },
+    { "key": "mitsubishimaterials", "code": "5711.T", "name": "三菱材料", "enabled": true, "price_buy": 4000, "per_buy": null },
+    { "key": "hitachi", "code": "6501.T", "name": "日立製作所", "enabled": true, "price_buy": 4800, "per_buy": null },
+    { "key": "kawasakiheavy", "code": "7012.T", "name": "川崎重工", "enabled": true, "price_buy": 2500, "per_buy": null },
+    { "key": "organo", "code": "6368.T", "name": "ORGANO", "enabled": true, "price_buy": 15000, "per_buy": null },
+    { "key": "shinetsu", "code": "4063.T", "name": "信越化學", "enabled": true, "price_buy": null, "per_buy": null },
+    { "key": "fanuc", "code": "6954.T", "name": "發那科", "enabled": true, "price_buy": null, "per_buy": null },
+    { "key": "ibiden", "code": "4062.T", "name": "揖斐電", "enabled": true, "price_buy": null, "per_buy": null },
+    { "key": "advantest", "code": "6857.T", "name": "愛德萬測試", "enabled": true, "price_buy": null, "per_buy": null },
+    { "key": "marubeni", "code": "8002.T", "name": "丸紅", "enabled": true, "price_buy": null, "per_buy": null },
+    { "key": "tokyoelectron", "code": "8035.T", "name": "東京威力科創", "enabled": true, "price_buy": null, "per_buy": null }
+  ]
+}

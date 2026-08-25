@@ -1,0 +1,12 @@
+{
+  "source": "村田製作所官方法說會逐字稿 (2026/2/2、2026/4/30、2026/7/31 三場交叉核對)",
+  "source_url": "https://corporate.murata.com/-/media/corporate/about/newsroom/news/irnews/irnews/2026/0731d/26q1-j-speach.ashx",
+  "fetched_at": "2026-08-18",
+  "note": "此資料為人工從法說會逐字稿/簡報讀取比對，非自動化 API 抓取。全公司 B/B Ratio 為連續三場法說會重疊區間交叉核對過的官方數字。MLCC 部門單獨揭露的 B/B Ratio，官方只在 2026/4/30 法說會口頭揭露 FY25Q4 這一筆（原文：「BBレシオは、全体で1.24倍、それからMLCCは1.36になります」），其餘季度官方未單獨揭露，誠實標示為缺漏（null），不捏造。每季法說會後需人工更新。",
+  "quarters": ["FY22Q3","FY22Q4","FY23Q1","FY23Q2","FY23Q3","FY23Q4","FY24Q1","FY24Q2","FY24Q3","FY24Q4","FY25Q1","FY25Q2","FY25Q3","FY25Q4","FY26Q1"],
+  "dates": ["2022-12-31","2023-03-31","2023-06-30","2023-09-30","2023-12-31","2024-03-31","2024-06-30","2024-09-30","2024-12-31","2025-03-31","2025-06-30","2025-09-30","2025-12-31","2026-03-31","2026-06-30"],
+  "bb_ratio": [0.78, 0.90, 0.98, 0.95, 0.95, 1.05, 1.02, 0.92, 1.00, 1.01, 1.04, 1.00, 1.07, 1.24, 1.34],
+  "bb_ratio_mlcc": [null, null, null, null, null, null, null, null, null, null, null, null, null, 1.36, null],
+  "revenue_oku_jpy": [null, null, null, null, null, null, 4217, 4618, 4480, 4119, 4162, 4866, 4675, 4606, 5023],
+  "orders_oku_jpy": [null, null, null, null, null, null, null, null, null, null, null, null, 5007, null, 6739]
+}

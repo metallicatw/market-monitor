@@ -1,0 +1,18 @@
+{
+  "name": "瑞穗金融集團 (Mizuho FG)",
+  "code": "8411.T",
+  "source": "2026年3月期 有価証券報告書 実績値 (きたい資本)",
+  "source_urls": [
+    "https://kitaishihon.com/company/8411/finance"
+  ],
+  "fetched_at": "2026-08-17",
+  "note": "此資料為人工從財報網站讀取，非自動化 API 抓取。銀行業不適用一般製造業「營業利益率」概念，故此欄位標示為不適用。EPS 為依據每股配息與配息性向反推計算之估計值。每季財報公布後需人工更新。",
+  "fiscal_period": "FY2026/3 実績",
+  "operating_margin_pct": null,
+  "net_margin_pct": 13.7,
+  "shares_outstanding": 2489848000,
+  "eps_jpy": 507.0,
+  "per_x": 12.1,
+  "pbr_x": 1.3,
+  "disclosure_date": "2026-05-15"
+}
