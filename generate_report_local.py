@@ -30,10 +30,16 @@ generate_report_local.py
 import argparse
 import json
 import os
-from datetime import datetime
-from zoneinfo import ZoneInfo
+from datetime import datetime, timedelta, timezone
 
-TAIPEI_TZ = ZoneInfo("Asia/Taipei")
+# Windows 沒有內建 IANA 時區資料庫，zoneinfo 需要另外裝 tzdata 套件
+# （pip install tzdata）才能找到 "Asia/Taipei"。這裡做防護：找不到就退回
+# 固定 UTC+8（台灣沒有日光節約時間，固定 8 小時永遠準確），不會讓報告產不出來。
+try:
+    from zoneinfo import ZoneInfo
+    TAIPEI_TZ = ZoneInfo("Asia/Taipei")
+except Exception:
+    TAIPEI_TZ = timezone(timedelta(hours=8))
 
 from config_loader import load_thresholds, load_jp_stocks, effective_per_buy
 
