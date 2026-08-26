@@ -14,15 +14,20 @@ python run.py
 瀏覽器會自動打開控制台，更新資料、調整設定、產生報告都在同一個畫面完成。
 不需要 Python 以外的任何套件。
 
-控制台有三個分頁：
+控制台有四個分頁：
 
 | 分頁 | 做什麼 |
 |---|---|
-| **每日操作** | 按「更新資料並產生報告」就結束了。旁邊可以直接開啟報告 |
+| **每日操作** | 更新資料、產生報告、檢查財報窗口 |
 | **追蹤個股** | 增刪個股、拖曳排序、暫時隱藏、設定各股的布局門檻 |
+| **財報登錄** | 自動建立季報歷史、手動登錄新一季數字、設定 API 金鑰 |
 | **警示門檻** | 調整大盤與總經指標的警示線、本益比布局的預設值 |
 
-改完設定按「儲存設定」會直接寫回 `config.json`，右側會先讓你看到即將寫入的內容。
+設定改完會自動存回 `config.json`，右側會先讓你看到即將寫入的內容。
+
+> **已部署到 GitHub 的話**，「每日操作」分頁裡的更新按鈕請避免使用，
+> 資料更新交給雲端排程，本機只用控制台調設定與登錄季報。
+> 詳見下方「電腦端日常流程」。
 
 ---
 
@@ -153,6 +158,66 @@ bvps_jpy                每股淨值
 
 ---
 
+## 電腦端日常流程
+
+部署到 GitHub 之後，本機與雲端會同時寫入這個專案（你改程式碼，Actions 每天自動更新資料），
+所以要有固定順序，否則會撞在一起。
+
+```cmd
+cd /d D:\PROJECTS\market-monitor
+git pull                       開工前先拉，這步不能省
+（修改程式碼、用控制台調設定）
+git add -A
+git commit -m "改了什麼"
+git push
+```
+
+推上去約一分鐘後 GitHub Pages 自動更新，不用另外做什麼。
+
+### 關鍵原則：本機不要產生「正式檔案」
+
+`index.html` 與 `data/` 是程式產生的，雲端每天也會產生一份。
+兩邊各自生成同一個檔案，`git pull` 時必然衝突——這是最常見的麻煩來源。
+
+**本機請這樣做：**
+
+| 想做的事 | 指令 | 說明 |
+|---|---|---|
+| 預覽報告 | `python generate_report_local.py --local` | 產出在 `local_test/`，不進版控 |
+| 調整設定 | `python run.py` | 控制台，改 `config.json` |
+| 登錄季報 | `python run.py` → 財報登錄 | 這個只能在電腦做 |
+
+**本機請避免：**
+
+- `python fetch_market_data.py` — 讓雲端抓就好
+- `python generate_report_local.py`（不加 `--local`）— 會覆蓋 `index.html`
+- `python run.py update` — 同上
+
+資料更新與正式報告全部交給 Actions，衝突就只會出現在你真正手動改過的程式碼上。
+
+### 萬一還是衝突了
+
+```cmd
+git status --short
+```
+
+前面有 `UU` 的就是衝突檔。依檔案類型處理：
+
+```cmd
+git checkout --theirs index.html data/      程式產生的 → 用雲端版本
+git checkout --ours  你改過的程式.py         你手改的  → 用本機版本
+git add -A
+git commit -m "resolve"
+git push
+```
+
+> 合併時 `--ours` 是你目前分支（本機），`--theirs` 是拉進來的遠端版本。
+> 這跟直覺相反，容易選錯，兩個指令分開下比較不會弄混。
+
+解完後到 Actions 手動跑一次「每日更新報告」，資料與報告就會回到最新狀態。
+
+---
+
 ## 用手機操作
 
 控制台（`run.py`）是本機伺服器，GitHub Pages 放不了。手機上改用 **GitHub Actions** 當遠端執行引擎。
@@ -252,11 +317,17 @@ python cleanup.py --delete   # 確認後執行
 ## 不開控制台時的指令
 
 ```bash
-python run.py update        更新資料並產生正式報告
+python run.py report --local  只產生測試報告（本機預覽用這個）
+python run.py earnings        檢查財報公布窗口
+python run.py verify 4063     查證股票代號
+```
+
+以下兩個會產生正式檔案，**部署到 GitHub 後請留給 Actions 執行**，
+本機跑會造成 `index.html` 與 `data/` 衝突（見「電腦端日常流程」）：
+
+```bash
+python run.py update        更新資料並產生正式報告（Actions 用這個）
 python run.py fetch         只更新價格
-python run.py report --local  只產生測試報告
-python run.py earnings      檢查財報公布窗口
-python run.py verify 4063   查證股票代號
 ```
 
 ---
