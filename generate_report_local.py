@@ -1164,7 +1164,7 @@ def render_murata_bb_section(murata):
   <div class="chart-container" style="height:320px;"><canvas id="murataChart"></canvas></div>
 
   <div class="chart-source-box" title="資料來源與更新時間">
-    📌 <a href="{source_url}" target="_blank">村田法說會</a>　｜　人工登錄　｜　{fetched_at}
+    📌 <a href="{source_url}" target="_blank">村田法說會</a>　｜　人工登錄　｜　資料截至 {last_q}　｜　每季法說會後更新（約 4月底・7月底・10月底・2月初）
   </div>
 """
     murata_summary = (chip("B/B", f"{last_bb:.2f}")

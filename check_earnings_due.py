@@ -125,6 +125,54 @@ def _latest_recorded_quarter(key):
         return None, None
 
 
+def _murata_briefing_dates(year):
+    """村田法說會的實際慣例日期（近年觀察）：
+    4月底（通期）、7月底（Q1）、10月底（Q2）、隔年2月初（Q3）。
+    B/B Ratio 只在這四場的簡報與逐字稿裡揭露，沒有其他資料源。"""
+    import datetime as _dt
+    out = []
+    for m in (4, 7, 10):
+        nxt = _dt.date(year, m + 1, 1)
+        out.append(nxt - _dt.timedelta(days=1))       # 該月最後一天
+    out.append(_dt.date(year + 1, 2, 2))              # 隔年 2 月初
+    return sorted(out)
+
+
+def check_murata(today, progress=print):
+    """村田 B/B Ratio 是季頻、且只能人工登錄，這裡提醒是否已經有新的法說會過去了。"""
+    path = os.path.join(DATA_DIR, "murata_bb.json")
+    if not os.path.exists(path):
+        progress("  ● 村田 B/B Ratio：找不到 data/murata_bb.json")
+        return
+    try:
+        with open(path, encoding="utf-8") as f:
+            d = json.load(f)
+    except Exception as e:
+        progress(f"  ● 村田 B/B Ratio：檔案讀取失敗（{e}）")
+        return
+
+    quarters = d.get("quarters") or []
+    last_q = quarters[-1] if quarters else "（無資料）"
+    fetched = d.get("fetched_at") or ""
+
+    # 找出最近一場已經過去的法說會
+    candidates = _murata_briefing_dates(today.year - 1) + _murata_briefing_dates(today.year)
+    passed = [x for x in candidates if x <= today]
+    nxt = [x for x in candidates if x > today]
+    last_briefing = passed[-1] if passed else None
+    next_briefing = nxt[0] if nxt else None
+
+    progress(f"  ● 村田 B/B Ratio：目前資料截至 {last_q}（登錄日 {fetched or '未標註'}）")
+    if last_briefing:
+        stale = bool(fetched) and fetched < last_briefing.isoformat()
+        if stale or not fetched:
+            progress(f"      🔔 {last_briefing.isoformat()} 已有法說會，登錄日在那之前，可能還沒補上新數字")
+        else:
+            progress(f"      最近一場法說會 {last_briefing.isoformat()}，登錄日在那之後，看起來已更新")
+    if next_briefing:
+        progress(f"      下一場約在 {next_briefing.isoformat()}")
+
+
 def main():
     today = date.today()
     stocks = load_jp_stocks(include_disabled=True)
@@ -181,6 +229,11 @@ def main():
         print("📅 下一波公布窗口預告：")
         for name, label, qe, d in sorted(waiting, key=lambda x: x[3]):
             print(f"    {name:20s} {label}　季末 {qe.isoformat()}　約 {d} 天後進入公布窗口")
+
+    print()
+    print("-" * 72)
+    print("📊 季頻指標（只能人工登錄，沒有自動抓取的資料源）：")
+    check_murata(today)
 
     print()
     print("💡 確認新財報後，請人工更新以下檔案（注意各家獲利科目定義不同，務必核對官方原始短信）：")
