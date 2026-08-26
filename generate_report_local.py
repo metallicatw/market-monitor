@@ -30,7 +30,16 @@ generate_report_local.py
 import argparse
 import json
 import os
-from datetime import datetime
+from datetime import date, datetime, timedelta, timezone
+
+# Windows 沒有內建 IANA 時區資料庫，zoneinfo 需要另外裝 tzdata 套件
+# （pip install tzdata）才能找到 "Asia/Taipei"。這裡做防護：找不到就退回
+# 固定 UTC+8（台灣沒有日光節約時間，固定 8 小時永遠準確），不會讓報告產不出來。
+try:
+    from zoneinfo import ZoneInfo
+    TAIPEI_TZ = ZoneInfo("Asia/Taipei")
+except Exception:
+    TAIPEI_TZ = timezone(timedelta(hours=8))
 
 from config_loader import load_thresholds, load_jp_stocks, effective_per_buy
 
@@ -222,6 +231,9 @@ CSS = """
   @media (max-width:520px) {
     /* 手機寬度不夠時縮字而不是截斷，來源與日期都要看得到 */
     .chart-source-box { font-size:9px; padding:3px 8px; }
+    /* 手機寬度放不下時允許折行。像密大那條要標示資料月份與下次發布日，
+       內容本來就比較長，寧可占兩行也不要把發布日切掉。 */
+    .chart-source-box { white-space:normal; text-overflow:clip; line-height:1.7; }
   }
   @media (max-width:400px) {
     /* 極窄螢幕連第二個來源都放不下，先收起來；主要來源與日期優先保留 */
@@ -853,6 +865,42 @@ def render_vix_section(vix):
     return html, script
 
 
+def _last_friday(year, month):
+    """回傳該月最後一個週五的日期。"""
+    # 先取該月最後一天：跳到下個月一號再退一天
+    nxt = date(year + 1, 1, 1) if month == 12 else date(year, month + 1, 1)
+    last_day = nxt - timedelta(days=1)
+    # weekday(): 週一=0 … 週五=4
+    return last_day - timedelta(days=(last_day.weekday() - 4) % 7)
+
+
+def michigan_next_release(last_date_str):
+    """推算 FRED 下一次補上新數據的日期。
+
+    密大授權 FRED 的條件是「延遲一個月」，實務上 FRED 固定在每個月的
+    最後一個週五更新，補進「前一個月」的數值。例如資料最新到 6 月時，
+    7 月的數值會在 8 月的最後一個週五出現。
+
+    回傳 ((下一筆數據的年, 月), 公布日期)。若推算出的日期已經過去
+    （資料源臨時延後），會自動往後推到下一個月，不會顯示過期資訊。
+    """
+    try:
+        y, m = int(last_date_str[:4]), int(last_date_str[5:7])
+    except (ValueError, IndexError):
+        return None, None
+
+    ny, nm = (y + 1, 1) if m == 12 else (y, m + 1)          # 下一筆數據的月份
+    ry, rm = (ny + 1, 1) if nm == 12 else (ny, nm + 1)      # 該筆數據的公布月份
+
+    today = date.today()
+    for _ in range(24):
+        rel = _last_friday(ry, rm)
+        if rel >= today:
+            return (ny, nm), rel
+        ry, rm = (ry + 1, 1) if rm == 12 else (ry, rm + 1)
+    return (ny, nm), _last_friday(ry, rm)
+
+
 def render_michigan_section(michigan):
     dates_json = json.dumps(michigan["dates"], ensure_ascii=False)
     close_json = json.dumps(michigan["close"], ensure_ascii=False)
@@ -866,6 +914,17 @@ def render_michigan_section(michigan):
     diff_txt, chg_color = fmt_diff(diff, 1)
     warn = last_val < MICHIGAN_WARN_THRESHOLD
     zone_label, zone_color = michigan_zone(last_val)
+
+    # 這個指標的「新舊」不能看抓取日期：密大授權 FRED 延遲一個月，
+    # 就算今天剛抓過，最新值仍會落後一到兩個月。所以標出資料本身涵蓋到哪個月，
+    # 以及下一筆何時才會出現，才不會讓人誤以為資料沒更新或程式壞掉。
+    next_month, release_date = michigan_next_release(dates[-1])
+    vintage_txt = f"資料截至 {dates[-1][:7]}"
+    if next_month and release_date:
+        vintage_txt += (f"（官方延遲一個月，{next_month[1]}月數據將於 "
+                        f"{release_date.strftime('%m/%d')} 發布）")
+    else:
+        vintage_txt += "（官方延遲一個月）"
 
     html = f"""
   <div class="sub-title">密西根大學消費者信心指數</div>
@@ -893,7 +952,7 @@ def render_michigan_section(michigan):
   <div class="custom-legend" id="michiganLegend"></div>
   <div class="chart-container short"><canvas id="michiganChart"></canvas></div>
   <div class="chart-source-box" title="資料來源與更新時間">
-    📌 <a href="https://fred.stlouisfed.org/series/UMCSENT" target="_blank">FRED</a>　｜　{fetched_at}　｜　官方延遲一個月
+    📌 <a href="https://fred.stlouisfed.org/series/UMCSENT" target="_blank">FRED</a>　｜　{vintage_txt}
   </div>
 """
 
@@ -1627,7 +1686,7 @@ def collect_alerts(taiex, vix, nikkei, michigan, murata, jp_stocks):
 
 
 def render_page_header(alerts, taiex):
-    now_disp = datetime.now().strftime("%Y-%m-%d %H:%M")
+    now_disp = datetime.now(TAIPEI_TZ).strftime("%Y-%m-%d %H:%M")
     baseline_disp = taiex["dates"][-1].replace("-", "/") if taiex else "N/A"
 
     if alerts:
