@@ -22,10 +22,10 @@ jobs:
       JQUANTS_API_KEY: ${{ secrets.JQUANTS_API_KEY }}
     steps:
       - name: 取得專案
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: 準備 Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "3.12"
 
