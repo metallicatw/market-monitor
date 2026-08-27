@@ -51,6 +51,12 @@ IR_URLS = {
     "hitachi": "https://www.hitachi.co.jp/IR/library/fr/",
     "kawasakiheavy": "https://www.khi.co.jp/ir/library/financial_results/",
     "organo": "https://www.organo.co.jp/ir/result/",
+    "shinetsu": "https://www.shinetsu.co.jp/jp/ir/library/",
+    "fanuc": "https://www.fanuc.co.jp/ja/ir/library/index.html",
+    "ibiden": "https://www.ibiden.co.jp/ir/library/",
+    "advantest": "https://www.advantest.com/ja/investors/ir-library/",
+    "marubeni": "https://www.marubeni.com/jp/ir/reports/",
+    "tokyoelectron": "https://www.tel.co.jp/ir/library/",
 }
 
 # 各季結束後，實務上多半在這個天數區間內公布（法定上限 45 日）
@@ -156,7 +162,9 @@ def check_murata(today, progress=print):
     fetched = d.get("fetched_at") or ""
 
     # 找出最近一場已經過去的法說會
-    candidates = _murata_briefing_dates(today.year - 1) + _murata_briefing_dates(today.year)
+    # 明確排序，不依賴兩個年份串接後恰好遞增（跨年時容易出錯）
+    candidates = sorted(_murata_briefing_dates(today.year - 1)
+                        + _murata_briefing_dates(today.year))
     passed = [x for x in candidates if x <= today]
     nxt = [x for x in candidates if x > today]
     last_briefing = passed[-1] if passed else None

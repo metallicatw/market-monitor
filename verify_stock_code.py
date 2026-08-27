@@ -7,7 +7,7 @@
 
 為什麼需要這支程式？
 --------------------
-設定編輯器（config_editor.html）是本機開啟的網頁，受瀏覽器的跨網域限制
+控制台（panel.html）是本機開啟的網頁，受瀏覽器的跨網域限制
 （CORS），沒辦法直接去查 Yahoo Finance 的資料。這支 Python 程式沒有這個限制，
 可以真的把代號丟給 Yahoo，把它回報的公司名稱、交易所、最新股價印出來給你核對。
 
@@ -165,7 +165,7 @@ def main():
         report(c)
 
     print("\n" + "-" * 66)
-    print("確認無誤後，把代號填進 config_editor.html 或 config.json 即可。")
+    print("確認無誤後，用控制台（python run.py）新增，或直接填進 config.json。")
     print("提醒：新個股只會有股價圖，季度財報要另外人工建立資料檔。")
 
 

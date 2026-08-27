@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """
 fetch_market_data.py
-真實歷史數據抓取腳本 —— 與 generate_report.py 分離。
+真實歷史數據抓取腳本 —— 與 generate_report_local.py 分離。
 
 這支腳本只做一件事：向官方/公開來源抓「真實」歷史數據，
 存成 data/*.json 快取檔。絕不捏造、絕不補插值、絕不用亂數模擬。
@@ -14,7 +14,7 @@ fetch_market_data.py
 其餘資料源 (密大信心指數 / 村田B/B / 日股個股) 說明請見檔案底部，
 架構已留擴充點，每個函式的產出格式都跟 fetch_taiex() 一致：
     {"dates": [...], "close": [...], ...}
-generate_report.py 只讀這些 JSON，不會再自己編數字。
+generate_report_local.py 只讀這些 JSON，不會再自己編數字。
 """
 
 import csv
