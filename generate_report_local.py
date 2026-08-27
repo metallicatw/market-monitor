@@ -627,6 +627,28 @@ def render_taiex_section(taiex):
     idx_buy = last_close < TAIEX_BUY_THRESHOLD
     vol_buy = avg10_vol < VOLUME_BUY_THRESHOLD_BIL
 
+    # TWSE 的官方統計報表是「盤後彙整」，不是收盤瞬間就有——實務上要到傍晚後
+    # 才會放上當天資料。所以「還沒抓到今天」很常是資料源當下沒有，不是程式壞掉。
+    # 這裡明確算給人看，而不是讓人自己猜為什麼還停在前一天。
+    last_data_date = datetime.strptime(dates[-1], "%Y-%m-%d").date()
+    today_taipei = datetime.now(TAIPEI_TZ).date()
+    gap_days = (today_taipei - last_data_date).days
+    # 用「最近一個已過去的平日」當作應該要有資料的基準，跳過還沒收盤的當天與週末
+    expected = today_taipei
+    while expected.weekday() >= 5:          # 5=六 6=日，退到最近的平日
+        expected -= timedelta(days=1)
+    if expected == today_taipei and datetime.now(TAIPEI_TZ).hour < 17:
+        expected -= timedelta(days=1)       # 今天還沒到傍晚，官方報表通常還沒出
+        while expected.weekday() >= 5:
+            expected -= timedelta(days=1)
+    stale = last_data_date < expected
+
+    if stale:
+        vintage_note = (f"⚠️ 最後資料 {dates[-1]}，TWSE 官方統計為盤後彙整報表，"
+                        f"通常傍晚後才會有當天資料，這不代表抓取失敗")
+    else:
+        vintage_note = f"資料截至 {dates[-1]}"
+
     taiex_summary = (
         f'<span class="chip price {"up" if diff >= 0 else "down"}">'
         f'<span class="chip-v">{last_close:,.0f}</span><span class="chip-k">{diff_txt}</span></span>'
@@ -668,9 +690,11 @@ def render_taiex_section(taiex):
   <div class="chart-container"><canvas id="taiexChart"></canvas></div>
 
   <div class="chart-source-box" title="資料來源與更新時間">
-    📌 <a href="https://www.google.com/finance/beta/quote/IX0001:TPE?type=area" target="_blank">Google</a>　｜　<a href="https://www.twse.com.tw/zh/trading/historical/fmtqik.html" target="_blank">TWSE</a>　｜　{fetched_at}
+    📌 <a href="https://www.google.com/finance/beta/quote/IX0001:TPE?type=area" target="_blank">Google</a>　｜　<a href="https://www.twse.com.tw/zh/trading/historical/fmtqik.html" target="_blank">TWSE</a>　｜　{vintage_note}
   </div>
 """
+    if stale:
+        taiex_summary += '<span class="chip warn">資料尚未更新到今天</span>'
     section_html = collapsible("taiex", "台股加權指數", taiex_summary, taiex_body,
                                alert=bool(idx_buy or vol_buy))
 
