@@ -266,6 +266,8 @@ CSS = """
   .page-header-top { display:flex; justify-content:space-between; align-items:flex-start; gap:16px; flex-wrap:wrap; }
   .page-title { font-size:30px; font-weight:800; color:#f8fafc; letter-spacing:0.3px; }
   .page-subtitle { font-size:13px; color:var(--text-muted); margin-top:6px; }
+  /* 標題拿掉之後它變成第一行，上面不再需要留白。 */
+  .page-subtitle.stamp-lead { margin-top:0; }
   .mode-toggle-btn { flex-shrink:0; display:inline-flex; align-items:center; gap:6px; background:rgba(59,130,246,0.14);
                       border:1px solid rgba(59,130,246,0.5); color:#93c5fd; font-size:12.5px; font-weight:700;
                       padding:8px 16px; border-radius:22px; cursor:pointer; white-space:nowrap; transition:background .2s,transform .15s; }
@@ -1733,8 +1735,14 @@ def render_page_header(alerts, taiex):
 <div class="page-header">
   <div class="page-header-top">
     <div>
-      <div class="page-title">每日全球市場與總經個股監控報告</div>
-      <div class="page-subtitle">報告生成時間：{now_disp}　｜　報告資料基準：{baseline_disp}</div>
+      <!-- 標題那一行拿掉了。
+         這份報告平常是嵌在 tw-six-metrics 的〔全球市場監控＋日股觀察〕分頁裡，
+         而那一頁自己就有一個同義的標題——兩個標題疊在一起，上面那個講一次、
+         下面那個再講一次，中間隔著一條 iframe 的邊界。
+
+         時間戳留著，而且現在是報告的第一行：嵌起來的時候它剛好接在那個分頁的
+         標題底下，這正是它該在的位置——「你正在看的這一份是什麼時候的」。 -->
+      <div class="page-subtitle stamp-lead">報告生成時間：{now_disp}　｜　報告資料基準：{baseline_disp}</div>
     </div>
     <button class="mode-toggle-btn" id="modeToggleBtn" onclick="toggleViewMode()">🖥️ 電腦版／📱 手機版</button>
   </div>
