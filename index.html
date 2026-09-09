@@ -70,10 +70,32 @@
                 border:1px solid var(--border-color); border-radius:7px; padding:5px 12px; cursor:pointer; }
   .expand-btn:hover { color:var(--text-main); border-color:#22d3ee; }
 
-  .block-title { font-size:15px; font-weight:800; color:#e2e8f0; letter-spacing:1px;
-                 margin:10px 0 -4px 2px; display:flex; align-items:center; gap:10px; }
-  .block-title::before { content:''; width:4px; height:18px; background:var(--accent-blue); border-radius:2px; }
-  .block-title::after { content:''; flex:1; height:1px; background:linear-gradient(90deg, var(--border-color), transparent); }
+  /* 五大區塊。每一塊一個色系 —— 一打開報告看到的是五條收合的橫幅，
+     顏色是用來「認位置」的：捲到一半也知道自己在哪一塊。
+     色相由 --blk 帶進來，其餘規則共用，不要為每一塊各寫一份。 */
+  .block-card { border-left:4px solid var(--blk); background:
+                linear-gradient(90deg, color-mix(in srgb, var(--blk) 10%, transparent) 0%,
+                                       var(--bg-card) 42%); }
+  .block-card > .card-head .card-title { font-size:1.06em; color:#f8fafc; letter-spacing:0.4px; }
+  .block-card > .card-head .card-title::before { content:''; display:inline-block; width:8px; height:8px;
+                border-radius:50%; background:var(--blk); margin-right:9px; vertical-align:middle; }
+  .block-card > .card-head:hover .card-chev { color:var(--blk); }
+  .block-card:not(.collapsed) { box-shadow:0 0 0 1px color-mix(in srgb, var(--blk) 28%, transparent) inset; }
+  /* 內層卡片預設是展開的，所以要跟外層拉開層次，否則兩層邊框疊在一起會很吵。 */
+  .block-card > .card-body > .section-card { background:rgba(11,15,25,0.45); margin-bottom:14px; }
+  .block-card > .card-body > .section-card:last-child { margin-bottom:0; }
+  .block-card > .card-body > .jp-stock-grid { margin-top:2px; }
+  /* 速覽表：預設收合。用 <details> 不寫 JS —— 少一個會壞的東西。 */
+  details.fold { margin-top:18px; border:1px solid var(--border-color); border-radius:10px;
+                 background:rgba(11,15,25,0.5); overflow:hidden; }
+  details.fold > summary { cursor:pointer; list-style:none; padding:11px 14px; font-size:13px; font-weight:700;
+                           color:#cbd5e1; display:flex; align-items:center; gap:8px; }
+  details.fold > summary::-webkit-details-marker { display:none; }
+  details.fold > summary::before { content:'⌄'; font-size:18px; line-height:1; color:var(--text-muted);
+                                   transform:rotate(-90deg); transition:transform .18s; }
+  details.fold[open] > summary::before { transform:rotate(0deg); }
+  details.fold > summary:hover { color:#f8fafc; }
+  details.fold > .fold-body { padding:0 14px 14px 14px; }
   .section-title { font-size:20px; font-weight:800; margin-bottom:14px; color:#f8fafc; letter-spacing:0.3px; }
   .sub-title { font-size:13px; font-weight:700; margin:18px 0 10px 0; color:#cbd5e1; display:flex; align-items:center; gap:8px; }
   .sub-title::before { content:''; width:3px; height:14px; background:var(--accent-blue); border-radius:2px; }
@@ -248,24 +270,45 @@
 
          時間戳留著，而且現在是報告的第一行：嵌起來的時候它剛好接在那個分頁的
          標題底下，這正是它該在的位置——「你正在看的這一份是什麼時候的」。 -->
-      <div class="page-subtitle stamp-lead">報告生成時間：2026-09-09 20:10　｜　報告資料基準：2026/09/09</div>
+      <div class="page-subtitle stamp-lead">報告生成時間：2026-09-09 20:18　｜　報告資料基準：2026/09/09</div>
     </div>
     <button class="mode-toggle-btn" id="modeToggleBtn" onclick="toggleViewMode()">🖥️ 電腦版／📱 手機版</button>
-  </div>
-  <div class="block-title" style="margin:14px 0 8px 2px;">重點摘要</div>
-  
-  <div class="summary-box has-alerts">
-    <div class="summary-title alert">🚨 本次報告有 10 項指標觸發預警／布局參考</div>
-    <div class="summary-list"><div>🔴 <b>風險預警：</b>市值貨幣比 5.16，高於 4.5 參考線，資金相對吃緊，資料月份 2026/05、落後 4 個月</div><div>🔴 <b>風險預警：</b>密大消費者信心指數 55.2，落在「景氣衰退」區間（&lt;60）</div><div>🔴 <b>風險預警：</b>村田製作所 B/B Ratio 1.34，突破 1.2 反指標聖杯警示線</div><div>🔴 <b>風險預警：</b>村田 MLCC 部門 B/B Ratio 1.36，突破 1.2 反指標聖杯警示線</div><div>🔵 <b>布局機會：</b>TOWA 收盤 2,189 円，低於 2,500 布局參考線</div><div>🔵 <b>布局機會：</b>瑞穗金融集團 本益比 13.9 倍，低於 20 倍布局參考</div><div>🔵 <b>布局機會：</b>三菱材料 本益比 5.9 倍，低於 20 倍布局參考</div><div>🔵 <b>布局機會：</b>川崎重工 收盤 2,418 円，低於 2,500 布局參考線</div><div>🔵 <b>布局機會：</b>ORGANO 收盤 12,550 円，低於 15,000 布局參考線</div><div>🔵 <b>布局機會：</b>丸紅 本益比 17.0 倍，低於 20 倍布局參考</div></div>
   </div>
 </div>
 <div class="expand-all-bar">
   <button class="expand-btn" onclick="setAllCards(false)">全部展開</button>
-  <button class="expand-btn" onclick="setAllCards(true)">全部收合</button>
+  <button class="expand-btn" onclick="setInitialCardStates()">全部收合</button>
 </div>
 
 <div class="wrap">
-<div class="block-title">台股重要經濟指標</div>
+
+<div class="section-card block-card collapsed" id="card-summary" data-card="summary" style="--blk:#f59e0b;">
+  <button class="card-head" type="button" onclick="toggleCard('summary')" aria-expanded="false">
+    <span class="card-head-main">
+      <span class="card-title">重點摘要</span>
+      <span class="card-summary"><span class="chip warn"><span class="chip-k">風險預警</span><span class="chip-v">4 項</span></span><span class="chip buy"><span class="chip-k">布局參考</span><span class="chip-v">6 項</span></span></span>
+    </span>
+    <span class="card-chev" aria-hidden="true">⌄</span>
+  </button>
+  <div class="card-body">
+
+  <div class="summary-box has-alerts">
+    <div class="summary-title alert">🚨 本次報告有 10 項指標觸發預警／布局參考</div>
+    <div class="summary-list"><div>🔴 <b>風險預警：</b>市值貨幣比 5.16，高於 4.5 參考線，資金相對吃緊，資料月份 2026/05、落後 4 個月</div><div>🔴 <b>風險預警：</b>密大消費者信心指數 55.2，落在「景氣衰退」區間（&lt;60）</div><div>🔴 <b>風險預警：</b>村田製作所 B/B Ratio 1.34，突破 1.2 反指標聖杯警示線</div><div>🔴 <b>風險預警：</b>村田 MLCC 部門 B/B Ratio 1.36，突破 1.2 反指標聖杯警示線</div><div>🔵 <b>布局機會：</b>TOWA 收盤 2,189 円，低於 2,500 布局參考線</div><div>🔵 <b>布局機會：</b>瑞穗金融集團 本益比 13.9 倍，低於 20 倍布局參考</div><div>🔵 <b>布局機會：</b>三菱材料 本益比 5.9 倍，低於 20 倍布局參考</div><div>🔵 <b>布局機會：</b>川崎重工 收盤 2,418 円，低於 2,500 布局參考線</div><div>🔵 <b>布局機會：</b>ORGANO 收盤 12,550 円，低於 15,000 布局參考線</div><div>🔵 <b>布局機會：</b>丸紅 本益比 17.0 倍，低於 20 倍布局參考</div></div>
+  </div>
+  </div>
+</div>
+
+<div class="section-card block-card collapsed" id="card-tw" data-card="tw" style="--blk:#22d3ee;">
+  <button class="card-head" type="button" onclick="toggleCard('tw')" aria-expanded="false">
+    <span class="card-head-main">
+      <span class="card-title">台股重要經濟指標</span>
+      <span class="card-summary"><span class="chip"><span class="chip-k">加權指數</span><span class="chip-v">47,183</span></span><span class="chip buy"><span class="chip-k">製造業PMI</span><span class="chip-v">62.5</span></span><span class="chip warn"><span class="chip-k">市值/M1B</span><span class="chip-v">5.16</span></span></span>
+    </span>
+    <span class="card-chev" aria-hidden="true">⌄</span>
+  </button>
+  <div class="card-body">
+
 <div class="section-card collapsed" id="card-taiex" data-card="taiex">
   <button class="card-head" type="button" onclick="toggleCard('taiex')" aria-expanded="false">
     <span class="card-head-main">
@@ -319,7 +362,7 @@
   <button class="card-head" type="button" onclick="toggleCard('twmacro')" aria-expanded="false">
     <span class="card-head-main">
       <span class="card-title">台股資金面與景氣領先指標</span>
-      <span class="card-summary"><span class="chip buy"><span class="chip-k">製造業PMI</span><span class="chip-v">62.5</span></span><span class="chip warn"><span class="chip-k">市值/M1B</span><span class="chip-v">5.16</span></span></span>
+      <span class="card-summary"></span>
     </span>
     <span class="card-chev" aria-hidden="true">⌄</span>
   </button>
@@ -418,7 +461,20 @@ M1B 是流動性最高的那一段貨幣——通貨淨額加上支票存款、�
 
   </div>
 </div>
-<div class="block-title">美股重要經濟指標</div>
+
+  </div>
+</div>
+
+<div class="section-card block-card collapsed" id="card-us" data-card="us" style="--blk:#3b82f6;">
+  <button class="card-head" type="button" onclick="toggleCard('us')" aria-expanded="false">
+    <span class="card-head-main">
+      <span class="card-title">美股重要經濟指標</span>
+      <span class="card-summary"><span class="chip"><span class="chip-k">失業率</span><span class="chip-v">4.1%</span></span><span class="chip"><span class="chip-k">CPI年增</span><span class="chip-v">3.5%</span></span><span class="chip"><span class="chip-k">VIX</span><span class="chip-v">15.7</span></span></span>
+    </span>
+    <span class="card-chev" aria-hidden="true">⌄</span>
+  </button>
+  <div class="card-body">
+
 <div class="section-card collapsed" id="card-usidx" data-card="usidx">
   <button class="card-head" type="button" onclick="toggleCard('usidx')" aria-expanded="false">
     <span class="card-head-main">
@@ -447,7 +503,7 @@ M1B 是流動性最高的那一段貨幣——通貨淨額加上支票存款、�
   <button class="card-head" type="button" onclick="toggleCard('usmacro')" aria-expanded="false">
     <span class="card-head-main">
       <span class="card-title">美股經濟指標</span>
-      <span class="card-summary"><span class="chip"><span class="chip-k">失業率</span><span class="chip-v">4.1%</span></span><span class="chip"><span class="chip-k">CPI年增</span><span class="chip-v">3.5%</span></span><span class="chip"><span class="chip-k">VIX</span><span class="chip-v">15.7</span></span></span>
+      <span class="card-summary"></span>
     </span>
     <span class="card-chev" aria-hidden="true">⌄</span>
   </button>
@@ -479,23 +535,6 @@ M1B 是流動性最高的那一段貨幣——通貨淨額加上支票存款、�
       <div class="fin-sub" style="font-size:10px;opacity:.75;">2026/07
         ｜百萬美元</div>
     </div></div>
-
-  <div class="title-row" style="margin-top:14px;">
-    <div class="sub-title" style="margin:0;">ISM 製造業／服務業 PMI</div>
-    <button class="info-btn" onclick="toggleInfo('usIsmInfo')">💡 ISM PMI 為什麼沒有數字</button>
-  </div>
-  <div id="usIsmInfo" class="info-popup">ISM 製造業／服務業 PMI 是美國最受關注的景氣領先指標之一，跟台灣 PMI 一樣以 50 為榮枯線：高於 50 代表擴張，低於 50 代表收縮，而且問的同樣是「相較於上個月」。
-
-一般會再看幾個分項：新訂單（最領先）、生產、就業、供應商交貨時間（拉長代表供應鏈吃緊）、以及支付價格（通膨壓力的早期訊號）。
-
-這份報告沒有放它的數字，原因是拿不到免費的官方資料源：ISM 在 2016 年因為授權問題把序列從 FRED 下架（FRED 的 NAPM 代號現在直接回 404），之後就沒有免費、可程式化取得的官方管道了。
-
-依這份報告的一貫原則——寧可留空也不放來路不明或推估的數字——這一格只保留說明，不放數值。想看實際數字請直接到 ISM 官網或財經媒體查閱當期新聞稿。</div>
-  <div class="stat-box" style="opacity:.75;">
-    <div class="stat-label">本報告不放此指標數字</div>
-    <div class="stat-sub">ISM 於 2016 年因授權問題自 FRED 下架，目前沒有免費、可程式化取得的官方管道。
-      與其放推估值或來路不明的數字，這裡選擇留白，只保留觀念說明。</div>
-  </div>
 
   <div class="title-row" style="margin-top:18px;">
     <div class="sub-title" style="margin:0;">💼 勞動力市場</div>
@@ -617,11 +656,11 @@ VIX 是市場對未來 30 天波動的預期，俗稱恐慌指數。它不預測
         </div>
     </div></div>
 
-  <div class="title-row" style="margin-top:22px;">
-    <div class="sub-title" style="margin:0;">核心指標速覽表</div>
-    <button class="info-btn" onclick="toggleInfo('usOverviewInfo')">💡 這張表怎麼用</button>
-  </div>
-  <div id="usOverviewInfo" class="info-popup">這張表把上面四組指標壓成一頁，用途是「一眼確認現在的總體位置」，不是拿來當買賣訊號。
+  <details class="fold">
+    <summary>核心指標速覽表（12 項）</summary>
+    <div class="fold-body">
+      <div class="title-row" style="margin:0 0 10px 0;"><button class="info-btn" onclick="toggleInfo('usOverviewInfo')">💡 這張表怎麼用</button></div>
+      <div id="usOverviewInfo" class="info-popup">這張表把上面四組指標壓成一頁，用途是「一眼確認現在的總體位置」，不是拿來當買賣訊號。
 
 三個使用原則：
 
@@ -630,10 +669,10 @@ VIX 是市場對未來 30 天波動的預期，俗稱恐慌指數。它不預測
 2. 分清領先與落後。營建許可、初請失業金、PMI 這類會先動；失業率、GDP 這類反映的是已經發生的事。用落後指標去猜轉折，永遠會慢一拍。
 
 3. 別忽略發布時間差。這張表上每一格的「資料月份」不一定相同——有的是上週，有的是兩個月前，季頻的 GDP 甚至可能落後一季。橫向比較時要記得它們代表的不是同一個時點。</div>
-  <div class="ov-wrap">
-    <table class="ov-table">
-      <thead><tr><th>指標</th><th>頻率</th><th>這格在看什麼</th><th>時序</th></tr></thead>
-      <tbody>
+      <div class="ov-wrap">
+        <table class="ov-table">
+          <thead><tr><th>指標</th><th>頻率</th><th>這格在看什麼</th><th>時序</th></tr></thead>
+          <tbody>
       <tr>
         <td class="ov-name">實質 GDP</td>
         <td class="ov-freq">季</td>
@@ -705,15 +744,11 @@ VIX 是市場對未來 30 天波動的預期，俗稱恐慌指數。它不預測
         <td class="ov-freq">月</td>
         <td>家戶對財務與景氣的感受</td>
         <td><span class="ov-lead" style="color:#22d3ee;border-color:#22d3ee;">領先</span></td>
-      </tr>
-      <tr>
-        <td class="ov-name">ISM PMI</td>
-        <td class="ov-freq">月</td>
-        <td>無免費官方源，本報告不放數字</td>
-        <td><span class="ov-lead" style="color:#22d3ee;border-color:#22d3ee;">領先</span></td>
       </tr></tbody>
-    </table>
-  </div>
+        </table>
+      </div>
+    </div>
+  </details>
 
   </div>
 </div>
@@ -787,7 +822,20 @@ VIX 是市場對未來 30 天波動的預期，俗稱恐慌指數。它不預測
 
   </div>
 </div>
-<div class="block-title">日股重要經濟指標 ＆ 日股觀察</div>
+
+  </div>
+</div>
+
+<div class="section-card block-card collapsed" id="card-jp" data-card="jp" style="--blk:#a855f7;">
+  <button class="card-head" type="button" onclick="toggleCard('jp')" aria-expanded="false">
+    <span class="card-head-main">
+      <span class="card-title">日股重要經濟指標</span>
+      <span class="card-summary"><span class="chip"><span class="chip-k">日經225</span><span class="chip-v">65,143</span></span><span class="chip warn"><span class="chip-k">村田 B/B</span><span class="chip-v">1.34</span></span></span>
+    </span>
+    <span class="card-chev" aria-hidden="true">⌄</span>
+  </button>
+  <div class="card-body">
+
 <div class="section-card collapsed" id="card-nikkei" data-card="nikkei">
   <button class="card-head" type="button" onclick="toggleCard('nikkei')" aria-expanded="false">
     <span class="card-head-main">
@@ -869,6 +917,19 @@ VIX 是市場對未來 30 天波動的預期，俗稱恐慌指數。它不預測
 
   </div>
 </div>
+
+  </div>
+</div>
+
+<div class="section-card block-card collapsed" id="card-jpstock" data-card="jpstock" style="--blk:#10b981;">
+  <button class="card-head" type="button" onclick="toggleCard('jpstock')" aria-expanded="false">
+    <span class="card-head-main">
+      <span class="card-title">日股觀察</span>
+      <span class="card-summary"><span class="chip"><span class="chip-k">追蹤中</span><span class="chip-v">16 檔</span></span><span class="chip buy"><span class="chip-k">觸發布局</span><span class="chip-v">3 檔</span></span></span>
+    </span>
+    <span class="card-chev" aria-hidden="true">⌄</span>
+  </button>
+  <div class="card-body">
 <div class="jp-stock-grid">
 <div class="section-card collapsed" id="card-kao" data-card="kao">
   <button class="card-head" type="button" onclick="toggleCard('kao')" aria-expanded="false">
@@ -2198,6 +2259,9 @@ VIX 是市場對未來 30 天波動的預期，俗稱恐慌指數。它不預測
   </div>
 </div>
 </div>
+  </div>
+</div>
+
 </div>
 
 <script>
@@ -2398,6 +2462,19 @@ VIX 是市場對未來 30 天波動的預期，俗稱恐慌指數。它不預測
       if (head) head.setAttribute('aria-expanded', String(!collapsed));
     });
     if (!collapsed) setTimeout(() => resizeChartsIn(document.body), 40);
+  }
+
+  /* 打開報告時的樣子：五個大區塊收合，裡面的卡片是開的。
+     兩層都收的話，要看任何一個數字都得點兩次——那正是折疊裡面再折疊
+     最惱人的地方。這樣安排：第一眼是五條橫幅，點一次就直接看到內容。
+     「全部收合」按鈕也回到這個狀態，而不是把內層一起收掉。 */
+  function setInitialCardStates() {
+    document.querySelectorAll('.section-card[data-card]').forEach((card) => {
+      const isBlock = card.classList.contains('block-card');
+      card.classList.toggle('collapsed', isBlock);
+      const head = card.querySelector('.card-head');
+      if (head) head.setAttribute('aria-expanded', String(!isBlock));
+    });
   }
 
   /* 每次打開報告都從全部收合開始，先看摘要再決定要展開哪幾張。
@@ -4159,7 +4236,7 @@ VIX 是市場對未來 30 天波動的預期，俗稱恐慌指數。它不預測
   // 也不會連帶讓折疊、縮字、版型切換這些基本功能失效。
   applyViewMode('auto');   // 載入時不強制，交給響應式 CSS
   clearSavedCardStates();
-  setAllCards(true);       // 保險：不論任何原因，開啟報告時一律全部收合
+  setInitialCardStates();  // 五個大區塊收合、內層卡片展開
   requestAnimationFrame(function () { requestAnimationFrame(fitAllCardHeads); });
   watchCardHeads();
   if (document.fonts && document.fonts.ready) {
