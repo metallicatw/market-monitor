@@ -1,0 +1,12 @@
+{
+ "name": "cbc_ef15m01_money_aggregates",
+ "url": "https://www.cbc.gov.tw/public/data/OpenData/經研處/EF15M01.csv",
+ "method": "GET",
+ "format": "csv",
+ "bytes": 143147,
+ "sha256": "f088f7dbedec922aac9da6031fb4a69f285c61729271b732936764f689ed43e8",
+ "captured_at": "2026-09-09T13:10+08:00",
+ "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120",
+ "first_line": "\"期間\",\"貨幣機構以外各部門持有通貨-原始值\",\"貨幣機構以外各部門持有通貨-年增率\",\"存款貨幣-計-原始值\",\"存款貨幣-計-年增率\",\"存款貨幣-支票存款-原始值\",\"存款貨幣-支票存款-年增率\",\"存款貨幣-活期存款-原始值\",\"存款貨�",
+ "note": "USE — 央行貨幣總計數（日平均數，月資料）1987M05 起。M1B 在第 27 欄「貨幣總計數 -Ｍ１Ｂ-原始值」，單位新臺幣百萬元；第 28 欄為年增率。第一次連線常被 reset，需重試。"
+}

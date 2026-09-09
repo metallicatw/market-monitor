@@ -48,6 +48,9 @@ DEFAULT_THRESHOLDS = {
     "michigan_warn": 60,
     "murata_bb_warn": 1.2,
     "per_buy_default": 20,
+    "pmi_neutral": 50,
+    "tw_marketcap_m1b_high": 4.5,
+    "tw_marketcap_m1b_low": 2.5,
 }
 
 DEFAULT_JP_STOCKS = [
@@ -128,6 +131,121 @@ def load_jp_stocks(include_disabled=False):
     if include_disabled:
         return stocks
     return [s for s in stocks if s["enabled"]]
+
+
+# ---------------------------------------------------------------------------
+# 美股欄設定：三大指數 與 FRED 經濟指標
+# ---------------------------------------------------------------------------
+DEFAULT_US_INDICES = [
+    {"key": "dji", "symbol": "^DJI", "name": "道瓊工業指數", "enabled": True},
+    {"key": "sp500", "symbol": "^GSPC", "name": "S&P 500", "enabled": True},
+    {"key": "nasdaq", "symbol": "^IXIC", "name": "NASDAQ 綜合指數", "enabled": True},
+]
+
+DEFAULT_US_FRED_SERIES = [
+    {"id": "GDPC1", "name": "實質GDP", "group": "growth"},
+    {"id": "RSAFS", "name": "零售銷售", "group": "growth"},
+    {"id": "PAYEMS", "name": "非農就業人數", "group": "labor"},
+    {"id": "UNRATE", "name": "失業率", "group": "labor"},
+    {"id": "ICSA", "name": "每週初請失業金", "group": "labor"},
+    {"id": "CPIAUCSL", "name": "CPI", "group": "inflation"},
+    {"id": "CPILFESL", "name": "核心CPI", "group": "inflation"},
+    {"id": "PCEPILFE", "name": "核心PCE", "group": "inflation"},
+    {"id": "PPIACO", "name": "PPI", "group": "inflation"},
+    {"id": "HOUST", "name": "新屋開工", "group": "housing_sentiment"},
+    {"id": "PERMIT", "name": "營建許可", "group": "housing_sentiment"},
+    {"id": "UMCSENT", "name": "密大消費者信心", "group": "housing_sentiment", "cache": "michigan.json"},
+]
+
+DEFAULT_US_INDICATOR_GROUPS = [
+    {"key": "growth", "label": "📈 經濟增長與整體產出"},
+    {"key": "labor", "label": "💼 勞動力市場"},
+    {"key": "inflation", "label": "🔍 通膨與物價"},
+    {"key": "housing_sentiment", "label": "🏠 房地產與信心"},
+]
+
+
+def load_us_indices(include_disabled=False):
+    """回傳美股指數清單。改 config.json 的 us_indices 即可增刪，不用動程式。"""
+    raw = _load_raw().get("us_indices")
+    if not isinstance(raw, list) or not raw:
+        items = [dict(x) for x in DEFAULT_US_INDICES]
+    else:
+        items, seen = [], set()
+        for i, item in enumerate(raw):
+            if not isinstance(item, dict):
+                print(f"⚠️ us_indices 第 {i+1} 筆不是有效設定區塊，已略過。")
+                continue
+            key, symbol = item.get("key"), item.get("symbol")
+            if not key or not symbol:
+                print(f"⚠️ us_indices 第 {i+1} 筆缺少 key 或 symbol，已略過。")
+                continue
+            if key in seen:
+                print(f"⚠️ us_indices 出現重複的 key「{key}」，只保留第一筆。")
+                continue
+            seen.add(key)
+            items.append({
+                "key": key,
+                "symbol": symbol,
+                "name": item.get("name") or symbol,
+                "enabled": bool(item.get("enabled", True)),
+            })
+    if include_disabled:
+        return items
+    return [x for x in items if x.get("enabled", True)]
+
+
+def load_fred_series(include_disabled=False):
+    """
+    回傳要抓的 FRED 序列清單。
+
+    每筆至少要有 id（FRED 序列代號）；name / group / unit / freq 是給報告用的，
+    cache 可覆寫存檔檔名（UMCSENT 沿用既有的 michigan.json 就是靠這個）。
+
+    ⚠️ ISM 製造業/服務業 PMI 不在這裡，因為沒有免費官方源 ——
+       FRED 的 NAPM 序列在 2016 年因授權問題下架，實測回 404。
+    """
+    raw = _load_raw().get("us_fred_series")
+    if not isinstance(raw, list) or not raw:
+        items = [dict(x) for x in DEFAULT_US_FRED_SERIES]
+    else:
+        items, seen = [], set()
+        for i, item in enumerate(raw):
+            if not isinstance(item, dict):
+                print(f"⚠️ us_fred_series 第 {i+1} 筆不是有效設定區塊，已略過。")
+                continue
+            sid = (item.get("id") or "").strip()
+            if not sid:
+                print(f"⚠️ us_fred_series 第 {i+1} 筆缺少 id（FRED 序列代號），已略過。")
+                continue
+            if sid in seen:
+                print(f"⚠️ us_fred_series 出現重複的 id「{sid}」，只保留第一筆。")
+                continue
+            seen.add(sid)
+            items.append({
+                "id": sid,
+                "name": item.get("name") or sid,
+                "group": item.get("group") or "other",
+                "unit": item.get("unit") or "",
+                "freq": item.get("freq") or "",
+                "cache": item.get("cache"),
+                "enabled": bool(item.get("enabled", True)),
+            })
+    if include_disabled:
+        return items
+    return [x for x in items if x.get("enabled", True)]
+
+
+def load_us_indicator_groups():
+    """回傳美股指標的分組與顯示標題，順序即報告顯示順序。"""
+    raw = _load_raw().get("us_indicator_groups")
+    if not isinstance(raw, list) or not raw:
+        return [dict(x) for x in DEFAULT_US_INDICATOR_GROUPS]
+    groups = []
+    for item in raw:
+        if isinstance(item, dict) and item.get("key"):
+            groups.append({"key": item["key"], "label": item.get("label") or item["key"]})
+    return groups or [dict(x) for x in DEFAULT_US_INDICATOR_GROUPS]
 
 
 def effective_per_buy(stock, thresholds=None):

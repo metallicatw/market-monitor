@@ -41,7 +41,9 @@ try:
 except Exception:
     TAIPEI_TZ = timezone(timedelta(hours=8))
 
-from config_loader import load_thresholds, load_jp_stocks, effective_per_buy
+from config_loader import (load_thresholds, load_jp_stocks, effective_per_buy,
+                           load_us_indices, load_fred_series, load_us_indicator_groups)
+from explanations import TIPS, OVERVIEW_TABLE
 
 BASE_DIR = os.path.dirname(__file__)
 DATA_DIR = os.path.join(BASE_DIR, "data")
@@ -58,6 +60,13 @@ VIX_PANIC_THRESHOLD = _TH["vix_panic"]              # > 此值 => 高度恐慌
 MICHIGAN_WARN_THRESHOLD = _TH["michigan_warn"]      # < 此值 => 衰退警戒
 MURATA_BB_WARN_THRESHOLD = _TH["murata_bb_warn"]    # > 此值 => 反指標聖杯警示
 PER_BUY_DEFAULT = _TH["per_buy_default"]            # 本益比 < 此值 => 可以考慮布局（個股可各自覆寫）
+PMI_NEUTRAL = _TH["pmi_neutral"]                    # PMI/NMI 榮枯線（50）
+TW_MC_M1B_HIGH = _TH["tw_marketcap_m1b_high"]       # 市值貨幣比 > 此值 => 資金相對吃緊
+TW_MC_M1B_LOW = _TH["tw_marketcap_m1b_low"]         # 市值貨幣比 < 此值 => 資金相對寬鬆
+
+US_INDEX_CONFIG = load_us_indices()
+US_FRED_CONFIG = load_fred_series()
+US_GROUP_CONFIG = load_us_indicator_groups()
 
 # 個股清單（順序＝顯示順序，已濾掉 enabled=false 的隱藏個股）
 JP_STOCK_CONFIG = load_jp_stocks()
@@ -191,6 +200,10 @@ CSS = """
                 border:1px solid var(--border-color); border-radius:7px; padding:5px 12px; cursor:pointer; }
   .expand-btn:hover { color:var(--text-main); border-color:#22d3ee; }
 
+  .block-title { font-size:15px; font-weight:800; color:#e2e8f0; letter-spacing:1px;
+                 margin:10px 0 -4px 2px; display:flex; align-items:center; gap:10px; }
+  .block-title::before { content:''; width:4px; height:18px; background:var(--accent-blue); border-radius:2px; }
+  .block-title::after { content:''; flex:1; height:1px; background:linear-gradient(90deg, var(--border-color), transparent); }
   .section-title { font-size:20px; font-weight:800; margin-bottom:14px; color:#f8fafc; letter-spacing:0.3px; }
   .sub-title { font-size:13px; font-weight:700; margin:18px 0 10px 0; color:#cbd5e1; display:flex; align-items:center; gap:8px; }
   .sub-title::before { content:''; width:3px; height:14px; background:var(--accent-blue); border-radius:2px; }
@@ -249,6 +262,23 @@ CSS = """
   .fin-box.alert-buy .fin-value { color:#22d3ee; }
   .fin-box .fin-label { font-size:11px; color:var(--text-muted); margin-bottom:4px; }
   .fin-box .fin-value { font-size:18px; font-weight:700; }
+  .fin-box .fin-sub { font-size:11px; margin-top:3px; color:var(--text-muted); }
+  .vintage { display:inline-block; font-size:11px; padding:1px 7px; border-radius:9px;
+             background:rgba(148,163,184,0.12); border:1px solid rgba(148,163,184,0.28); color:#94a3b8; }
+  .vintage.stale { background:rgba(245,158,11,0.10); border-color:rgba(245,158,11,0.45); color:#f59e0b; }
+  .ov-wrap { overflow-x:auto; margin-top:4px; }
+  .ov-table { width:100%; border-collapse:collapse; font-size:12.5px; min-width:520px; }
+  .ov-table th { text-align:left; padding:8px 10px; color:var(--text-muted); font-weight:700;
+                 border-bottom:1px solid var(--border-color); white-space:nowrap; }
+  .ov-table td { padding:8px 10px; border-bottom:1px solid rgba(38,51,77,0.5); color:#cbd5e1; vertical-align:top; }
+  .ov-table tr:last-child td { border-bottom:none; }
+  .ov-name { font-weight:700; color:#f8fafc; white-space:nowrap; }
+  .ov-freq { color:var(--text-muted); white-space:nowrap; }
+  .ov-lead { display:inline-block; font-size:11px; font-weight:700; padding:1px 8px;
+             border-radius:9px; border:1px solid; white-space:nowrap; }
+  @media (max-width: 640px) {
+    .fin-grid { grid-template-columns:repeat(2,1fr); }
+  }
   .fin-box .fin-sub { font-size:10.5px; color:var(--text-muted); margin-top:3px; }
   .fin-empty { background:rgba(250,204,21,0.05); border:1px dashed rgba(250,204,21,0.35);
                border-radius:8px; padding:14px 16px; }
@@ -1659,7 +1689,493 @@ def render_jp_stock_section(stock, fin, key, quarterly=None, annual=None):
     return section_html, script
 
 
-def collect_alerts(taiex, vix, nikkei, michigan, murata, jp_stocks):
+# ---------------------------------------------------------------------------
+# 燈泡說明（💡）
+# ---------------------------------------------------------------------------
+def tip_button(tip_id, key):
+    """
+    產生「💡 短標題」按鈕 ＋ 收合的說明區塊。
+
+    文字全部放在 explanations.py 的 TIPS 裡 —— 想改內容只要動那個檔，
+    不用碰這裡的排版邏輯。找不到 key 就回傳空字串，不會讓報告產不出來。
+    """
+    entry = TIPS.get(key)
+    if not entry:
+        return "", ""
+    label, body = entry
+    btn = f'<button class="info-btn" onclick="toggleInfo(\'{tip_id}\')">💡 {label}</button>'
+    popup = f'<div id="{tip_id}" class="info-popup">{html_escape(body)}</div>'
+    return btn, popup
+
+
+def html_escape(text):
+    """說明文字是純文字，出現 < > & 時要跳脫，不然會被當標籤吃掉。"""
+    return (str(text).replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;"))
+
+
+def titled_row(title, tip_id=None, tip_key=None, level="section-title"):
+    """標題列＋（可選）燈泡。回傳整段 HTML。"""
+    btn, popup = tip_button(tip_id, tip_key) if tip_id and tip_key else ("", "")
+    return f"""
+  <div class="title-row">
+    <div class="{level}" style="margin-bottom:0;">{title}</div>
+    {btn}
+  </div>
+  {popup}
+"""
+
+
+def vintage_note(iso_month, months_behind=None, freq=""):
+    """
+    誠實標示這格數字代表的是哪個月，而不是讓人以為是「今天」。
+
+    落後三個月以上會加上警示色 —— 不是資料錯了，是來源本來就慢，
+    但看報告的人有權利一眼知道。
+    """
+    if not iso_month:
+        return ""
+    disp = iso_month[:7].replace("-", "/")
+    if months_behind is None:
+        months_behind = _months_behind_iso(iso_month)
+    suffix = f"｜{freq}頻" if freq else ""
+    if months_behind is not None and months_behind >= 3:
+        return (f'<span class="vintage stale">資料月份 {disp}'
+                f'（落後 {months_behind} 個月）{suffix}</span>')
+    return f'<span class="vintage">資料月份 {disp}{suffix}</span>'
+
+
+def _months_behind_iso(iso_date):
+    try:
+        y, m = int(iso_date[:4]), int(iso_date[5:7])
+    except (ValueError, TypeError):
+        return None
+    today = date.today()
+    return (today.year - y) * 12 + (today.month - m)
+
+
+def fmt_period(iso_date, freq=""):
+    """
+    把資料日期顯示成跟該指標頻率相符的樣子。
+
+    季頻序列在 FRED 裡是用「該季第一個月的 1 號」表示的，直接印 2026/04
+    會讓人以為是四月的數字 —— 實際上那是第二季。週頻則要看到日，
+    因為初請失業金一週就換一筆。
+    """
+    if not iso_date:
+        return "—"
+    if freq == "季":
+        try:
+            y, m = int(iso_date[:4]), int(iso_date[5:7])
+            return f"{y}Q{(m - 1) // 3 + 1}"
+        except ValueError:
+            return iso_date
+    if freq == "週" or freq == "日":
+        return iso_date.replace("-", "/")
+    return iso_date[:7].replace("-", "/")
+
+
+def fmt_indicator_value(value, unit=""):
+    """依單位挑一個看得懂的格式。經濟指標的量級差很大，硬用同一種會很難讀。"""
+    if value is None:
+        return "—"
+    if "%" in unit:
+        return f"{value:,.1f}%"
+    if abs(value) >= 10000:
+        return f"{value:,.0f}"
+    if abs(value) >= 100:
+        return f"{value:,.1f}"
+    return f"{value:,.2f}"
+
+
+# ---------------------------------------------------------------------------
+# 台股：製造業 PMI ／ 非製造業 NMI
+# ---------------------------------------------------------------------------
+def render_tw_pmi_section(pmi):
+    dates = pmi["dates"]
+    pmi_vals, nmi_vals = pmi["pmi"], pmi["nmi"]
+    last_pmi = next((v for v in reversed(pmi_vals) if v is not None), None)
+    last_nmi = next((v for v in reversed(nmi_vals) if v is not None), None)
+    prev_pmi = next((v for v in reversed(pmi_vals[:-1]) if v is not None), last_pmi)
+    if last_pmi is None:
+        return "", ""
+
+    diff = round(last_pmi - prev_pmi, 1)
+    diff_txt, chg_color = fmt_diff(diff, 1)
+    neutral = PMI_NEUTRAL
+    expanding = last_pmi >= neutral
+    # 擴張/收縮不是「警示」，是狀態，所以用 buy/warn 兩種既有色系表達方向
+    zone_label = "擴張" if expanding else "收縮"
+    zone_color = "#22d3ee" if expanding else "#ef4444"
+
+    html = titled_row("臺灣製造業 PMI ／ 非製造業 NMI", "twPmiInfo", "tw_pmi", level="sub-title") + f"""
+  <div class="stat-grid">
+    <div class="stat-box">
+      <div class="stat-label">製造業 PMI
+        <span class="zone-badge" style="background:rgba(0,0,0,0.25);color:{zone_color};border:1px solid {zone_color};">{zone_label}</span>
+      </div>
+      <div>
+        <span class="stat-value" style="color:{zone_color};">{last_pmi:,.1f}</span>
+        <span class="stat-chg" style="color:{chg_color};">{diff_txt}</span>
+      </div>
+      <div class="stat-sub">{vintage_note(dates[-1], freq="月")}｜{neutral} 為榮枯線</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-label">非製造業 NMI</div>
+      <div>
+        <span class="stat-value" style="color:{'#22d3ee' if (last_nmi or 0) >= neutral else '#ef4444'};">{fmt_indicator_value(last_nmi)}</span>
+      </div>
+      <div class="stat-sub">服務業與內需的對照組</div>
+    </div>
+  </div>
+
+  <div class="tf-bar" id="tf-twpmi">
+    <span style="font-size:11px;color:#64748b;margin-right:2px;">週期切換:</span>
+    <button class="tf-btn" onclick="simpleSetRange('twpmi','1Y',this)">1Y</button>
+    <button class="tf-btn" onclick="simpleSetRange('twpmi','3Y',this)">3Y</button>
+    <button class="tf-btn active" onclick="simpleSetRange('twpmi','5Y',this)">5Y</button>
+  </div>
+  <div class="custom-legend" id="twPmiLegend"></div>
+  <div class="chart-container short"><canvas id="twPmiChart"></canvas></div>
+  <div class="chart-source-box" title="資料來源與更新時間">
+    📌 <a href="https://data.gov.tw/dataset/6100" target="_blank">國發會／中華經濟研究院（政府資料開放平臺）</a>　｜　每月發布
+  </div>
+"""
+
+    script = f"""
+  const twPmiDates = {json.dumps(dates, ensure_ascii=False)};
+  const twPmiVals = {json.dumps(pmi_vals, ensure_ascii=False)};
+  const twNmiVals = {json.dumps(nmi_vals, ensure_ascii=False)};
+  const twPmiChart = new Chart(document.getElementById('twPmiChart'), {{
+    type: 'line',
+    data: {{
+      labels: twPmiDates.map(fmtLabel),
+      datasets: [
+        {{ label: '製造業 PMI', data: twPmiVals, borderColor: 'rgb(34,211,238)',
+           backgroundColor: (c) => gradientFill(c, '34,211,238'),
+           fill: true, tension: 0, pointRadius: 2, pointHoverRadius: 5, borderWidth: 2, order: 1, spanGaps: true }},
+        {{ label: '非製造業 NMI', data: twNmiVals, borderColor: 'rgb(168,85,247)',
+           fill: false, tension: 0, pointRadius: 2, pointHoverRadius: 5, borderWidth: 2, order: 2, spanGaps: true }},
+        {{ label: '{PMI_NEUTRAL} 榮枯線', data: twPmiDates.map(() => {PMI_NEUTRAL}), borderColor: '#f59e0b',
+           borderDash: [5,4], borderWidth: 1.2, pointRadius: 0, fill: false, order: 3 }}
+      ]
+    }},
+    options: {{
+      responsive: true, maintainAspectRatio: false,
+      interaction: {{ mode: 'index', intersect: false }},
+      plugins: {{
+        legend: {{ display: false }},
+        tooltip: {{
+          backgroundColor: 'rgba(15,23,42,0.95)', titleColor:'#f8fafc', bodyColor:'#cbd5e1',
+          borderColor: '#334155', borderWidth: 1, padding: 10, boxPadding: 4,
+          filter: (item) => !item.dataset.borderDash,
+          callbacks: {{
+            title: tooltipFullDateTitle('twpmi'),
+            afterLabel: (item) => (item.parsed.y >= {PMI_NEUTRAL} ? '擴張（>{PMI_NEUTRAL}）' : '收縮（<{PMI_NEUTRAL}）')
+          }}
+        }}
+      }},
+      scales: {{
+        x: {{ type: 'category', ticks: {{ maxTicksLimit: 8, maxRotation: 0, color: '#94a3b8' }}, grid: {{ color: 'rgba(38,51,77,0.35)' }} }},
+        y: {{ suggestedMin: 30, suggestedMax: 70, grid: {{ color: 'rgba(38,51,77,0.35)' }} }}
+      }}
+    }}
+  }});
+  buildLegend(twPmiChart, 'twPmiLegend');
+  chartRegistry['twpmi'] = {{ chart: twPmiChart, dates: twPmiDates, close: twPmiVals, currentDates: twPmiDates.slice(), warnLevels: [{PMI_NEUTRAL}] }};
+"""
+    return html, script
+
+
+# ---------------------------------------------------------------------------
+# 台股：市值貨幣比
+# ---------------------------------------------------------------------------
+def render_tw_marketcap_m1b_section(ratio_data):
+    dates = ratio_data["dates"]
+    ratios = ratio_data["ratio"]
+    if not dates:
+        return "", ""
+
+    last = ratios[-1]
+    prev = ratios[-2] if len(ratios) > 1 else last
+    diff = round(last - prev, 2)
+    diff_txt, chg_color = fmt_diff(diff, 2)
+    behind = ratio_data.get("months_behind")
+
+    high, low = TW_MC_M1B_HIGH, TW_MC_M1B_LOW
+    if last >= high:
+        zone_label, zone_color = "資金相對吃緊", "#ef4444"
+    elif last <= low:
+        zone_label, zone_color = "資金相對寬鬆", "#22d3ee"
+    else:
+        zone_label, zone_color = "區間中段", "#94a3b8"
+
+    cap_t = ratio_data["market_cap"][-1] / 1e6
+    m1b_t = ratio_data["m1b"][-1] / 1e6
+
+    html = titled_row("市值貨幣比（上市櫃總市值 ÷ M1B）", "twMcM1bInfo", "tw_marketcap_m1b",
+                      level="sub-title") + f"""
+  <div class="stat-box" style="margin-bottom:14px;">
+    <div class="stat-label">最新比值
+      <span class="zone-badge" style="background:rgba(0,0,0,0.25);color:{zone_color};border:1px solid {zone_color};">{zone_label}</span>
+    </div>
+    <div>
+      <span class="stat-value" style="color:{zone_color};">{last:,.2f}</span>
+      <span class="stat-chg" style="color:{chg_color};">{diff_txt} 較上月</span>
+    </div>
+    <div class="stat-sub">
+      {vintage_note(dates[-1], behind, freq="月")}
+      ｜總市值 {cap_t:,.1f} 兆元 ÷ M1B {m1b_t:,.1f} 兆元
+      ｜參考區間：&lt;{low} 寬鬆、&gt;{high} 吃緊
+    </div>
+  </div>
+
+  <div class="custom-legend" id="twMcM1bLegend"></div>
+  <div class="chart-container short"><canvas id="twMcM1bChart"></canvas></div>
+  <div class="chart-source-box" title="資料來源與更新時間">
+    📌 <a href="https://data.gov.tw/dataset/11138" target="_blank">金管會證期局 市場綜覽t49</a>
+    ｜<a href="https://data.gov.tw/dataset/6024" target="_blank">中央銀行 貨幣總計數</a>
+    ｜自行計算，非官方公布之比值
+  </div>
+"""
+
+    script = f"""
+  const mcDates = {json.dumps(dates, ensure_ascii=False)};
+  const mcRatio = {json.dumps(ratios, ensure_ascii=False)};
+  const mcCap = {json.dumps([round(v / 1e6, 2) for v in ratio_data["market_cap"]], ensure_ascii=False)};
+  const mcM1b = {json.dumps([round(v / 1e6, 2) for v in ratio_data["m1b"]], ensure_ascii=False)};
+  const twMcM1bChart = new Chart(document.getElementById('twMcM1bChart'), {{
+    type: 'line',
+    data: {{
+      labels: mcDates.map(fmtLabel),
+      datasets: [
+        {{ label: '市值貨幣比', data: mcRatio, borderColor: 'rgb(250,204,21)',
+           backgroundColor: (c) => gradientFill(c, '250,204,21'),
+           fill: true, tension: 0, pointRadius: 3, pointHoverRadius: 6, borderWidth: 2, order: 1 }},
+        {{ label: '{high} 資金吃緊', data: mcDates.map(() => {high}), borderColor: '#ef4444',
+           borderDash: [5,4], borderWidth: 1.1, pointRadius: 0, fill: false, order: 2 }},
+        {{ label: '{low} 資金寬鬆', data: mcDates.map(() => {low}), borderColor: '#22d3ee',
+           borderDash: [5,4], borderWidth: 1.1, pointRadius: 0, fill: false, order: 3 }}
+      ]
+    }},
+    options: {{
+      responsive: true, maintainAspectRatio: false,
+      interaction: {{ mode: 'index', intersect: false }},
+      plugins: {{
+        legend: {{ display: false }},
+        tooltip: {{
+          backgroundColor: 'rgba(15,23,42,0.95)', titleColor:'#f8fafc', bodyColor:'#cbd5e1',
+          borderColor: '#334155', borderWidth: 1, padding: 10, boxPadding: 4,
+          filter: (item) => !item.dataset.borderDash,
+          callbacks: {{
+            title: tooltipFullDateTitle('twmcm1b'),
+            afterLabel: (item) => {{
+              const i = item.dataIndex;
+              return ['總市值 ' + mcCap[i] + ' 兆元', 'M1B ' + mcM1b[i] + ' 兆元'];
+            }}
+          }}
+        }}
+      }},
+      scales: {{
+        x: {{ type: 'category', ticks: {{ maxTicksLimit: 8, maxRotation: 0, color: '#94a3b8' }}, grid: {{ color: 'rgba(38,51,77,0.35)' }} }},
+        y: {{ grid: {{ color: 'rgba(38,51,77,0.35)' }} }}
+      }}
+    }}
+  }});
+  buildLegend(twMcM1bChart, 'twMcM1bLegend');
+  chartRegistry['twmcm1b'] = {{ chart: twMcM1bChart, dates: mcDates, close: mcRatio, currentDates: mcDates.slice(), warnLevels: [{high},{low}] }};
+"""
+    return html, script
+
+
+# ---------------------------------------------------------------------------
+# 美股：三大指數（重訂基期後放同一張圖比較）
+# ---------------------------------------------------------------------------
+def render_us_indices_section(indices):
+    """
+    三個指數放同一張圖。因為道瓊四萬多、S&P 六千多、NASDAQ 兩萬多，
+    直接畫在同一個 y 軸上只會看到三條互不相干的線 —— 所以全部重訂基期成
+    「區間起點 = 100」，比較的是相對漲跌幅。圖上會標明這件事，
+    tooltip 裡同時顯示重訂基期後的值與真實收盤點數，不會讓人誤讀。
+    """
+    usable = [(k, d) for k, d in indices if d and d.get("dates")]
+    if not usable:
+        return "", ""
+
+    # 對齊到共同交易日，否則三條線的 x 軸對不起來
+    common = set(usable[0][1]["dates"])
+    for _, d in usable[1:]:
+        common &= set(d["dates"])
+    common_dates = sorted(common)
+    if len(common_dates) < 2:
+        return "", ""
+
+    colors = ["59,130,246", "34,197,94", "168,85,247"]
+    series_js, legend_bits, chips = [], [], []
+    for i, (key, d) in enumerate(usable):
+        by_date = dict(zip(d["dates"], d["close"]))
+        raw = [by_date[dt] for dt in common_dates]
+        base = raw[0]
+        rebased = [round(v / base * 100, 2) for v in raw] if base else raw
+        color = colors[i % len(colors)]
+        series_js.append(f"""
+        {{ label: {json.dumps(d.get("name") or key, ensure_ascii=False)}, data: {json.dumps(rebased)},
+           borderColor: 'rgb({color})', fill: false, tension: 0,
+           pointRadius: 0, pointHoverRadius: 4, borderWidth: 2, order: {i + 1} }},""")
+        legend_bits.append(f"rawSeries[{i}] = {json.dumps(raw)};")
+
+        last, prev = raw[-1], raw[-2]
+        pct = round((last - prev) / prev * 100, 2) if prev else 0
+        _, tone_color = updown(last - prev)
+        tone = "up" if last > prev else ("down" if last < prev else "")
+        chips.append(chip(d.get("name") or key, f"{last:,.0f} ({pct:+.2f}%)", f"price {tone}".strip()))
+
+    period_txt = f"{common_dates[0].replace('-', '/')} 起"
+    html = f"""
+  <div class="stat-box" style="margin-bottom:12px;">
+    <div class="stat-label">相對走勢（{period_txt} = 100）</div>
+    <div class="stat-sub">三個指數的點數量級差很多，直接疊圖看不出相對強弱，
+      所以統一重訂基期。滑過圖表可同時看到重訂基期後的值與真實收盤點數。</div>
+  </div>
+  <div class="custom-legend" id="usIdxLegend"></div>
+  <div class="chart-container"><canvas id="usIdxChart"></canvas></div>
+  <div class="chart-source-box" title="資料來源與更新時間">
+    📌 Yahoo Finance Chart API　｜　^DJI、^GSPC、^IXIC　｜　每日收盤
+  </div>
+"""
+
+    script = f"""
+  const usIdxDates = {json.dumps(common_dates, ensure_ascii=False)};
+  const rawSeries = [];
+  {' '.join(legend_bits)}
+  const usIdxChart = new Chart(document.getElementById('usIdxChart'), {{
+    type: 'line',
+    data: {{ labels: usIdxDates.map(fmtLabel), datasets: [{''.join(series_js)}] }},
+    options: {{
+      responsive: true, maintainAspectRatio: false,
+      interaction: {{ mode: 'index', intersect: false }},
+      plugins: {{
+        legend: {{ display: false }},
+        tooltip: {{
+          backgroundColor: 'rgba(15,23,42,0.95)', titleColor:'#f8fafc', bodyColor:'#cbd5e1',
+          borderColor: '#334155', borderWidth: 1, padding: 10, boxPadding: 4,
+          callbacks: {{
+            title: tooltipFullDateTitle('usidx'),
+            label: (item) => {{
+              const raw = rawSeries[item.datasetIndex];
+              const actual = raw ? raw[item.dataIndex] : null;
+              const base = item.dataset.label + ': ' + item.parsed.y.toFixed(2);
+              return actual === null ? base
+                : base + '（實際 ' + actual.toLocaleString(undefined, {{maximumFractionDigits: 2}}) + '）';
+            }}
+          }}
+        }}
+      }},
+      scales: {{
+        x: {{ type: 'category', ticks: {{ maxTicksLimit: 8, maxRotation: 0, color: '#94a3b8' }}, grid: {{ color: 'rgba(38,51,77,0.35)' }} }},
+        y: {{ grid: {{ color: 'rgba(38,51,77,0.35)' }}, title: {{ display: true, text: '重訂基期（起點=100）', color: '#64748b' }} }}
+      }}
+    }}
+  }});
+  buildLegend(usIdxChart, 'usIdxLegend');
+  chartRegistry['usidx'] = {{ chart: usIdxChart, dates: usIdxDates, close: [], currentDates: usIdxDates.slice(), warnLevels: [] }};
+"""
+    return html, script, chips
+
+
+# ---------------------------------------------------------------------------
+# 美股：四組經濟指標
+# ---------------------------------------------------------------------------
+def render_us_indicator_group(group, series_with_data):
+    """
+    一組指標一個 fin-grid。這裡刻意不畫圖：這一組裡的單位有 %、有千人、
+    有指數，畫在同一張圖上沒有意義；分開畫十二張圖又會讓整份報告失焦。
+    數值、變化、以及「這個數字是哪個月的」才是這一格真正要回答的事。
+    """
+    if not series_with_data:
+        return ""
+
+    boxes = []
+    for meta, data in series_with_data:
+        values, dates = data["close"], data["dates"]
+        last = values[-1]
+        prev = values[-2] if len(values) > 1 else last
+        diff = last - prev
+        _, chg_color = updown(diff)
+        arrow = "▲" if diff > 0 else ("▼" if diff < 0 else "")
+        pct = f"{(diff / prev * 100):+.2f}%" if prev else "—"
+        unit = meta.get("unit", "")
+        boxes.append(f"""
+    <div class="fin-box">
+      <div class="fin-label">{meta['name']}</div>
+      <div class="fin-value">{fmt_indicator_value(last, unit)}</div>
+      <div class="fin-sub" style="color:{chg_color};">{arrow} {pct}</div>
+      <div class="fin-sub" style="font-size:10px;opacity:.75;">{fmt_period(dates[-1], meta.get('freq', ''))}
+        {('｜' + unit) if unit else ''}</div>
+    </div>""")
+
+    tip_id = f"us{group['key'].title().replace('_', '')}Info"
+    btn, popup = tip_button(tip_id, f"us_{group['key']}")
+    return f"""
+  <div class="title-row" style="margin-top:18px;">
+    <div class="sub-title" style="margin:0;">{group['label']}</div>
+    {btn}
+  </div>
+  {popup}
+  <div class="fin-grid">{''.join(boxes)}</div>
+"""
+
+
+def render_ism_placeholder():
+    """
+    ISM PMI 沒有免費官方源（FRED 的 NAPM 已下架，實測回 404）。
+    依「不行就略過」的原則不放數字 —— 但榮枯線 50 的觀念本身有價值，
+    所以說明文字仍然收進燈泡，並且明講為什麼這格是空的。
+    """
+    btn, popup = tip_button("usIsmInfo", "ism_pmi")
+    return f"""
+  <div class="title-row" style="margin-top:14px;">
+    <div class="sub-title" style="margin:0;">ISM 製造業／服務業 PMI</div>
+    {btn}
+  </div>
+  {popup}
+  <div class="stat-box" style="opacity:.75;">
+    <div class="stat-label">本報告不放此指標數字</div>
+    <div class="stat-sub">ISM 於 2016 年因授權問題自 FRED 下架，目前沒有免費、可程式化取得的官方管道。
+      與其放推估值或來路不明的數字，這裡選擇留白，只保留觀念說明。</div>
+  </div>
+"""
+
+
+def render_us_overview_table():
+    """核心指標速覽表：把上面四組壓成一頁，用來確認總體位置。"""
+    btn, popup = tip_button("usOverviewInfo", "us_overview")
+    rows = []
+    tone = {"領先": "#22d3ee", "同步": "#94a3b8", "落後": "#f59e0b"}
+    for name, freq, what, lead in OVERVIEW_TABLE:
+        rows.append(f"""
+      <tr>
+        <td class="ov-name">{name}</td>
+        <td class="ov-freq">{freq}</td>
+        <td>{what}</td>
+        <td><span class="ov-lead" style="color:{tone.get(lead, '#94a3b8')};border-color:{tone.get(lead, '#94a3b8')};">{lead}</span></td>
+      </tr>""")
+    return f"""
+  <div class="title-row" style="margin-top:22px;">
+    <div class="sub-title" style="margin:0;">核心指標速覽表</div>
+    {btn}
+  </div>
+  {popup}
+  <div class="ov-wrap">
+    <table class="ov-table">
+      <thead><tr><th>指標</th><th>頻率</th><th>這格在看什麼</th><th>時序</th></tr></thead>
+      <tbody>{''.join(rows)}</tbody>
+    </table>
+  </div>
+"""
+
+
+def collect_alerts(taiex, vix, nikkei, michigan, murata, jp_stocks,
+                   tw_pmi=None, tw_mc_m1b=None):
     """彙整所有區塊目前觸發的預警/布局機會，給頁首摘要欄用。"""
     alerts = []
     if taiex:
@@ -1670,6 +2186,25 @@ def collect_alerts(taiex, vix, nikkei, michigan, murata, jp_stocks):
             alerts.append(("buy", f"台股加權指數 {last_close:,.0f} 點，低於 {TAIEX_BUY_THRESHOLD:,} 布局參考線"))
         if avg10 < VOLUME_BUY_THRESHOLD_BIL:
             alerts.append(("buy", f"台股10日均量 {avg10:,.0f} 億，低於 {VOLUME_BUY_THRESHOLD_BIL:,} 億布局參考"))
+    if tw_pmi and tw_pmi.get("pmi"):
+        last_pmi = next((v for v in reversed(tw_pmi["pmi"]) if v is not None), None)
+        last_month = tw_pmi["dates"][-1][:7].replace("-", "/") if tw_pmi.get("dates") else ""
+        if last_pmi is not None and last_pmi < PMI_NEUTRAL:
+            alerts.append(("warn", f"臺灣製造業 PMI {last_pmi:.1f}（{last_month}），"
+                                   f"低於 {PMI_NEUTRAL} 榮枯線，製造業處於收縮"))
+    if tw_mc_m1b and tw_mc_m1b.get("ratio"):
+        last_ratio = tw_mc_m1b["ratio"][-1]
+        month = tw_mc_m1b["dates"][-1][:7].replace("-", "/")
+        behind = tw_mc_m1b.get("months_behind")
+        # 這個指標本來就落後好幾個月，摘要列一定要把資料月份講出來，
+        # 不然會被誤讀成「現在」的狀態
+        stale_note = f"，資料月份 {month}" + (f"、落後 {behind} 個月" if behind else "")
+        if last_ratio >= TW_MC_M1B_HIGH:
+            alerts.append(("warn", f"市值貨幣比 {last_ratio:.2f}，"
+                                   f"高於 {TW_MC_M1B_HIGH} 參考線，資金相對吃緊{stale_note}"))
+        elif last_ratio <= TW_MC_M1B_LOW:
+            alerts.append(("buy", f"市值貨幣比 {last_ratio:.2f}，"
+                                  f"低於 {TW_MC_M1B_LOW} 參考線，資金相對寬鬆{stale_note}"))
     if vix:
         last_vix = vix["close"][-1]
         if last_vix > VIX_PANIC_THRESHOLD:
@@ -1746,6 +2281,7 @@ def render_page_header(alerts, taiex):
     </div>
     <button class="mode-toggle-btn" id="modeToggleBtn" onclick="toggleViewMode()">🖥️ 電腦版／📱 手機版</button>
   </div>
+  <div class="block-title" style="margin:14px 0 8px 2px;">重點摘要</div>
   {summary_html}
 </div>
 <div class="expand-all-bar">
@@ -1755,27 +2291,115 @@ def render_page_header(alerts, taiex):
 """
 
 
-def build_html(taiex, vix, nikkei, michigan, murata, jp_stocks):
+def build_html(taiex, vix, nikkei, michigan, murata, jp_stocks,
+               tw_pmi=None, tw_mc_m1b=None, us_indices=None, us_fred=None):
+    """
+    版面分成四個大區塊，每一塊底下放既有的可折疊卡片。
+
+    刻意不把卡片再包一層折疊 —— 折疊裡面再折疊，使用者要點兩次才看得到東西，
+    而且 Chart.js 在雙層 display:none 裡重新量尺寸會出更多狀況。
+    區塊只是視覺上的分隔線與標題。
+    """
     sections_html = []
     scripts = []
+    us_indices = us_indices or []
+    us_fred = us_fred or {}
 
-    alerts = collect_alerts(taiex, vix, nikkei, michigan, murata, jp_stocks)
+    alerts = collect_alerts(taiex, vix, nikkei, michigan, murata, jp_stocks,
+                            tw_pmi=tw_pmi, tw_mc_m1b=tw_mc_m1b)
     header_html = render_page_header(alerts, taiex)
 
+    def block(title):
+        sections_html.append(f'<div class="block-title">{title}</div>')
+
+    # --- 台股 -------------------------------------------------------------
+    tw_parts = []
     if taiex:
         t_html, t_script = render_taiex_section(taiex)
-        sections_html.append(t_html)
+        tw_parts.append(t_html)
         scripts.append(t_script)
 
+    macro_tw_html, macro_tw_scripts, macro_tw_chips = [], [], []
+    if tw_pmi and tw_pmi.get("dates"):
+        h, s = render_tw_pmi_section(tw_pmi)
+        if h:
+            macro_tw_html.append(h)
+            macro_tw_scripts.append(s)
+            last_pmi = next((v for v in reversed(tw_pmi["pmi"]) if v is not None), None)
+            if last_pmi is not None:
+                macro_tw_chips.append(chip("製造業PMI", f"{last_pmi:.1f}",
+                                           "buy" if last_pmi >= PMI_NEUTRAL else "warn"))
+    if tw_mc_m1b and tw_mc_m1b.get("dates"):
+        h, s = render_tw_marketcap_m1b_section(tw_mc_m1b)
+        if h:
+            macro_tw_html.append(h)
+            macro_tw_scripts.append(s)
+            r = tw_mc_m1b["ratio"][-1]
+            macro_tw_chips.append(chip("市值/M1B", f"{r:.2f}",
+                                       "warn" if r >= TW_MC_M1B_HIGH else ""))
+
+    if macro_tw_html:
+        tw_parts.append(collapsible(
+            "twmacro", "台股資金面與景氣領先指標",
+            "".join(macro_tw_chips), "".join(macro_tw_html)))
+        scripts.append("".join(macro_tw_scripts))
+
+    if tw_parts:
+        block("台股重要經濟指標")
+        sections_html.extend(tw_parts)
+
+    # --- 美股 -------------------------------------------------------------
+    us_parts = []
+    idx_result = render_us_indices_section(us_indices) if us_indices else None
+    if idx_result:
+        i_html, i_script, i_chips = idx_result
+        if i_html:
+            us_parts.append(collapsible("usidx", "美股三大指數", "".join(i_chips), i_html))
+            scripts.append(i_script)
+
+    # 四組指標。VIX 不走 FRED（用 CBOE 那份逐日的），所以在這裡手動併進
+    # 「房地產與信心」那一組，讓它跟其他指標一起被一眼掃到。
+    group_html = []
+    for group in US_GROUP_CONFIG:
+        members = []
+        for meta in US_FRED_CONFIG:
+            if meta.get("group") != group["key"]:
+                continue
+            data = us_fred.get(meta["id"])
+            if data and data.get("dates"):
+                members.append((meta, data))
+        if group["key"] == "housing_sentiment" and vix and vix.get("dates"):
+            members.append(({"name": "VIX", "unit": "", "freq": "日"}, vix))
+        if members:
+            group_html.append(render_us_indicator_group(group, members))
+        if group["key"] == "growth":
+            group_html.append(render_ism_placeholder())
+
+    if group_html:
+        group_html.append(render_us_overview_table())
+        us_chips = []
+        unrate = us_fred.get("UNRATE")
+        cpi = us_fred.get("CPIAUCSL")
+        if unrate and unrate.get("close"):
+            us_chips.append(chip("失業率", f"{unrate['close'][-1]:.1f}%"))
+        if cpi and len(cpi.get("close", [])) > 12:
+            yoy = (cpi["close"][-1] / cpi["close"][-13] - 1) * 100
+            us_chips.append(chip("CPI年增", f"{yoy:.1f}%"))
+        if vix and vix.get("close"):
+            v_last = vix["close"][-1]
+            us_chips.append(chip("VIX", f"{v_last:.1f}", "warn" if v_last > VIX_WARN_THRESHOLD else ""))
+        us_parts.append(collapsible("usmacro", "美股經濟指標",
+                                    "".join(us_chips), "".join(group_html)))
+
+    # VIX 與密大信心的細部圖表沿用既有區塊，放在美股區塊裡
     if vix or michigan:
-        inner_html, inner_scripts = [], []
-        macro_chips = []
+        inner_html, inner_scripts, macro_chips = [], [], []
         if vix:
             h, s = render_vix_section(vix)
             inner_html.append(h); inner_scripts.append(s)
             v_last = vix["close"][-1]
-            v_tone = "warn" if v_last > VIX_WARN_THRESHOLD else ""
-            macro_chips.append(chip("VIX", f"{v_last:.1f}", v_tone))
+            macro_chips.append(chip("VIX", f"{v_last:.1f}",
+                                    "warn" if v_last > VIX_WARN_THRESHOLD else ""))
             if v_last > VIX_PANIC_THRESHOLD:
                 macro_chips.append('<span class="chip warn solid">高度恐慌</span>')
             elif v_last > VIX_WARN_THRESHOLD:
@@ -1790,19 +2414,25 @@ def build_html(taiex, vix, nikkei, michigan, murata, jp_stocks):
                 macro_chips.append('<span class="chip warn solid">衰退警戒</span>')
 
         has_macro_alert = any("solid" in c for c in macro_chips)
-        sections_html.append(collapsible(
+        us_parts.append(collapsible(
             "macro", "VIX 恐慌指數 ＆ 密大消費者信心",
             "".join(macro_chips), "".join(inner_html), alert=has_macro_alert))
         scripts.append("".join(inner_scripts))
 
+    if us_parts:
+        block("美股重要經濟指標")
+        sections_html.extend(us_parts)
+
+    # --- 日股 -------------------------------------------------------------
+    jp_parts = []
     if nikkei:
         n_html, n_script = render_nikkei_section(nikkei)
-        sections_html.append(n_html)
+        jp_parts.append(n_html)
         scripts.append(n_script)
 
     if murata:
         mu_html, mu_script = render_murata_bb_section(murata)
-        sections_html.append(mu_html)
+        jp_parts.append(mu_html)
         scripts.append(mu_script)
 
     jp_html_list = []
@@ -1813,7 +2443,11 @@ def build_html(taiex, vix, nikkei, michigan, murata, jp_stocks):
         jp_html_list.append(a_html)
         scripts.append(a_script)
     if jp_html_list:
-        sections_html.append(f'<div class="jp-stock-grid">{"".join(jp_html_list)}</div>')
+        jp_parts.append(f'<div class="jp-stock-grid">{"".join(jp_html_list)}</div>')
+
+    if jp_parts:
+        block("日股重要經濟指標 ＆ 日股觀察")
+        sections_html.extend(jp_parts)
 
     html = f"""<!DOCTYPE html>
 <html lang="zh-TW">
@@ -1865,6 +2499,19 @@ def main():
     michigan = load_json("michigan.json")
     murata = load_json("murata_bb.json")
 
+    # 台股新增的兩個總經指標
+    tw_pmi = load_json("tw_pmi.json")
+    tw_mc_m1b = load_json("tw_marketcap_m1b.json")
+
+    # 美股三大指數與 FRED 指標，清單全部讀自 config.json
+    us_indices = [(idx["key"], load_json(f"index_{idx['key']}.json")) for idx in US_INDEX_CONFIG]
+    us_fred = {}
+    for meta in US_FRED_CONFIG:
+        cache = meta.get("cache") or f"fred_{meta['id'].lower()}.json"
+        data = load_json(cache)
+        if data:
+            us_fred[meta["id"]] = data
+
     # 日本焦點個股清單：順序、啟用與否全部依 config.json 設定
     JP_STOCK_KEYS = [s["key"] for s in JP_STOCK_CONFIG]
     if not JP_STOCK_KEYS:
@@ -1880,11 +2527,21 @@ def main():
         jp_stocks.append((key, stock, fin, quarterly, annual))
 
     for name, val in [("vix.json", vix), ("nikkei.json", nikkei), ("michigan.json", michigan),
-                       ("murata_bb.json", murata)]:
+                       ("murata_bb.json", murata), ("tw_pmi.json", tw_pmi),
+                       ("tw_marketcap_m1b.json", tw_mc_m1b)]:
         if val is None:
             print(f"⚠️ 找不到 data/{name}，本次輸出會跳過對應區塊。")
 
-    html = build_html(taiex, vix, nikkei, michigan, murata, jp_stocks)
+    missing_idx = [k for k, v in us_indices if v is None]
+    if missing_idx:
+        print(f"⚠️ 找不到美股指數快取：{', '.join(missing_idx)}，本次報告會跳過這幾條線。")
+    missing_fred = [m["id"] for m in US_FRED_CONFIG if m["id"] not in us_fred]
+    if missing_fred:
+        print(f"⚠️ 找不到 FRED 指標快取：{', '.join(missing_fred)}，本次報告不顯示這幾格。")
+
+    html = build_html(taiex, vix, nikkei, michigan, murata, jp_stocks,
+                      tw_pmi=tw_pmi, tw_mc_m1b=tw_mc_m1b,
+                      us_indices=us_indices, us_fred=us_fred)
 
     if args.local:
         out_dir = os.path.join(BASE_DIR, "local_test")

@@ -111,8 +111,25 @@ JOB = Job()
 # ---------------------------------------------------------------------------
 # 共用：執行子程式並收集輸出
 # ---------------------------------------------------------------------------
+# fetch_market_data.py 用結束碼 2 表示「有來源失敗，但既有快取還在，
+# 報告照樣產得出來」。這跟真正的失敗要分開處理 —— 不然一個端點抽風就會
+# 變成整天沒有報告，那比靜靜失敗更糟。
+EXIT_PARTIAL = 2
+
+
 def run_script(args, timeout=600):
     """執行同目錄下的 python 程式，回傳 (成功與否, 輸出文字)。"""
+    ok, out, _code = run_script_rc(args, timeout=timeout)
+    return ok, out
+
+
+def run_script_rc(args, timeout=600):
+    """
+    跟 run_script 一樣，但多回傳實際的結束碼，讓呼叫端能分辨
+    「完全成功 / 部分失敗但可繼續 / 真的失敗」。
+
+    找不到檔案或逾時這種情況沒有真正的結束碼，統一回 1。
+    """
     cmd = [PYTHON] + args
     try:
         p = subprocess.run(
@@ -121,20 +138,29 @@ def run_script(args, timeout=600):
             env=_child_env(),
         )
         out = (p.stdout or "") + (p.stderr or "")
-        return p.returncode == 0, out.strip() or "（沒有輸出）"
+        return p.returncode == 0, out.strip() or "（沒有輸出）", p.returncode
     except subprocess.TimeoutExpired:
-        return False, f"執行超過 {timeout} 秒被中止，可能是網路太慢或卡住了。"
+        return False, f"執行超過 {timeout} 秒被中止，可能是網路太慢或卡住了。", 1
     except FileNotFoundError:
-        return False, f"找不到程式：{args[0]}　請確認檔案跟 run.py 放在同一層。"
+        return False, f"找不到程式：{args[0]}　請確認檔案跟 run.py 放在同一層。", 1
     except Exception as e:
-        return False, f"執行失敗：{e}"
+        return False, f"執行失敗：{e}", 1
 
 
 def cmd_fetch(include_hidden=False):
     args = ["fetch_market_data.py"]
     if include_hidden:
         args.append("--include-hidden")
-    return run_script(args)
+    ok, out = run_script(args)
+    return ok, out
+
+
+def cmd_fetch_rc(include_hidden=False):
+    """抓取版本的 run_script_rc，給需要分辨部分失敗的呼叫端用。"""
+    args = ["fetch_market_data.py"]
+    if include_hidden:
+        args.append("--include-hidden")
+    return run_script_rc(args)
 
 
 def cmd_report(local=False):
@@ -285,8 +311,9 @@ class PanelHandler(BaseHTTPRequestHandler):
             elif action == "publish":
                 ok, out = cmd_report(local=False)
             elif action == "update":
-                ok, out = cmd_fetch()
-                if ok:
+                ok, out, code = cmd_fetch_rc()
+                if ok or code == EXIT_PARTIAL:
+                    # 部分失敗照樣產報告，只是把警告留在輸出裡讓人看得到
                     ok2, out2 = cmd_report(local=bool(body.get("local", True)))
                     ok, out = ok2, out + "\n\n" + out2
             elif action == "earnings":
@@ -676,13 +703,32 @@ def main(argv):
         return serve(port, open_browser=not no_browser)
 
     if cmd == "update":
-        ok, out = cmd_fetch()
+        ok, out, code = cmd_fetch_rc()
+        print(out)
+        if not ok and code != EXIT_PARTIAL:
+            # 真正的失敗（程式爆掉、逾時、檔案不見）才中斷，不產報告
+            return 1
+        partial = (code == EXIT_PARTIAL)
+        if partial:
+            print("\n⚠️ 有部分資料源這次沒抓到，改用既有快取繼續產生報告。")
+        ok, out = cmd_report(local=False)
         print(out)
         if not ok:
             return 1
-        ok, out = cmd_report(local=False)
-        print(out)
-        return 0 if ok else 1
+        if partial:
+            # 這裡刻意**不**回傳非 0。原因：GitHub Actions 的
+            # 「有變動才提交」那一步預設只在前一步成功時才跑，所以只要這裡回非 0，
+            # 一個端點抽風就會連帶讓當天已經抓到的資料與報告都不被提交 ——
+            # 而市值那種靠逐月累積的歷史檔一旦沒提交就補不回來。
+            #
+            # 結論：結束碼是用來說「這份工作有沒有做完」（報告產出了 = 有），
+            # 不該同時兼任警報器。警報改用 Actions 的 warning 註記，
+            # 在 Actions 摘要上看得到，但不會把當天的成果一起丟掉。
+            warn = "有資料源沒抓到，報告是用既有快取產生的，請看上面的 log 確認是哪幾個。"
+            if os.environ.get("GITHUB_ACTIONS") == "true":
+                print(f"::warning title=有資料源沒抓到::{warn}")
+            print(f"⚠️ {warn}")
+        return 0
 
     if cmd == "fetch":
         ok, out = cmd_fetch(include_hidden="--include-hidden" in rest)
