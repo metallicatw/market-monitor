@@ -29,10 +29,28 @@ jobs:
         with:
           python-version: "3.12"
 
+      # run.py update 的結束碼：0 全部成功／2 有來源失敗但報告仍產出／其他為真失敗。
+      # 2 只發警告不讓 job 紅 —— 官方端點偶爾抽風是常態，每次都紅會讓人開始忽略通知；
+      # 但也絕不能安靜帶過，所以留一個 Actions 警告註記，連續幾天出現就看得出來。
       - name: 更新資料並產生報告
-        run: python run.py update
+        id: update
+        run: |
+          set +e
+          python run.py update
+          code=$?
+          set -e
+          echo "exit_code=$code" >> "$GITHUB_OUTPUT"
+          if [ "$code" -eq 2 ]; then
+            echo "::warning title=有資料源沒抓到::報告已用既有快取產生，請看上面的 log 確認是哪幾個來源。"
+          elif [ "$code" -ne 0 ]; then
+            echo "::error title=更新流程失敗::結束碼 $code，本次不會有新報告。"
+            exit "$code"
+          fi
 
+      # 一定要 always()：部分失敗時當天已經抓到的資料與報告仍然有價值，
+      # 不提交等於把它們丟掉，而市值那種靠逐月累積的歷史檔丟掉就補不回來了。
       - name: 有變動才提交
+        if: always()
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
