@@ -1160,7 +1160,7 @@ if __name__ == "__main__":
     print("   季度財報（營收/獲利/EPS/BVPS）與村田 B/B Ratio 不會自動更新，需人工登錄後才會變動。")
     print("   可執行 `python check_earnings_due.py` 查看目前有哪些個股進入財報公布窗口。")
     print("   ISM 製造業/服務業 PMI 沒有免費官方源（FRED 的 NAPM 已於 2016 年下架，實測回 404），")
-    print("   依既定原則『不行就略過』，報告不放這格數字，只保留燈泡裡的說明文字。")
+    print("   所以它不在 config.json 的 us_fred_series 裡，報告上也沒有這一格。")
 
     # 結束碼刻意分成三種，因為呼叫端（run.py update）需要分辨得出來：
     #   0 = 全部成功
