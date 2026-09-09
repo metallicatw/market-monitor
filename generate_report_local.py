@@ -125,13 +125,17 @@ def updown(diff):
 
 
 def fmt_diff(diff, decimals=2, pct=None):
-    """組出『▲12.34 / ▲0.56%』這種帶三角形的漲跌字串，顏色由呼叫端另外套用。"""
+    """組出『▲ 7.00 (2.72%)』這種帶三角形的漲跌字串，顏色由呼叫端另外套用。
+
+    數字不帶正負號——方向由三角形表示，再加一個 `+`／`-` 等於同一件事講兩次，
+    而且 `▼-30.0` 讀起來像雙重否定。漲跌幅收進括號，跟漲跌點數分開，
+    掃過去的時候不會把兩個數字讀成一個。
+    """
     color, arrow = updown(diff)
-    sign = "+" if diff > 0 else ""
-    txt = f"{arrow}{sign}{diff:,.{decimals}f}"
+    head = f"{arrow} " if arrow else ""
+    txt = f"{head}{abs(diff):,.{decimals}f}"
     if pct is not None:
-        pct_sign = "+" if pct > 0 else ""
-        txt += f" / {pct_sign}{pct}%"
+        txt += f" ({abs(pct):.2f}%)"
     return txt, color
 
 
