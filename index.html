@@ -81,7 +81,7 @@
                 border-radius:50%; background:var(--blk); margin-right:9px; vertical-align:middle; }
   .block-card > .card-head:hover .card-chev { color:var(--blk); }
   .block-card:not(.collapsed) { box-shadow:0 0 0 1px color-mix(in srgb, var(--blk) 28%, transparent) inset; }
-  /* 內層卡片預設是展開的，所以要跟外層拉開層次，否則兩層邊框疊在一起會很吵。 */
+  /* 內層卡片跟外層拉開層次，否則兩層邊框疊在一起會很吵。 */
   .block-card > .card-body > .section-card { background:rgba(11,15,25,0.45); margin-bottom:14px; }
   .block-card > .card-body > .section-card:last-child { margin-bottom:0; }
   .block-card > .card-body > .jp-stock-grid { margin-top:2px; }
@@ -270,7 +270,7 @@
 
          時間戳留著，而且現在是報告的第一行：嵌起來的時候它剛好接在那個分頁的
          標題底下，這正是它該在的位置——「你正在看的這一份是什麼時候的」。 -->
-      <div class="page-subtitle stamp-lead">報告生成時間：2026-09-09 20:47　｜　報告資料基準：2026/09/09</div>
+      <div class="page-subtitle stamp-lead">報告生成時間：2026-09-09 21:08　｜　報告資料基準：2026/09/09</div>
     </div>
     <button class="mode-toggle-btn" id="modeToggleBtn" onclick="toggleViewMode()">🖥️ 電腦版／📱 手機版</button>
   </div>
@@ -2464,17 +2464,10 @@ VIX 是市場對未來 30 天波動的預期，俗稱恐慌指數。它不預測
     if (!collapsed) setTimeout(() => resizeChartsIn(document.body), 40);
   }
 
-  /* 打開報告時的樣子：五個大區塊收合，裡面的卡片是開的。
-     兩層都收的話，要看任何一個數字都得點兩次——那正是折疊裡面再折疊
-     最惱人的地方。這樣安排：第一眼是五條橫幅，點一次就直接看到內容。
-     「全部收合」按鈕也回到這個狀態，而不是把內層一起收掉。 */
+  /* 打開報告時：兩層全部收合。第一眼是五條橫幅，展開哪一塊、
+     那一塊裡面再看哪一張，都由讀者自己決定。 */
   function setInitialCardStates() {
-    document.querySelectorAll('.section-card[data-card]').forEach((card) => {
-      const isBlock = card.classList.contains('block-card');
-      card.classList.toggle('collapsed', isBlock);
-      const head = card.querySelector('.card-head');
-      if (head) head.setAttribute('aria-expanded', String(!isBlock));
-    });
+    setAllCards(true);
   }
 
   /* 每次打開報告都從全部收合開始，先看摘要再決定要展開哪幾張。
@@ -4236,7 +4229,7 @@ VIX 是市場對未來 30 天波動的預期，俗稱恐慌指數。它不預測
   // 也不會連帶讓折疊、縮字、版型切換這些基本功能失效。
   applyViewMode('auto');   // 載入時不強制，交給響應式 CSS
   clearSavedCardStates();
-  setInitialCardStates();  // 五個大區塊收合、內層卡片展開
+  setInitialCardStates();  // 兩層全部收合
   requestAnimationFrame(function () { requestAnimationFrame(fitAllCardHeads); });
   watchCardHeads();
   if (document.fonts && document.fonts.ready) {
