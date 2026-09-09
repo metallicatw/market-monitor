@@ -211,7 +211,7 @@ CSS = """
                 border-radius:50%; background:var(--blk); margin-right:9px; vertical-align:middle; }
   .block-card > .card-head:hover .card-chev { color:var(--blk); }
   .block-card:not(.collapsed) { box-shadow:0 0 0 1px color-mix(in srgb, var(--blk) 28%, transparent) inset; }
-  /* 內層卡片預設是展開的，所以要跟外層拉開層次，否則兩層邊框疊在一起會很吵。 */
+  /* 內層卡片跟外層拉開層次，否則兩層邊框疊在一起會很吵。 */
   .block-card > .card-body > .section-card { background:rgba(11,15,25,0.45); margin-bottom:14px; }
   .block-card > .card-body > .section-card:last-child { margin-bottom:0; }
   .block-card > .card-body > .jp-stock-grid { margin-top:2px; }
@@ -587,17 +587,10 @@ SHARED_JS = """
     if (!collapsed) setTimeout(() => resizeChartsIn(document.body), 40);
   }
 
-  /* 打開報告時的樣子：五個大區塊收合，裡面的卡片是開的。
-     兩層都收的話，要看任何一個數字都得點兩次——那正是折疊裡面再折疊
-     最惱人的地方。這樣安排：第一眼是五條橫幅，點一次就直接看到內容。
-     「全部收合」按鈕也回到這個狀態，而不是把內層一起收掉。 */
+  /* 打開報告時：兩層全部收合。第一眼是五條橫幅，展開哪一塊、
+     那一塊裡面再看哪一張，都由讀者自己決定。 */
   function setInitialCardStates() {
-    document.querySelectorAll('.section-card[data-card]').forEach((card) => {
-      const isBlock = card.classList.contains('block-card');
-      card.classList.toggle('collapsed', isBlock);
-      const head = card.querySelector('.card-head');
-      if (head) head.setAttribute('aria-expanded', String(!isBlock));
-    });
+    setAllCards(true);
   }
 
   /* 每次打開報告都從全部收合開始，先看摘要再決定要展開哪幾張。
@@ -1378,11 +1371,10 @@ BLOCK_TONES = {
 
 
 def block_card(card_id, title, summary_html, body_html):
-    """一個大區塊。外層收合、內層展開 —— 這是刻意的。
+    """一個大區塊。兩層都預設收合。
 
-    折疊裡面再折疊，使用者要點兩次才看得到任何東西；全部攤平又會變成一頁捲不完。
-    所以只有這五個橫幅預設收合，點開之後裡面的卡片是已經開好的，一次點擊就到內容。
-    （個別卡片仍然可以自己收起來，只是不預設收。）
+    打開報告看到的是五條橫幅，顏色是用來認位置的——捲到一半也知道自己在哪一塊。
+    展開哪一塊、那一塊裡面再看哪一張，都由讀者自己決定；一次只攤開真正要看的東西。
     """
     tone = BLOCK_TONES.get(card_id, "#64748b")
     return f"""
@@ -2345,8 +2337,8 @@ def build_html(taiex, vix, nikkei, michigan, murata, jp_stocks,
                tw_pmi=None, tw_mc_m1b=None, us_indices=None, us_fred=None):
     """五個大區塊，每一塊是一張可收合的卡片，各有自己的色系。
 
-    收合的是**外層**：打開報告看到五條橫幅，點一次就進到內容——裡面的卡片
-    是已經開好的。折疊裡面再折疊會讓人點兩次才看得到東西，那比一頁捲不完更煩。
+    兩層都預設收合：外層是五條橫幅，展開後裡面的卡片也還是收著的，
+    要看哪一張再點哪一張。一次只攤開真正要看的東西。
     """
     scripts = []
     blocks = []
@@ -2533,7 +2525,7 @@ def build_html(taiex, vix, nikkei, michigan, murata, jp_stocks,
   // 也不會連帶讓折疊、縮字、版型切換這些基本功能失效。
   applyViewMode('auto');   // 載入時不強制，交給響應式 CSS
   clearSavedCardStates();
-  setInitialCardStates();  // 五個大區塊收合、內層卡片展開
+  setInitialCardStates();  // 兩層全部收合
   requestAnimationFrame(function () {{ requestAnimationFrame(fitAllCardHeads); }});
   watchCardHeads();
   if (document.fonts && document.fonts.ready) {{
