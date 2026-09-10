@@ -61,8 +61,10 @@ MICHIGAN_WARN_THRESHOLD = _TH["michigan_warn"]      # < 此值 => 衰退警戒
 MURATA_BB_WARN_THRESHOLD = _TH["murata_bb_warn"]    # > 此值 => 反指標聖杯警示
 PER_BUY_DEFAULT = _TH["per_buy_default"]            # 本益比 < 此值 => 可以考慮布局（個股可各自覆寫）
 PMI_NEUTRAL = _TH["pmi_neutral"]                    # PMI/NMI 榮枯線（50）
-TW_MC_M1B_HIGH = _TH["tw_marketcap_m1b_high"]       # 市值貨幣比 > 此值 => 資金相對吃緊
-TW_MC_M1B_LOW = _TH["tw_marketcap_m1b_low"]         # 市值貨幣比 < 此值 => 資金相對寬鬆
+TW_MC_M1B_HIGH = _TH["tw_marketcap_m1b_high"]       # 備援：歷史不足時，> 此值 => 吃緊
+TW_MC_M1B_LOW = _TH["tw_marketcap_m1b_low"]         # 備援：歷史不足時，< 此值 => 寬鬆
+TW_MC_M1B_PCT_HIGH = _TH["tw_marketcap_m1b_pct_high"]  # 主要判準：≥ 第 N 百分位 => 吃緊
+TW_MC_M1B_PCT_LOW = _TH["tw_marketcap_m1b_pct_low"]    # 主要判準：≤ 第 N 百分位 => 寬鬆
 
 US_INDEX_CONFIG = load_us_indices()
 US_FRED_CONFIG = load_fred_series()
@@ -2014,13 +2016,50 @@ def render_tw_marketcap_m1b_section(ratio_data):
     diff_txt, chg_color = fmt_diff(diff, 2, mc_pct)
     behind = ratio_data.get("months_behind")
 
-    high, low = TW_MC_M1B_HIGH, TW_MC_M1B_LOW
-    if last >= high:
+    # 分區用**百分位**，不用固定的絕對值。
+    #
+    # 這個數列有結構性的上升趨勢：2016 年中位 1.86、2021 年 2.43、2024 年 2.81、
+    # 2026 年 4.56。原本那組固定門檻（>4.5 吃緊、<2.5 寬鬆）是只有 5 個月歷史時
+    # 訂的，補完 126 個月之後回頭看，2.5 以下涵蓋 77% 的歷史——等於過去四分之三
+    # 的月份都掛「資金相對寬鬆」，而那個標籤也就不再說明任何事。
+    #
+    # 「看現在落在自己歷史區間的哪裡」本來就是這個指標說明文字寫的用法，只是
+    # 以前沒有歷史可以兌現。現在有了，就讓它真的照那句話判斷。
+    #
+    # 絕對值留著當備援：歷史不足 24 個月（例如從零重建資料）時百分位沒有意義。
+    percentile = None
+    if len(ratios) >= 24:
+        percentile = round(sum(1 for r in ratios if r < last) / len(ratios) * 100)
+        tight = percentile >= TW_MC_M1B_PCT_HIGH
+        loose = percentile <= TW_MC_M1B_PCT_LOW
+    else:
+        tight = last >= TW_MC_M1B_HIGH
+        loose = last <= TW_MC_M1B_LOW
+    if tight:
         zone_label, zone_color = "資金相對吃緊", "#ef4444"
-    elif last <= low:
+    elif loose:
         zone_label, zone_color = "資金相對寬鬆", "#22d3ee"
     else:
         zone_label, zone_color = "區間中段", "#94a3b8"
+
+    # 把「這個標籤是怎麼判的」寫在旁邊。門檻換算成當下的絕對值一起印出來，
+    # 是因為「第 80 百分位」對讀的人來說不是一個可以拿去比對的數字。
+    if percentile is not None:
+        ordered = sorted(ratios)
+
+        def at(p: int) -> float:
+            i = (len(ordered) - 1) * p / 100
+            lo, hi = int(i), min(int(i) + 1, len(ordered) - 1)
+            return ordered[lo] + (ordered[hi] - ordered[lo]) * (i - lo)
+
+        low = round(at(TW_MC_M1B_PCT_LOW), 2)
+        high = round(at(TW_MC_M1B_PCT_HIGH), 2)
+        zone_basis = (f"分區依歷史百分位："
+                      f"≤P{TW_MC_M1B_PCT_LOW}（約 {low:.2f}）寬鬆、"
+                      f"≥P{TW_MC_M1B_PCT_HIGH}（約 {high:.2f}）吃緊")
+    else:
+        low, high = TW_MC_M1B_LOW, TW_MC_M1B_HIGH
+        zone_basis = f"參考區間（歷史不足，暫用固定值）：&lt;{low} 寬鬆、&gt;{high} 吃緊"
 
     cap_t = ratio_data["market_cap"][-1] / 1e6
     m1b_t = ratio_data["m1b"][-1] / 1e6
@@ -2029,9 +2068,7 @@ def render_tw_marketcap_m1b_section(ratio_data):
     # 看今天比昨天高還是低」。在只有 5 個月歷史的時候那句話沒辦法兌現；現在有
     # 十年了，就把它算出來放在旁邊——這是補歷史真正買到的東西。
     span_txt = ""
-    if len(ratios) >= 24:
-        below = sum(1 for r in ratios if r < last)
-        percentile = round(below / len(ratios) * 100)
+    if percentile is not None:
         years = len(ratios) / 12
         span_txt = (f"｜歷史位置：{years:.0f} 年區間 {min(ratios):.2f}～{max(ratios):.2f} 的"
                     f"<b style=\"color:{zone_color};\">第 {percentile} 百分位</b>")
@@ -2049,7 +2086,7 @@ def render_tw_marketcap_m1b_section(ratio_data):
     <div class="stat-sub">
       {vintage_note(dates[-1], behind, freq="月")}
       ｜總市值 {cap_t:,.1f} 兆元 ÷ M1B {m1b_t:,.1f} 兆元
-      ｜參考區間：&lt;{low} 寬鬆、&gt;{high} 吃緊
+      ｜{zone_basis}
       {span_txt}
     </div>
   </div>
