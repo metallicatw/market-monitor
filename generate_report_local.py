@@ -439,8 +439,11 @@ SHARED_JS = """
   function filterByRange(dates, tf) {
     const lastDate = new Date(dates[dates.length - 1] + 'T00:00:00');
     let fromDate;
-    const daysMap = { '1M':30, '3M':90, '6M':182, '1Y':365, '3Y':365*3, '5Y':365*5 };
-    if (tf === 'YTD') {
+    const daysMap = { '1M':30, '3M':90, '6M':182, '1Y':365, '3Y':365*3,
+                      '5Y':365*5, '10Y':365*10, '20Y':365*20 };
+    if (tf === 'ALL') {
+      return 0;                       // 全部：不裁切
+    } else if (tf === 'YTD') {
       fromDate = new Date(lastDate.getFullYear(), 0, 1);
     } else {
       fromDate = new Date(lastDate);
@@ -1041,6 +1044,8 @@ def render_michigan_section(michigan):
     <button class="tf-btn" onclick="simpleSetRange('michigan','1Y',this)">1Y</button>
     <button class="tf-btn" onclick="simpleSetRange('michigan','3Y',this)">3Y</button>
     <button class="tf-btn active" onclick="simpleSetRange('michigan','5Y',this)">5Y</button>
+    <button class="tf-btn" onclick="simpleSetRange('michigan','10Y',this)">10Y</button>
+    <button class="tf-btn" onclick="simpleSetRange('michigan','ALL',this)">全部</button>
   </div>
   <div class="custom-legend" id="michiganLegend"></div>
   <div class="chart-container short"><canvas id="michiganChart"></canvas></div>
@@ -1077,7 +1082,12 @@ def render_michigan_section(michigan):
         {{
           label: '密大消費者信心指數', data: miClose, borderColor: 'rgb(168,85,247)',
           backgroundColor: (c) => gradientFill(c, '168,85,247'),
-          fill: true, tension: 0, pointRadius: 2, pointHoverRadius: 5, borderWidth: 2, order: 1
+          fill: true, tension: 0,
+          // 點半徑跟著「目前顯示幾個點」走。視窗放寬到 25 年之後，固定 2px
+          // 在「全部」那一檔會把線壓成一條由圓點組成的帶子。
+          pointRadius: (ctx) => (ctx.chart.data.labels.length > 90 ? 0
+                                 : (ctx.chart.data.labels.length > 36 ? 1.5 : 2)),
+          pointHoverRadius: 5, borderWidth: 2, order: 1
         }},{band_js}
       ]
     }},
@@ -1929,6 +1939,8 @@ def render_tw_pmi_section(pmi):
     <button class="tf-btn" onclick="simpleSetRange('twpmi','1Y',this)">1Y</button>
     <button class="tf-btn" onclick="simpleSetRange('twpmi','3Y',this)">3Y</button>
     <button class="tf-btn active" onclick="simpleSetRange('twpmi','5Y',this)">5Y</button>
+    <button class="tf-btn" onclick="simpleSetRange('twpmi','10Y',this)">10Y</button>
+    <button class="tf-btn" onclick="simpleSetRange('twpmi','ALL',this)">全部</button>
   </div>
   <div class="custom-legend" id="twPmiLegend"></div>
   <div class="chart-container short"><canvas id="twPmiChart"></canvas></div>
@@ -1941,6 +1953,10 @@ def render_tw_pmi_section(pmi):
   const twPmiDates = {json.dumps(dates, ensure_ascii=False)};
   const twPmiVals = {json.dumps(pmi_vals, ensure_ascii=False)};
   const twNmiVals = {json.dumps(nmi_vals, ensure_ascii=False)};
+  // 點半徑跟著目前顯示幾個點走。視窗放寬到 170 個月之後，固定 2px 在
+  // 「全部」那一檔會把兩條線壓成兩條由圓點組成的帶子。
+  const PMI_PT = (ctx) => (ctx.chart.data.labels.length > 90 ? 0
+                           : (ctx.chart.data.labels.length > 36 ? 1.5 : 2));
   const twPmiChart = new Chart(document.getElementById('twPmiChart'), {{
     type: 'line',
     data: {{
@@ -1948,9 +1964,9 @@ def render_tw_pmi_section(pmi):
       datasets: [
         {{ label: '製造業 PMI', data: twPmiVals, borderColor: 'rgb(34,211,238)',
            backgroundColor: (c) => gradientFill(c, '34,211,238'),
-           fill: true, tension: 0, pointRadius: 2, pointHoverRadius: 5, borderWidth: 2, order: 1, spanGaps: true }},
+           fill: true, tension: 0, pointRadius: PMI_PT, pointHoverRadius: 5, borderWidth: 2, order: 1, spanGaps: true }},
         {{ label: '非製造業 NMI', data: twNmiVals, borderColor: 'rgb(168,85,247)',
-           fill: false, tension: 0, pointRadius: 2, pointHoverRadius: 5, borderWidth: 2, order: 2, spanGaps: true }},
+           fill: false, tension: 0, pointRadius: PMI_PT, pointHoverRadius: 5, borderWidth: 2, order: 2, spanGaps: true }},
         {{ label: '{PMI_NEUTRAL} 榮枯線', data: twPmiDates.map(() => {PMI_NEUTRAL}), borderColor: '#f59e0b',
            borderDash: [5,4], borderWidth: 1.2, pointRadius: 0, fill: false, order: 3 }}
       ]

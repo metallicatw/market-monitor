@@ -222,18 +222,46 @@ def load_fred_series(include_disabled=False):
                 print(f"⚠️ us_fred_series 出現重複的 id「{sid}」，只保留第一筆。")
                 continue
             seen.add(sid)
+            freq = item.get("freq") or ""
             items.append({
                 "id": sid,
                 "name": item.get("name") or sid,
                 "group": item.get("group") or "other",
                 "unit": item.get("unit") or "",
-                "freq": item.get("freq") or "",
+                "freq": freq,
                 "cache": item.get("cache"),
+                "years_back": _fred_years_back(item, freq),
                 "enabled": bool(item.get("enabled", True)),
             })
+    # 走內建預設清單那條路的時候，上面那個迴圈沒跑過，這裡補上。
+    for x in items:
+        if not x.get("years_back"):
+            x["years_back"] = _fred_years_back(x, x.get("freq", ""))
     if include_disabled:
         return items
     return [x for x in items if x.get("enabled", True)]
+
+
+#: 每個頻率預設抓幾年。FRED 的 CSV 端點給完整歷史、不收錢也不需要 key，所以
+#: 視窗短不是為了省成本，只是預設值一直沒有人回頭調過。
+#:
+#: 月頻與季頻放 25 年：這一組指標的用途是「認出現在在循環的哪個位置」，而一個
+#: 完整的景氣循環動輒七到十年。5 年連一輪都蓋不住，於是每一條線看起來都像在
+#: 單調上升——那不是資料的性質，是視窗太短造成的錯覺。
+#:
+#: 週頻（初請失業金）放 15 年：它一年 52 個點，25 年會讓檔案胖到 30 KB 以上，
+#: 圖上也會糊成一團。15 年已經蓋得住 2008 與 2020 兩次尖峰，而那正是這條線
+#: 最有參考價值的兩段。
+_FRED_YEARS_BY_FREQ = {"週": 15, "月": 25, "季": 25}
+_FRED_YEARS_DEFAULT = 25
+
+
+def _fred_years_back(item, freq):
+    """單筆序列要抓幾年：設定裡寫死的優先，否則依頻率取預設。"""
+    raw = item.get("years_back")
+    if isinstance(raw, (int, float)) and raw > 0:
+        return int(raw)
+    return _FRED_YEARS_BY_FREQ.get(freq, _FRED_YEARS_DEFAULT)
 
 
 def load_us_indicator_groups():

@@ -1,0 +1,71 @@
+name: CI
+
+# 這個 repo 的兩條排程都直接 commit 到 main：「每日更新報告」寫 data/*.json 與
+# index.html，「管理追蹤名單」寫 config.json。中間沒有 PR、沒有審查、沒有測試。
+#
+# 而 tests/test_parsers_offline.py 裡有十三個測試，每一個都拿
+# reference/samples/ 裡真的打過端點拿回來的原始位元組去驗 parser——單位對不對、
+# 量級對不對、市值兩個來源加起來跟 t49 對不對得上。那份東西一次都沒有在 CI
+# 跑過。parser 改壞的話，第一個知道的是隔天早上的報告，而壞掉的數字已經
+# commit 進 data/ 了。
+#
+# 這條 workflow 就是把那道門補上。它完全不打網路（測試全部走 fixture），
+# 所以跑完只要幾秒。
+
+on:
+  push:
+    branches: [main]
+    # 只有資料檔變動的那些 commit（排程每天推的）不需要重跑測試——
+    # 程式沒變，測試結果不會變。
+    paths-ignore:
+      - "data/**"
+      - "index.html"
+      - "**.md"
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      # 這個 repo 刻意零第三方依賴（連櫃買那份月報都是走 ODS 用 stdlib 解，
+      # 就是為了不引 xlrd）。所以這裡沒有 pip install——如果哪天這一步變成
+      # 必要的，那本身就是一個該被討論的決定。
+      - name: 離線 parser 測試
+        run: python tests/test_parsers_offline.py
+
+      # 報告產生器有 1,900 行 f-string。語法錯誤在排程上是「今天沒有報告」，
+      # 在這裡是三秒鐘就看得到的紅字。
+      - name: 語法檢查
+        run: |
+          python -m compileall -q \
+            fetch_market_data.py generate_report_local.py config_loader.py \
+            explanations.py run.py manage_stock.py
+
+      # 設定檔壞掉的症狀是「報告少了幾格但沒有人知道」，所以順手驗一下它讀得動。
+      - name: 設定檔讀得動
+        run: |
+          python -c "
+          import config_loader as c
+          fred = c.load_fred_series()
+          idx = c.load_us_indices()
+          groups = c.load_us_indicator_groups()
+          assert fred and idx and groups, '設定檔讀出空的'
+          missing = [s['id'] for s in fred if not s.get('years_back')]
+          assert not missing, f'這些序列沒有 years_back：{missing}'
+          print(f'設定 ok：FRED {len(fred)} 檔、指數 {len(idx)} 檔、分組 {len(groups)} 組')
+          "

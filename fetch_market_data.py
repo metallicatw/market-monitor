@@ -915,7 +915,7 @@ def fetch_tw_otc_marketcap():
     return out or None
 
 
-def fetch_tw_pmi(years_back=5, incremental=True):
+def fetch_tw_pmi(years_back=20, incremental=True):
     """
     抓臺灣製造業採購經理人指數 (PMI) 與非製造業經理人指數 (NMI)。
     來源: 國家發展委員會，data.gov.tw nid=6100（政府資料開放授權條款第1版）。
@@ -924,6 +924,11 @@ def fetch_tw_pmi(years_back=5, incremental=True):
     早期只有 PMI，NMI 欄位是 "-"（不是 0，也不是空字串）—— 這裡把它當缺值跳過。
 
     回傳 {"dates": [...], "pmi": [...], "nmi": [...]}，日期為該月 1 號。
+
+    years_back 預設 20 年（來源實際只有 201207 起共 170 個月，所以等於全拿）。
+    原本是 5 年——但 PMI 看的是景氣循環，59 個月連兩個完整循環都不到，而且
+    「50 榮枯線」的意義本來就要放在多年的擴張收縮交替裡才讀得出來。來源那份
+    CSV 一次就給全部，截短它沒有省到任何一次請求。
     """
     existing = _load_cache("tw_pmi.json") if incremental else None
 
@@ -1424,8 +1429,12 @@ if __name__ == "__main__":
     for idx in load_us_indices():
         _run(idx["name"], fetch_index, idx["symbol"], idx["key"], name=idx["name"], years_back=5)
     for series in load_fred_series():
+        # 視窗長度由 config_loader 依頻率決定（月／季 25 年、週 15 年），
+        # 設定檔裡也可以逐筆用 years_back 覆寫。原本這裡寫死 5——對一組拿來
+        # 判斷「現在在景氣循環哪個位置」的指標來說，那連一輪都蓋不住。
         _run(f"{series['name']}({series['id']})", fetch_fred_series,
-             series["id"], name=series["name"], years_back=5,
+             series["id"], name=series["name"],
+             years_back=series.get("years_back", 25),
              cache_name=series.get("cache"))
 
     print("=" * 60)
