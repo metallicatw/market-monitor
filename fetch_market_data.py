@@ -68,6 +68,17 @@ def _http_get(url, timeout=20):
         return resp.read()
 
 
+def _http_post(url, data, timeout=30):
+    """表單 POST。獨立成一支是為了讓離線測試可以像 `_http_get` 一樣換掉它——
+    直接呼叫 `urllib.request.urlopen` 的話，那一段就永遠測不到。"""
+    req = urllib.request.Request(
+        url, data=data,
+        headers={**HEADERS, "Content-Type": "application/x-www-form-urlencoded"},
+    )
+    with urllib.request.urlopen(req, timeout=timeout, context=SSL_CONTEXT) as resp:
+        return resp.read()
+
+
 def _fetch_json_with_retry(url, max_retries=3, backoff_sec=3):
     """
     帶重試機制的 JSON 抓取。TWSE 官方 API 在短時間內被打太多次時，
@@ -737,6 +748,173 @@ def _roc_period_to_iso(text):
     return f"{year:04d}-{month:02d}-01"
 
 
+def _roc_month_to_iso(text):
+    """櫃買的月份格式 "115年8月 Aug  '26" -> '2026-08-01'。
+
+    只認「N年M月」這個前綴；純年度列（"104年"、"Year"）回 None，因為那個檔
+    1989～2015 是年列、2016 起才是月列，兩種混在同一張表裡。
+    """
+    import re
+
+    m = re.match(r"\s*(\d{2,3})\s*年\s*(\d{1,2})\s*月", text or "")
+    if not m:
+        return None
+    year, month = int(m.group(1)) + 1911, int(m.group(2))
+    if not (1900 <= year <= 2999 and 1 <= month <= 12):
+        return None
+    return f"{year:04d}-{month:02d}-01"
+
+
+def _ods_rows(raw):
+    """把一份 .ods（OpenDocument 試算表）解成 list[list[str]]。
+
+    為什麼是 ODS 不是 XLS：櫃買同一份月報有 `.xls` 與 `&isOds=Y` 兩種。xls 是
+    BIFF8，要 `xlrd`——而這個 repo 到目前為止**一個第三方套件都沒有**，排程
+    也因此不需要 pip install。ODS 是 zip + XML，`zipfile` 加 `ElementTree`
+    就解得開，維持零依賴。
+
+    `number-columns-repeated` 是 ODS 壓縮空白格的方式，一格可能宣告重複幾千次，
+    所以要設上限，不然一列會展開成一個巨大的 list。
+    """
+    import xml.etree.ElementTree as ET
+    import zipfile
+
+    ns = {
+        "table": "urn:oasis:names:tc:opendocument:xmlns:table:1.0",
+        "text": "urn:oasis:names:tc:opendocument:xmlns:text:1.0",
+        "office": "urn:oasis:names:tc:opendocument:xmlns:office:1.0",
+    }
+    with zipfile.ZipFile(io.BytesIO(raw)) as z:
+        root = ET.fromstring(z.read("content.xml"))
+
+    def cell_text(cell):
+        # office:value 是機器可讀的原始數字；text:p 是顯示用的（會有千分位、
+        # 也可能是 "1,234"）。有原始值就用原始值。
+        val = cell.get("{%s}value" % ns["office"])
+        if val is not None:
+            return val
+        return "".join("".join(p.itertext()) for p in cell.findall("text:p", ns))
+
+    table = root.find(".//table:table", ns)
+    if table is None:
+        return []
+    rows = []
+    for row in table.findall("table:table-row", ns):
+        cells = []
+        for cell in row.findall("table:table-cell", ns):
+            repeat = int(cell.get("{%s}number-columns-repeated" % ns["table"], 1))
+            cells.extend([cell_text(cell)] * min(repeat, 32))
+        if any(c.strip() for c in cells):
+            rows.append(cells)
+    return rows
+
+
+CBC_LISTED_MARKETCAP_URL = (
+    "https://www.cbc.gov.tw/public/data/OpenData/"
+    "%E7%B6%93%E7%A0%94%E8%99%95/EG27M01.csv"
+)
+CBC_LISTED_MARKETCAP_COL = "上市股票-總市值-原始值"
+TPEX_MONTHLY_INDEX_URL = "https://www.tpex.org.tw/www/zh-tw/statistics/monthlyRptMkt"
+TPEX_OTC_MARKETCAP_COL = "上櫃股票市值(百萬元)"
+
+
+def fetch_tw_listed_marketcap():
+    """上市總市值（月），中央銀行經研處 OpenData `EG27M01.csv`。
+
+    回傳 {ISO月份: 百萬元}；失敗回 None（呼叫端自己決定要不要沿用快取）。
+
+    這支的價值在於它**不是滾動視窗**：一個檔案就給 1987M05 起的 471 個月，
+    而且只落後一到兩個月。金管會那支 t49 只給最近五個月、落後四個月——歷史
+    要靠本地一個月一個月累積，一次抓壞就永遠補不回來。
+
+    ⚠️ 央行的站台第一次連線常常被 reset，一定要重試（`_http_get_with_retry`）。
+    """
+    try:
+        raw = _http_get_with_retry(
+            CBC_LISTED_MARKETCAP_URL, label="上市總市值（央行）"
+        ).decode("utf-8-sig")
+    except Exception as e:
+        print(f"⚠️ 上市總市值（央行）抓取失敗：{e}")
+        return None
+
+    reader = csv.DictReader(io.StringIO(raw))
+    if not reader.fieldnames or CBC_LISTED_MARKETCAP_COL not in reader.fieldnames:
+        print(f"⚠️ 上市總市值（央行）缺少「{CBC_LISTED_MARKETCAP_COL}」欄位。"
+              f"實際欄位：{reader.fieldnames}")
+        return None
+
+    out = {}
+    for row in reader:
+        iso = _roc_period_to_iso(row.get("月"))
+        if not iso:
+            continue
+        try:
+            out[iso] = float((row.get(CBC_LISTED_MARKETCAP_COL) or "").replace(",", "").strip())
+        except ValueError:
+            continue
+    return out or None
+
+
+def fetch_tw_otc_marketcap():
+    """上櫃總市值（月），櫃買中心「歷年上櫃股票統計」。
+
+    回傳 {ISO月份: 百萬元}；失敗回 None。
+
+    兩步：先 POST `monthlyRptMkt`（`type=2`）拿當期的下載連結，再抓那份 ODS。
+    **doc id 每個月會換，不能寫死**——所以索引那一步是必要的，不是多餘的。
+
+    這個檔 1989～2015 是年列、2016-01 起才是月列，兩種混在同一張表；
+    `_roc_month_to_iso` 只認「N年M月」，年列自然被跳過。
+
+    （櫃買的 startDate／endDate 過濾在伺服器端是壞的，六種格式都回同一份。
+    不影響：最新那個檔本身就含 2016 年至今的完整月序列。）
+    """
+    try:
+        index = json.loads(_http_post(TPEX_MONTHLY_INDEX_URL, b"type=2").decode("utf-8"))
+        rows = index["tables"][0]["data"]
+        # 每一列是 [民國年月, xls 路徑, ods 路徑]；第一列是最新的那個月。
+        ods_path = rows[0][2]
+    except Exception as e:
+        print(f"⚠️ 上櫃總市值（櫃買）索引抓取失敗：{e}")
+        return None
+
+    try:
+        raw = _http_get_with_retry(
+            "https://www.tpex.org.tw/www" + ods_path, label="上櫃總市值（櫃買）"
+        )
+        table = _ods_rows(raw)
+    except Exception as e:
+        print(f"⚠️ 上櫃總市值（櫃買）ODS 抓取或解析失敗：{e}")
+        return None
+
+    # 表頭那一列在前幾列，欄位位置不保證固定，所以用欄名找而不是寫死索引。
+    col = None
+    for row in table[:10]:
+        for i, cell in enumerate(row):
+            if cell.replace(" ", "").strip() == TPEX_OTC_MARKETCAP_COL.replace(" ", ""):
+                col = i
+                break
+        if col is not None:
+            break
+    if col is None:
+        print(f"⚠️ 上櫃總市值（櫃買）找不到「{TPEX_OTC_MARKETCAP_COL}」欄。"
+              f"前幾列：{table[:4]}")
+        return None
+
+    out = {}
+    for row in table:
+        if len(row) <= col:
+            continue
+        iso = _roc_month_to_iso(row[0])
+        if not iso:
+            continue          # 年列（1989～2015）跳過，只要月列
+        try:
+            out[iso] = float((row[col] or "").replace(",", "").strip())
+        except ValueError:
+            continue
+    return out or None
+
+
 def fetch_tw_pmi(years_back=5, incremental=True):
     """
     抓臺灣製造業採購經理人指數 (PMI) 與非製造業經理人指數 (NMI)。
@@ -819,15 +997,17 @@ def fetch_tw_pmi(years_back=5, incremental=True):
 CBC_M1B_CSV_URL = "https://www.cbc.gov.tw/public/data/OpenData/%E7%B6%93%E7%A0%94%E8%99%95/EF15M01.csv"
 
 
-def fetch_tw_m1b(years_back=10, incremental=True):
+def fetch_tw_m1b(years_back=11, incremental=True):
     """
     抓 M1B 貨幣總計數（日平均數，月資料）。
     來源: 中央銀行開放資料 EF15M01.csv，1987M05 起。
 
     單位：新臺幣百萬元。回傳 {"dates": [...], "m1b": [...], "yoy": [...]}。
 
-    years_back 預設 10 年（比其他圖表長），因為市值貨幣比是拿來看「相對於
-    歷史區間的高低」，只有 5 年會看不出循環位置。
+    years_back 預設 11 年。市值貨幣比是拿來看「相對於歷史區間的高低」，所以
+    分母的視窗不該比分子短——分子（上市＋上櫃總市值）受限於櫃買的月資料，
+    從 2016-01 開始。11 年剛好蓋得住它，多的部分自然被交集切掉。
+    來源本身有 1987M05 起的完整歷史，哪天分子往前延伸了，這裡跟著加就好。
     """
     existing = _load_cache("tw_m1b.json") if incremental else None
 
@@ -925,55 +1105,110 @@ def fetch_tw_m1b(years_back=10, incremental=True):
 FSC_MARKET_CAP_URL = "https://stat.fsc.gov.tw/api/v1/public/datasets/11138/export"
 
 
-def fetch_tw_market_cap(incremental=True):
+def _fetch_fsc_market_cap():
+    """t49 的上市＋上櫃合計市值，{ISO月份: (百萬元, 家數)}。抓不到回 None。
+
+    這一支從「唯一的來源」降級成「對帳用的第二意見」。它只給最近五個月、
+    落後四個月，但它是**獨立編製**的：央行＋櫃買加起來如果跟它對得上，
+    那兩支的單位、口徑（期末而非月平均）、以及「一個只含上市、一個只含上櫃」
+    這件事就同時被證明了。對不上就出聲——那是真的有東西變了。
     """
-    抓上市＋上櫃總市值。
-    來源: 金管會證券期貨局「臺灣證券市場綜覽t49」，data.gov.tw nid=11138。
-
-    CSV 欄位「市值_十億元」＝上市＋上櫃合計，單位新臺幣十億元；「年月」是 YYYYMM。
-    這裡統一換算成 **百萬元** 存檔，好跟 M1B（百萬元）直接相除。
-
-    回傳 {"dates": [...], "market_cap": [...(百萬元)], "listed_count": [...]}。
-    """
-    existing = _load_cache("tw_market_cap.json") if incremental else None
-
     try:
-        raw = _http_get_with_retry(FSC_MARKET_CAP_URL, label="上市櫃總市值").decode("utf-8-sig")
+        raw = _http_get_with_retry(FSC_MARKET_CAP_URL, label="上市櫃總市值（t49 對帳）").decode("utf-8-sig")
     except Exception as e:
-        print(f"⚠️ 上市櫃總市值 重試 3 次仍失敗，保留既有快取不動（不覆蓋、不補假資料）: {e}")
-        SOFT_FAILURES.append("上市櫃總市值（抓取失敗，沿用既有快取）")
-        return existing
-
+        print(f"　　（t49 對帳來源抓不到，跳過對帳：{e}）")
+        return None
     reader = csv.DictReader(io.StringIO(raw))
     if not reader.fieldnames or "市值_十億元" not in reader.fieldnames:
-        print(f"⚠️ 上市櫃總市值 回應缺少「市值_十億元」欄位，保留既有快取不動。"
-              f"實際欄位：{reader.fieldnames}")
-        SOFT_FAILURES.append("上市櫃總市值（欄位變了，沿用既有快取）")
-        return existing
-
-    out_dates, out_cap, out_count = [], [], []
+        print(f"　　（t49 欄位變了，跳過對帳。實際欄位：{reader.fieldnames}）")
+        return None
+    out = {}
     for row in reader:
         iso = _yyyymm_to_iso(row.get("年月"))
         if not iso:
             continue
         try:
-            cap_billion = float((row.get("市值_十億元") or "").replace(",", "").strip())
+            cap = float((row.get("市值_十億元") or "").replace(",", "").strip()) * 1000.0
         except ValueError:
             continue
         try:
             count = int(float((row.get("上市櫃家數") or "").replace(",", "").strip()))
         except ValueError:
             count = None
-        out_dates.append(iso)
-        out_cap.append(cap_billion * 1000.0)  # 十億元 -> 百萬元
-        out_count.append(count)
+        out[iso] = (cap, count)
+    return out or None
 
-    if not out_dates:
-        print("⚠️ 上市櫃總市值 解析不到任何資料列，保留既有快取不動。")
-        SOFT_FAILURES.append("上市櫃總市值（解析不到資料，沿用既有快取）")
+
+def fetch_tw_market_cap(incremental=True):
+    """上市＋上櫃總市值（月），單位新臺幣百萬元。
+
+    **三個來源，兩種角色。**
+
+    主來源（歷史）：
+      上市　中央銀行經研處 `EG27M01.csv`　　1987M05 起 471 個月，落後 1～2 個月
+      上櫃　櫃買中心「歷年上櫃股票統計」　　2016-01 起逐月，落後 1 個月
+
+    對帳（第二意見）：
+      金管會證期局 t49　　　　　　　　　　　最近 5 個月滾動視窗，落後約 4 個月
+
+    原本只有 t49，於是歷史只能「每個月跑一次、慢慢累積」——而它是滾動視窗，
+    一次抓壞就永遠補不回來，實際累積了半年也只有 5 個月。換成主來源之後，
+    一次抓取就拿到十年，而且是可重跑的：任何一天重跑都會得到同一份歷史。
+
+    t49 留著不是備份，是**測試**。它獨立編製，如果央行＋櫃買加起來跟它對得上
+    （實測四個重疊月份逐位元相同），那就同時證明了單位、期末口徑、以及
+    「一個只含上市、一個只含上櫃」這三件事。對不上就出聲。
+
+    回傳 {"dates": [...], "market_cap": [...(百萬元)], "listed_count": [...]}。
+    """
+    existing = _load_cache("tw_market_cap.json") if incremental else None
+
+    listed = fetch_tw_listed_marketcap()
+    otc = fetch_tw_otc_marketcap()
+    if not listed or not otc:
+        missing = " / ".join(
+            n for n, v in (("上市（央行）", listed), ("上櫃（櫃買）", otc)) if not v
+        )
+        print(f"⚠️ 上市櫃總市值：{missing} 沒抓到，保留既有快取不動（不覆蓋、不補假資料）。")
+        SOFT_FAILURES.append(f"上市櫃總市值（{missing} 失敗，沿用既有快取）")
         return existing
 
-    # merge 而不是覆蓋：滾動視窗只有 5 個月，覆蓋等於每次把歷史砍掉
+    # 兩邊都有的月份才算數。上櫃只到 2016-01，上市可以回到 1987——但相加需要
+    # 兩邊都在，缺一邊的月份寫進去就是一個少了三分之一的假總額。
+    months = sorted(set(listed) & set(otc))
+    if not months:
+        print("⚠️ 上市櫃總市值：兩個來源沒有共同月份，保留既有快取不動。")
+        SOFT_FAILURES.append("上市櫃總市值（兩來源無交集，沿用既有快取）")
+        return existing
+
+    out_dates = months
+    out_cap = [listed[m] + otc[m] for m in months]
+
+    # --- 對帳 ---------------------------------------------------------
+    fsc = _fetch_fsc_market_cap()
+    out_count = [None] * len(months)
+    checked = mismatched = 0
+    if fsc:
+        for i, m in enumerate(months):
+            if m not in fsc:
+                continue
+            ref, count = fsc[m]
+            out_count[i] = count
+            checked += 1
+            # 千分之一的容差。兩邊實測是逐位元相同，這個容差留給日後可能的
+            # 四捨五入位數變動，不是留給「口徑不一樣」——差到 0.1% 以上就是
+            # 真的有東西變了。
+            if ref and abs(out_cap[i] - ref) / ref > 0.001:
+                mismatched += 1
+                print(f"⚠️ 對帳不符 {m}：央行＋櫃買 {out_cap[i]:,.0f} vs t49 {ref:,.0f}"
+                      f"（差 {abs(out_cap[i]-ref)/ref*100:.2f}%）")
+        if mismatched:
+            print(f"::warning::上市櫃總市值 對帳有 {mismatched}/{checked} 個月對不上，"
+                  "請確認來源的口徑或單位是不是變了")
+            SOFT_FAILURES.append(f"上市櫃總市值（對帳 {mismatched} 個月不符）")
+        elif checked:
+            print(f"　　t49 對帳：{checked} 個重疊月份全部相符 ✓")
+
     merged = _merge_series(existing, out_dates, {"market_cap": out_cap, "listed_count": out_count})
     old_len = len(existing["dates"]) if existing and existing.get("dates") else 0
     if len(merged["dates"]) < old_len:
@@ -982,22 +1217,26 @@ def fetch_tw_market_cap(incremental=True):
         return existing
 
     result = {
-        "source": "金管會證期局 臺灣證券市場綜覽t49 (data.gov.tw nid=11138)",
-        "landing_page": "https://data.gov.tw/dataset/11138",
-        "unit": "新臺幣百萬元（原始檔為十億元，已 ×1000）",
+        "source": "上市：中央銀行經研處 EG27M01；上櫃：櫃買中心 歷年上櫃股票統計；"
+                  "對帳：金管會證期局 t49 (data.gov.tw nid=11138)",
+        "landing_page": "https://www.cbc.gov.tw/tw/lp-1114-1.html",
+        "unit": "新臺幣百萬元",
         "scope": "上市＋上櫃合計",
-        "note": "來源只回最近 5 個月滾動視窗，歷史靠本地逐月累積；證期局不定期更新，資料月份會落後數個月。",
+        "note": "上市來自央行（1987M05 起，無滾動視窗）、上櫃來自櫃買（2016-01 起逐月），"
+                "兩者相加；金管會 t49 只作對帳用。兩邊都有資料的月份才寫入。",
         "fetched_at": date.today().isoformat(),
         "latest_source_month": out_dates[-1],
+        "reconciled_months": checked,
+        "reconcile_mismatches": mismatched,
         "dates": merged["dates"],
         "market_cap": merged["market_cap"],
         "listed_count": merged["listed_count"],
     }
     out_path = os.path.join(DATA_DIR, "tw_market_cap.json")
     _write_json(out_path, result)
-    print(f"✅ 上市櫃總市值 更新完成：本次來源給了 {len(out_dates)} 個月，"
-          f"合併後快取總計 {len(merged['dates'])} 個月，"
-          f"來源最新月份 {out_dates[-1]}（落後 {_months_behind(out_dates[-1])} 個月）")
+    print(f"✅ 上市櫃總市值 更新完成：上市 {len(listed)} 個月 × 上櫃 {len(otc)} 個月 "
+          f"→ 交集 {len(months)} 個月，合併後快取總計 {len(merged['dates'])} 個月，"
+          f"最新月份 {out_dates[-1]}（落後 {_months_behind(out_dates[-1])} 個月）")
     return result
 
 

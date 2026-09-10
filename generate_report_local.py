@@ -2009,6 +2009,17 @@ def render_tw_marketcap_m1b_section(ratio_data):
     cap_t = ratio_data["market_cap"][-1] / 1e6
     m1b_t = ratio_data["m1b"][-1] / 1e6
 
+    # 這個指標的說明文字自己寫著：「用法是看現在落在自己歷史區間的哪裡，而不是
+    # 看今天比昨天高還是低」。在只有 5 個月歷史的時候那句話沒辦法兌現；現在有
+    # 十年了，就把它算出來放在旁邊——這是補歷史真正買到的東西。
+    span_txt = ""
+    if len(ratios) >= 24:
+        below = sum(1 for r in ratios if r < last)
+        percentile = round(below / len(ratios) * 100)
+        years = len(ratios) / 12
+        span_txt = (f"｜歷史位置：{years:.0f} 年區間 {min(ratios):.2f}～{max(ratios):.2f} 的"
+                    f"<b style=\"color:{zone_color};\">第 {percentile} 百分位</b>")
+
     html = titled_row("市值貨幣比（上市櫃總市值 ÷ M1B）", "twMcM1bInfo", "tw_marketcap_m1b",
                       level="sub-title") + f"""
   <div class="stat-box" style="margin-bottom:14px;">
@@ -2023,14 +2034,17 @@ def render_tw_marketcap_m1b_section(ratio_data):
       {vintage_note(dates[-1], behind, freq="月")}
       ｜總市值 {cap_t:,.1f} 兆元 ÷ M1B {m1b_t:,.1f} 兆元
       ｜參考區間：&lt;{low} 寬鬆、&gt;{high} 吃緊
+      {span_txt}
     </div>
   </div>
 
   <div class="custom-legend" id="twMcM1bLegend"></div>
   <div class="chart-container short"><canvas id="twMcM1bChart"></canvas></div>
   <div class="chart-source-box" title="資料來源與更新時間">
-    📌 <a href="https://data.gov.tw/dataset/11138" target="_blank">金管會證期局 市場綜覽t49</a>
+    📌 <a href="https://www.cbc.gov.tw/tw/lp-1114-1.html" target="_blank">中央銀行 上市股票統計</a>
+    ｜<a href="https://www.tpex.org.tw/zh-tw/statistics" target="_blank">櫃買中心 歷年上櫃股票統計</a>
     ｜<a href="https://data.gov.tw/dataset/6024" target="_blank">中央銀行 貨幣總計數</a>
+    ｜對帳：<a href="https://data.gov.tw/dataset/11138" target="_blank">金管會證期局 市場綜覽t49</a>
     ｜自行計算，非官方公布之比值
   </div>
 """
@@ -2045,9 +2059,13 @@ def render_tw_marketcap_m1b_section(ratio_data):
     data: {{
       labels: mcDates.map(fmtLabel),
       datasets: [
+        // 點的大小跟資料量走。原本固定 3px 是為了 5 個點的那張圖；接上長歷史
+        // 之後有 126 個月，固定 3px 會把線壓成一條由圓點組成的粗帶子。
         {{ label: '市值貨幣比', data: mcRatio, borderColor: 'rgb(250,204,21)',
            backgroundColor: (c) => gradientFill(c, '250,204,21'),
-           fill: true, tension: 0, pointRadius: 3, pointHoverRadius: 6, borderWidth: 2, order: 1 }},
+           fill: true, tension: 0,
+           pointRadius: mcDates.length > 90 ? 0 : (mcDates.length > 36 ? 1.5 : 3),
+           pointHoverRadius: 6, borderWidth: 2, order: 1 }},
         {{ label: '{high} 資金吃緊', data: mcDates.map(() => {high}), borderColor: '#ef4444',
            borderDash: [5,4], borderWidth: 1.1, pointRadius: 0, fill: false, order: 2 }},
         {{ label: '{low} 資金寬鬆', data: mcDates.map(() => {low}), borderColor: '#22d3ee',

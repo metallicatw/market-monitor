@@ -1,0 +1,9 @@
+{
+  "url": "https://www.tpex.org.tw/www/zh-tw/statistics/monthlyRptMkt",
+  "method": "POST",
+  "body": "type=2",
+  "fetched_at": "2026-09-10",
+  "bytes": 1039,
+  "sha256": "bce14b56fa8d45076116edbec17c63bad907a2b5fd292b9ed32f4c80d0d0a7a9",
+  "note": "櫃買 歷年上櫃股票統計 索引。POST type=2。tables[0].data 每列 [民國年月, xls 路徑, ods 路徑]。doc id 每月會換，必須先打這支拿當期的。"
+}

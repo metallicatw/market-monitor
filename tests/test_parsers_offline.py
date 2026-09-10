@@ -40,6 +40,64 @@ class _StubHTTP:
         return self.payload
 
 
+class _RoutingHTTP:
+    """依網址分流到不同 fixture 的 stub。
+
+    市值那一支現在打三個地方（央行 CSV、櫃買索引、櫃買 ODS）外加一個對帳用的
+    t49，單一 payload 的 stub 不夠用了。找不到對應的 fixture 就 raise——
+    測試裡「悄悄回了別人的資料」比直接失敗糟得多。
+    """
+
+    def __init__(self, routes, missing=None):
+        self.routes = routes          # {網址片段: fixture 名稱}
+        self.missing = missing or ()  # 這些片段要模擬「抓不到」
+        self.urls = []
+
+    def __call__(self, url, timeout=20, **kwargs):
+        self.urls.append(url)
+        for frag in self.missing:
+            if frag in url:
+                raise OSError(f"simulated failure for {frag}")
+        for frag, name in self.routes.items():
+            if frag in url:
+                return sample(name)
+        raise AssertionError(f"測試沒有為這個網址準備 fixture：{url}")
+
+
+MARKET_CAP_ROUTES = {
+    "EG27M01": "cbc_eg27m01_listed_marketcap",
+    "monthlyRptMktDl": "tpex_monthlyrptmkt_ods",
+    "monthlyRptMkt": "tpex_monthlyrptmkt_index",
+    "datasets/11138": "fsc_t49_11138_market_overview",
+}
+
+
+def run_market_cap(routes=None, missing=(), existing=None, incremental=True):
+    """在乾淨的暫存 DATA_DIR 裡跑 fetch_tw_market_cap，網路全部走 fixture。"""
+    stub = _RoutingHTTP(routes or MARKET_CAP_ROUTES, missing)
+    orig_get, orig_post, orig_dir = fmd._http_get, fmd._http_post, fmd.DATA_DIR
+    orig_sleep = fmd.time.sleep
+    with tempfile.TemporaryDirectory() as tmp:
+        fmd._http_get = stub
+        fmd._http_post = lambda url, data, timeout=30: stub(url)
+        fmd.DATA_DIR = tmp
+        fmd.time.sleep = lambda *_a, **_k: None      # 不要真的等重試 backoff
+        try:
+            if existing is not None:
+                with open(os.path.join(tmp, "tw_market_cap.json"), "w", encoding="utf-8") as f:
+                    json.dump(existing, f)
+            result = fmd.fetch_tw_market_cap(incremental=incremental)
+            on_disk = None
+            path = os.path.join(tmp, "tw_market_cap.json")
+            if os.path.exists(path):
+                with open(path, encoding="utf-8") as f:
+                    on_disk = json.load(f)
+            return result, on_disk, stub
+        finally:
+            fmd._http_get, fmd._http_post, fmd.DATA_DIR = orig_get, orig_post, orig_dir
+            fmd.time.sleep = orig_sleep
+
+
 def run_with_fixture(fixture_name, fn, **kwargs):
     """在一個乾淨的暫存 DATA_DIR 裡，用 fixture 當回應跑 fetcher。"""
     stub = _StubHTTP(sample(fixture_name))
@@ -91,72 +149,97 @@ def test_m1b_parser_rejects_the_lookalike_file():
     print("  M1B 反向測試 ok：EF19M01（變動額）有被擋下來")
 
 
-def test_tw_market_cap():
-    result, _ = run_with_fixture("fsc_t49_11138_market_overview", fmd.fetch_tw_market_cap)
+def test_tw_market_cap_sums_two_sources():
+    """央行（上市）＋ 櫃買（上櫃）＝ 上市櫃總市值，而且歷史不是 5 個月。"""
+    result, _, stub = run_market_cap(incremental=False)
     assert result is not None, "市值 parser 回 None"
-    assert result["dates"] == ["2026-01-01", "2026-02-01", "2026-03-01",
-                               "2026-04-01", "2026-05-01"], result["dates"]
-    # 原始檔 202605 是 158010.38 十億元 -> 158,010,380 百萬元
-    assert abs(result["market_cap"][-1] - 158_010_380) < 1, result["market_cap"][-1]
-    assert result["listed_count"][-1] == 1968, result["listed_count"][-1]
-    print(f"  市值 ok：來源給 {len(result['dates'])} 個月（滾動視窗），"
-          f"最新 {result['dates'][-1]} = {result['market_cap'][-1]/1e6:.2f} 兆元")
+    assert len(result["dates"]) >= 120, \
+        f"接了長歷史來源之後不該只有 {len(result['dates'])} 個月"
+    assert result["dates"][0] == "2016-01-01", result["dates"][0]
+    # 央行 2026M07 上市 140,848,179 + 櫃買 115年7月 上櫃 9,526,934.205 百萬元
+    i = result["dates"].index("2026-07-01")
+    assert abs(result["market_cap"][i] - (140_848_179 + 9_526_934.205226)) < 1, \
+        result["market_cap"][i]
+    # 三個來源都要真的被打到（不是某一支悄悄沒跑）
+    joined = " ".join(stub.urls)
+    for frag in ("EG27M01", "monthlyRptMkt", "datasets/11138"):
+        assert frag in joined, f"{frag} 沒有被請求"
+    print(f"  市值 ok：{len(result['dates'])} 個月 {result['dates'][0]}～{result['dates'][-1]}，"
+          f"最新 {result['market_cap'][-1]/1e6:.2f} 兆元")
+
+
+def test_market_cap_reconciles_against_t49():
+    """
+    這是整個資料源替換案的證據：央行＋櫃買 vs 金管會 t49，重疊月份必須相符。
+
+    t49 是獨立編製的，所以對得上就同時證明了三件事——單位是新臺幣百萬元、
+    兩邊都是期末口徑（不是月平均）、以及「央行那份只含上市、櫃買那份只含上櫃」。
+    對不上就是有東西變了，這個測試會在資料進到報告之前先紅。
+    """
+    result, _, _ = run_market_cap(incremental=False)
+    assert result["reconciled_months"] >= 4, \
+        f"只對帳到 {result['reconciled_months']} 個月，t49 的滾動視窗是不是變了？"
+    assert result["reconcile_mismatches"] == 0, \
+        f"有 {result['reconcile_mismatches']} 個月對不上 t49"
+    print(f"  對帳 ok：{result['reconciled_months']} 個重疊月份與 t49 完全相符")
+
+
+def test_market_cap_only_writes_months_both_sources_have():
+    """
+    央行從 1987 年起、櫃買從 2016 年起。只有上市的月份寫進去，就是一個少了
+    上櫃、卻叫做「上市櫃總市值」的假總額——而且不會有任何錯誤訊息。
+    """
+    result, _, _ = run_market_cap(incremental=False)
+    assert result["dates"][0] >= "2016-01-01", \
+        f"寫進了櫃買沒有資料的月份：{result['dates'][0]}"
 
 
 def test_market_cap_merge_never_shrinks_history():
+    """寫檔必須是合併不是覆蓋，否則早期累積的歷史會被砍掉。"""
+    history = {
+        "dates": [f"2015-{m:02d}-01" for m in range(1, 13)],
+        "market_cap": [50_000_000 + m * 100_000 for m in range(1, 13)],
+        "listed_count": [1700 + m for m in range(1, 13)],
+    }
+    result, _, _ = run_market_cap(existing=history)
+    assert result["dates"][0] == "2015-01-01", "舊歷史被洗掉了"
+    assert len(result["dates"]) > 120
+
+
+def test_market_cap_keeps_cache_when_a_source_fails():
+    """任何一個來源掛掉，既有快取都必須原封不動——不能寫出殘缺的檔。"""
+    history = {"dates": ["2024-01-01"], "market_cap": [70_000_000], "listed_count": [1800]}
+    for missing in ("EG27M01", "monthlyRptMkt"):
+        result, on_disk, _ = run_market_cap(missing=(missing,), existing=history)
+        assert on_disk == history, f"{missing} 失敗時卻動到了既有快取"
+        assert result == history
+    print("  失敗保護 ok：上市、上櫃任一支掛掉都不動既有快取")
+
+
+def test_market_cap_survives_t49_being_gone():
+    """t49 只是對帳用的第二意見。它掛掉不該讓整份市值抓不成。"""
+    result, _, _ = run_market_cap(missing=("datasets/11138",), incremental=False)
+    assert result is not None, "對帳來源掛掉不該讓主資料一起失敗"
+    assert len(result["dates"]) >= 120
+    assert result["reconciled_months"] == 0
+    print("  t49 降級 ok：對帳來源掛掉，主資料照樣寫入（只是沒有對帳）")
+
+
+def test_ods_parser_reads_the_right_column_by_name():
     """
-    來源只回最近 5 個月。如果寫檔是覆蓋而不是合併，
-    每跑一次就會把辛苦累積的歷史砍成 5 個月 —— 而且不會報錯。
+    櫃買那份 1989～2015 是年列、2016 起是月列，混在同一張表。
+    欄位位置也不保證固定，所以是用欄名找，不是寫死索引。
     """
-    stub = _StubHTTP(sample("fsc_t49_11138_market_overview"))
-    orig_get, orig_dir = fmd._http_get, fmd.DATA_DIR
-    with tempfile.TemporaryDirectory() as tmp:
-        fmd._http_get, fmd.DATA_DIR = stub, tmp
-        try:
-            # 先假裝本地已經累積了 2024 年的歷史
-            history = {
-                "dates": [f"2024-{m:02d}-01" for m in range(1, 13)],
-                "market_cap": [70_000_000 + m * 100_000 for m in range(1, 13)],
-                "listed_count": [1800 + m for m in range(1, 13)],
-            }
-            with open(os.path.join(tmp, "tw_market_cap.json"), "w", encoding="utf-8") as f:
-                json.dump(history, f)
-
-            result = fmd.fetch_tw_market_cap(incremental=True)
-            assert result is not None
-            assert len(result["dates"]) == 17, f"12 個月歷史 + 5 個月新資料應該是 17，實際 {len(result['dates'])}"
-            assert result["dates"][0] == "2024-01-01", "舊歷史被洗掉了"
-            assert result["dates"][-1] == "2026-05-01"
-        finally:
-            fmd._http_get, fmd.DATA_DIR = orig_get, orig_dir
-    print("  市值合併 ok：舊歷史 12 個月 + 新 5 個月 = 17 個月，沒有被覆蓋")
-
-
-def test_market_cap_keeps_cache_when_source_fails():
-    """來源掛掉時，既有快取必須原封不動 —— 不能寫出一個空的或殘缺的檔。"""
-    def boom(url, timeout=20):
-        raise OSError("simulated connection reset")
-
-    orig_get, orig_dir = fmd._http_get, fmd.DATA_DIR
-    with tempfile.TemporaryDirectory() as tmp:
-        fmd._http_get, fmd.DATA_DIR = boom, tmp
-        fmd_sleep = fmd.time.sleep
-        fmd.time.sleep = lambda *_a, **_k: None  # 測試不要真的等重試 backoff
-        try:
-            history = {"dates": ["2024-01-01"], "market_cap": [70_000_000], "listed_count": [1800]}
-            path = os.path.join(tmp, "tw_market_cap.json")
-            with open(path, "w", encoding="utf-8") as f:
-                json.dump(history, f)
-
-            result = fmd.fetch_tw_market_cap(incremental=True)
-            with open(path, encoding="utf-8") as f:
-                on_disk = json.load(f)
-            assert on_disk == history, "來源失敗卻動到了既有快取"
-            assert result == history
-        finally:
-            fmd._http_get, fmd.DATA_DIR = orig_get, orig_dir
-            fmd.time.sleep = fmd_sleep
-    print("  市值失敗保護 ok：來源掛掉時快取原封不動")
+    rows = fmd._ods_rows(sample("tpex_monthlyrptmkt_ods"))
+    assert rows, "ODS 解不出任何列"
+    header = next(r for r in rows if any("上櫃股票市值" in c for c in r))
+    col = next(i for i, c in enumerate(header) if "上櫃股票市值" in c)
+    months = [r for r in rows if fmd._roc_month_to_iso(r[0])]
+    years = [r for r in rows if not fmd._roc_month_to_iso(r[0]) and "年" in r[0]]
+    assert len(months) >= 120, f"只解出 {len(months)} 個月列"
+    assert years, "年列應該存在且被排除在外"
+    assert float(months[-1][col]) > 1_000_000, "上櫃市值的量級不對（應為百萬元）"
+    print(f"  ODS ok：{len(months)} 個月列、{len(years)} 個年列（年列已排除），欄位第 {col} 欄")
 
 
 def test_ratio_alignment_and_magnitude():
@@ -164,29 +247,39 @@ def test_ratio_alignment_and_magnitude():
     市值貨幣比：只算「兩邊都有的月份」。
     M1B 比市值新，多出來的月份不能拿舊市值去湊。
     """
-    orig_dir = fmd.DATA_DIR
+    stub = _RoutingHTTP(MARKET_CAP_ROUTES)
+    orig_get, orig_post, orig_dir = fmd._http_get, fmd._http_post, fmd.DATA_DIR
     with tempfile.TemporaryDirectory() as tmp:
+        fmd._http_get = stub
+        fmd._http_post = lambda url, data, timeout=30: stub(url)
         fmd.DATA_DIR = tmp
         try:
-            cap, _ = run_with_fixture("fsc_t49_11138_market_overview", fmd.fetch_tw_market_cap)
-            m1b, _ = run_with_fixture("cbc_ef15m01_money_aggregates", fmd.fetch_tw_m1b, years_back=50)
-            # run_with_fixture 用的是它自己的暫存目錄，這裡重新寫進本測試的目錄
-            for name, payload in (("tw_market_cap.json", cap), ("tw_m1b.json", m1b)):
-                with open(os.path.join(tmp, name), "w", encoding="utf-8") as f:
-                    json.dump(payload, f)
+            cap = fmd.fetch_tw_market_cap(incremental=False)
+            m1b_stub = _StubHTTP(sample("cbc_ef15m01_money_aggregates"))
+            fmd._http_get = m1b_stub
+            m1b = fmd.fetch_tw_m1b(years_back=50, incremental=False)
 
             result = fmd.compute_tw_marketcap_m1b_ratio()
             assert result is not None
-            # 市值只到 202605，所以比值也只能到 202605（M1B 有到 202607）
-            assert result["dates"][-1] == "2026-05-01", result["dates"][-1]
-            assert len(result["dates"]) == 5, result["dates"]
-            expected = [3.81, 4.13, 3.72, 4.56, 5.16]
-            for got, want in zip(result["ratio"], expected):
-                assert abs(got - want) < 0.01, f"比值 {got} 與預期 {want} 不符"
-            print(f"  市值貨幣比 ok：{result['dates'][0]}~{result['dates'][-1]}，"
-                  f"比值 {[round(r,2) for r in result['ratio']]}")
+            # 市值到 202607、M1B 也到 202607，所以比值的尾端是 202607。
+            assert result["dates"][-1] == "2026-07-01", result["dates"][-1]
+            # 交集的起點由市值決定（櫃買的月資料 2016-01 起），不是 M1B（1987 起）。
+            assert result["dates"][0] == "2016-01-01", result["dates"][0]
+            assert len(result["dates"]) == len(cap["dates"]), \
+                "比值的月份數應該等於市值的月份數（M1B 覆蓋更長）"
+            # 這五個月是探測時人工對過 MacroMicro 量級的，留著當定樁。
+            for month, want in (("2026-01-01", 3.81), ("2026-02-01", 4.13),
+                                ("2026-03-01", 3.72), ("2026-04-01", 4.56),
+                                ("2026-05-01", 5.16)):
+                got = result["ratio"][result["dates"].index(month)]
+                assert abs(got - want) < 0.01, f"{month} 比值 {got} 與預期 {want} 不符"
+            assert 1.0 < min(result["ratio"]) and max(result["ratio"]) < 20.0, \
+                "比值量級不對，單位可能又錯了"
+            print(f"  市值貨幣比 ok：{len(result['dates'])} 個月 "
+                  f"{result['dates'][0]}~{result['dates'][-1]}，"
+                  f"區間 {min(result['ratio']):.2f}~{max(result['ratio']):.2f}")
         finally:
-            fmd.DATA_DIR = orig_dir
+            fmd._http_get, fmd._http_post, fmd.DATA_DIR = orig_get, orig_post, orig_dir
 
 
 def test_fred_csv_parser():

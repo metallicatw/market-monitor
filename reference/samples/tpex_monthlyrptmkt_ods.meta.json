@@ -1,0 +1,9 @@
+{
+  "url": "https://www.tpex.org.tw/www/zh-tw/statistics/monthlyRptMktDl?doc=2942&isOds=Y",
+  "method": "GET",
+  "body": null,
+  "fetched_at": "2026-09-10",
+  "bytes": 28872,
+  "sha256": "25bfc1b71a668b02e9e76078c6898a7dc0b7b92d7df33714ba38a2fb8398fc37",
+  "note": "櫃買 歷年上櫃股票統計 ODS 本體。工作表1，第 6 欄「上櫃股票市值(百萬元)」；1989-2015 為年列，2016-01 起為月列。ODS 是 zip+XML，stdlib 就能解，不必引 xlrd。"
+}
