@@ -132,7 +132,10 @@ def fmt_diff(diff, decimals=2, pct=None):
     掃過去的時候不會把兩個數字讀成一個。
     """
     color, arrow = updown(diff)
-    head = f"{arrow} " if arrow else ""
+    if not arrow:
+        # 平盤印「0.00 (0.00%)」只是把兩個零講兩次，不如直接說持平。
+        return "持平", color
+    head = f"{arrow} "
     txt = f"{head}{abs(diff):,.{decimals}f}"
     if pct is not None:
         txt += f" ({abs(pct):.2f}%)"
@@ -868,7 +871,8 @@ def render_vix_section(vix):
     prev_val = close[-2] if len(close) > 1 else last_val
     diff = round(last_val - prev_val, 2)
     last_date_disp = dates[-1].replace("-", "/")
-    diff_txt, chg_color = fmt_diff(diff, 2)
+    pct = round(diff / prev_val * 100, 2) if prev_val else None
+    diff_txt, chg_color = fmt_diff(diff, 2, pct)
     warn = last_val > VIX_WARN_THRESHOLD
     panic = last_val > VIX_PANIC_THRESHOLD
 
@@ -882,7 +886,7 @@ def render_vix_section(vix):
       <span class="zone-badge" style="background:rgba(0,0,0,0.25);color:{zone_color};border:1px solid {zone_color};">{zone_label}</span>
     </div>
     <div>
-      <span class="stat-value" style="color:{'#ef4444' if last_val > VIX_WARN_THRESHOLD else '#10b981'};">{last_val:,.2f}</span>
+      <span class="stat-value" style="color:{chg_color};">{last_val:,.2f}</span>
       <span class="stat-chg" style="color:{chg_color};">{diff_txt}</span>
     </div>
     <div class="stat-sub">&lt;20 平穩｜&gt;20 不穩定・避險情緒上升｜&gt;30 高度恐慌</div>
@@ -999,7 +1003,8 @@ def render_michigan_section(michigan):
     prev_val = close[-2] if len(close) > 1 else last_val
     diff = round(last_val - prev_val, 2)
     last_date_disp = dates[-1].replace("-", "/")
-    diff_txt, chg_color = fmt_diff(diff, 1)
+    pct = round(diff / prev_val * 100, 2) if prev_val else None
+    diff_txt, chg_color = fmt_diff(diff, 1, pct)
     warn = last_val < MICHIGAN_WARN_THRESHOLD
     zone_label, zone_color = michigan_zone(last_val)
 
@@ -1021,7 +1026,7 @@ def render_michigan_section(michigan):
       <span class="zone-badge" style="background:rgba(0,0,0,0.25);color:{zone_color};border:1px solid {zone_color};">{zone_label}</span>
     </div>
     <div>
-      <span class="stat-value" style="color:{'#ef4444' if warn else '#10b981'};">{last_val:,.1f}</span>
+      <span class="stat-value" style="color:{chg_color};">{last_val:,.1f}</span>
       <span class="stat-chg" style="color:{chg_color};">{diff_txt}</span>
     </div>
     <div class="stat-sub">警戒水位：&gt;95 過熱｜75-95 安全常態｜60-75 觀望停滯｜&lt;60 衰退警戒｜&lt;50 系統危機</div>
@@ -1217,7 +1222,8 @@ def render_murata_bb_section(murata):
     prev_bb = bb[-2] if len(bb) > 1 else last_bb
     diff = round(last_bb - prev_bb, 2)
     warn = last_bb > MURATA_BB_WARN_THRESHOLD
-    diff_txt, chg_color = fmt_diff(diff, 2)
+    bb_pct = round(diff / prev_bb * 100, 2) if prev_bb else None
+    diff_txt, chg_color = fmt_diff(diff, 2, bb_pct)
 
     mlcc_series = murata.get("bb_ratio_mlcc", [])
     last_mlcc = next((v for v in reversed(mlcc_series) if v is not None), None)
@@ -1866,7 +1872,28 @@ def render_tw_pmi_section(pmi):
         return "", ""
 
     diff = round(last_pmi - prev_pmi, 1)
-    diff_txt, chg_color = fmt_diff(diff, 1)
+    pmi_pct = round(diff / prev_pmi * 100, 2) if prev_pmi else None
+    diff_txt, chg_color = fmt_diff(diff, 1, pmi_pct)
+
+    # NMI 原本只有一個數字，沒有月變化。往回找上一個非 None 的值把它補上。
+    nmi_prev = None
+    if last_nmi is not None:
+        seen_last = False
+        for v in reversed(nmi_vals):
+            if v is None:
+                continue
+            if not seen_last:
+                seen_last = True
+                continue
+            nmi_prev = v
+            break
+    if last_nmi is not None and nmi_prev:
+        nmi_diff = round(last_nmi - nmi_prev, 1)
+        nmi_diff_txt, nmi_chg_color = fmt_diff(
+            nmi_diff, 1, round(nmi_diff / nmi_prev * 100, 2))
+    else:
+        nmi_diff_txt, nmi_chg_color = "", "#94a3b8"
+
     neutral = PMI_NEUTRAL
     expanding = last_pmi >= neutral
     # 擴張/收縮不是「警示」，是狀態，所以用 buy/warn 兩種既有色系表達方向
@@ -1880,15 +1907,18 @@ def render_tw_pmi_section(pmi):
         <span class="zone-badge" style="background:rgba(0,0,0,0.25);color:{zone_color};border:1px solid {zone_color};">{zone_label}</span>
       </div>
       <div>
-        <span class="stat-value" style="color:{zone_color};">{last_pmi:,.1f}</span>
+        <span class="stat-value" style="color:{chg_color};">{last_pmi:,.1f}</span>
         <span class="stat-chg" style="color:{chg_color};">{diff_txt}</span>
       </div>
       <div class="stat-sub">{vintage_note(dates[-1], freq="月")}｜{neutral} 為榮枯線</div>
     </div>
     <div class="stat-box">
-      <div class="stat-label">非製造業 NMI</div>
+      <div class="stat-label">非製造業 NMI
+        <span class="zone-badge" style="background:rgba(0,0,0,0.25);color:{'#22d3ee' if (last_nmi or 0) >= neutral else '#ef4444'};border:1px solid {'#22d3ee' if (last_nmi or 0) >= neutral else '#ef4444'};">{'擴張' if (last_nmi or 0) >= neutral else '收縮'}</span>
+      </div>
       <div>
-        <span class="stat-value" style="color:{'#22d3ee' if (last_nmi or 0) >= neutral else '#ef4444'};">{fmt_indicator_value(last_nmi)}</span>
+        <span class="stat-value" style="color:{nmi_chg_color};">{fmt_indicator_value(last_nmi)}</span>
+        <span class="stat-chg" style="color:{nmi_chg_color};">{nmi_diff_txt}</span>
       </div>
       <div class="stat-sub">服務業與內需的對照組</div>
     </div>
@@ -1964,7 +1994,8 @@ def render_tw_marketcap_m1b_section(ratio_data):
     last = ratios[-1]
     prev = ratios[-2] if len(ratios) > 1 else last
     diff = round(last - prev, 2)
-    diff_txt, chg_color = fmt_diff(diff, 2)
+    mc_pct = round(diff / prev * 100, 2) if prev else None
+    diff_txt, chg_color = fmt_diff(diff, 2, mc_pct)
     behind = ratio_data.get("months_behind")
 
     high, low = TW_MC_M1B_HIGH, TW_MC_M1B_LOW
@@ -1985,7 +2016,7 @@ def render_tw_marketcap_m1b_section(ratio_data):
       <span class="zone-badge" style="background:rgba(0,0,0,0.25);color:{zone_color};border:1px solid {zone_color};">{zone_label}</span>
     </div>
     <div>
-      <span class="stat-value" style="color:{zone_color};">{last:,.2f}</span>
+      <span class="stat-value" style="color:{chg_color};">{last:,.2f}</span>
       <span class="stat-chg" style="color:{chg_color};">{diff_txt} 較上月</span>
     </div>
     <div class="stat-sub">
@@ -2166,15 +2197,22 @@ def render_us_indicator_group(group, series_with_data):
         last = values[-1]
         prev = values[-2] if len(values) > 1 else last
         diff = last - prev
-        _, chg_color = updown(diff)
-        arrow = "▲" if diff > 0 else ("▼" if diff < 0 else "")
-        pct = f"{(diff / prev * 100):+.2f}%" if prev else "—"
+        pct = (diff / prev * 100) if prev else None
+        # 小數位數跟著數值本身的量級走（與 fmt_indicator_value 同一套規則），
+        # 免得出現「1,239.0 ▼ 176.00」這種一個一位、一個兩位的怪組合。
+        if abs(last) >= 10000:
+            decimals = 0
+        elif abs(last) >= 100:
+            decimals = 1
+        else:
+            decimals = 2
+        diff_txt, chg_color = fmt_diff(diff, decimals, pct)
         unit = meta.get("unit", "")
         boxes.append(f"""
     <div class="fin-box">
       <div class="fin-label">{meta['name']}</div>
-      <div class="fin-value">{fmt_indicator_value(last, unit)}</div>
-      <div class="fin-sub" style="color:{chg_color};">{arrow} {pct}</div>
+      <div class="fin-value" style="color:{chg_color};">{fmt_indicator_value(last, unit)}</div>
+      <div class="fin-sub" style="color:{chg_color};">{diff_txt}</div>
       <div class="fin-sub" style="font-size:10px;opacity:.75;">{fmt_period(dates[-1], meta.get('freq', ''))}
         {('｜' + unit) if unit else ''}</div>
     </div>""")
