@@ -47,10 +47,21 @@ jobs:
             exit "$code"
           fi
 
-      # 一定要 always()：部分失敗時當天已經抓到的資料與報告仍然有價值，
-      # 不提交等於把它們丟掉，而市值那種靠逐月累積的歷史檔丟掉就補不回來了。
+      # 為什麼是這一串條件而不是 `always()`：
+      #
+      # 需求是「部分失敗時，當天已經抓到的資料與報告仍然要提交」——市值那種靠
+      # 逐月累積的歷史檔丟掉就補不回來。`always()` 確實涵蓋了那個情況，但它同時
+      # 也涵蓋了**取消與 runner 被砍**：timeout、使用者按取消、OOM，`always()`
+      # 一樣會跑，`git add -A` 一樣會把當下磁碟上的東西提交進去。
+      #
+      # 寫檔現在是原子的（`fetch_market_data._write_json`：暫存檔 → fsync →
+      # os.replace），所以就算真的被砍在中途，磁碟上也只會是完整的舊版。但沒有
+      # 理由在那種狀態下還去 commit 一份「不知道跑到哪裡」的快照。
+      #
+      # 這個條件的意思是：正常跑完，或者更新那一步自己回報失敗（含 exit 2 的
+      # 那條路）。job 被取消不在裡面。
       - name: 有變動才提交
-        if: always()
+        if: success() || steps.update.outcome == 'failure'
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"

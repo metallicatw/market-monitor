@@ -86,16 +86,65 @@ def _fetch_json_with_retry(url, max_retries=3, backoff_sec=3):
     raise last_err
 
 
+def _write_json(path, obj):
+    """原子寫入：先寫同目錄的暫存檔，fsync，再 os.replace 換過去。
+
+    為什麼不能直接 `open(path, "w")`：那一行一開啟就先把原檔清成 0 位元組，
+    然後才一段一段寫。runner 在中間被砍（timeout、取消、OOM）——而排程的提交
+    步驟是 `if: always()` ＋ `git add -A`——截斷的 JSON 就這樣被 commit 進 main。
+
+    `os.replace` 在同一個檔案系統上是原子的：任何一個時間點去讀，讀到的不是
+    完整的舊版就是完整的新版，沒有中間狀態。
+    """
+    tmp = f"{path}.tmp.{os.getpid()}"
+    try:
+        with open(tmp, "w", encoding="utf-8") as f:
+            json.dump(obj, f, ensure_ascii=False)
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(tmp, path)
+    except BaseException:
+        # BaseException 而不是 Exception：KeyboardInterrupt 與 SystemExit
+        # 正是「runner 被砍」的樣子，暫存檔一樣要清掉。
+        try:
+            os.unlink(tmp)
+        except OSError:
+            pass
+        raise
+
+
+class CacheUnreadable(Exception):
+    """快取檔在那裡，但讀不出來。跟「檔案不存在」是完全不同的一件事。"""
+
+
 def _load_cache(filename):
-    """讀取既有的 data/*.json 快取檔，沒有就回傳 None。"""
+    """讀取既有的 data/*.json 快取檔。
+
+    **「檔案不存在」與「檔案壞掉」必須走不同的路。** 原本兩種都回 None，
+    而合併寫入的那幾支（市值、M1B、PMI、TAIEX）拿 None 當作「還沒有歷史」，
+    於是「合併後有沒有變少」那個守門員拿 old_len=0 去比——一定過。結果一個
+    壞掉的位元組，就讓整份 tw_market_cap.json 被來源那個 5 個月的滾動視窗
+    重建，而那份歷史**只能靠本地逐月累積**，洗掉就是永久損失。
+
+    所以壞掉要 raise。呼叫端（`_run`）會記成一次失敗、保留檔案不動，人看得到，
+    也還救得回來——git 裡就有上一版。
+    """
     path = os.path.join(DATA_DIR, filename)
     if not os.path.exists(path):
         return None
     try:
         with open(path, "r", encoding="utf-8") as f:
-            return json.load(f)
-    except (json.JSONDecodeError, OSError):
-        return None
+            data = json.load(f)
+    except (json.JSONDecodeError, OSError) as exc:
+        raise CacheUnreadable(
+            f"{filename} 讀不出來（{exc}）。這不是「沒有快取」，是既有的歷史檔壞了；"
+            f"不覆蓋它。請從 git 取回上一版：git checkout HEAD -- data/{filename}"
+        ) from exc
+    if not isinstance(data, dict):
+        raise CacheUnreadable(
+            f"{filename} 的最外層不是物件（拿到 {type(data).__name__}），不覆蓋它。"
+        )
+    return data
 
 
 def _merge_series(existing, new_dates, new_fields):
@@ -291,8 +340,7 @@ def fetch_taiex(years_back=5, sleep_sec=1.5, incremental=True):
     }
 
     out_path = os.path.join(DATA_DIR, "taiex.json")
-    with open(out_path, "w", encoding="utf-8") as f:
-        json.dump(result, f, ensure_ascii=False)
+    _write_json(out_path, result)
 
     print(f"✅ TAIEX 資料更新完成：本次新抓 {len(out_dates)} 筆，快取總計 {len(merged['dates'])} 個真實交易日，寫入 {out_path}")
     if failed_months:
@@ -364,8 +412,7 @@ def fetch_vix(incremental=True):
         "close": merged["close"],
     }
     out_path = os.path.join(DATA_DIR, "vix.json")
-    with open(out_path, "w", encoding="utf-8") as f:
-        json.dump(result, f, ensure_ascii=False)
+    _write_json(out_path, result)
     print(f"✅ VIX 資料更新完成：本次新增 {max(new_count,0)} 筆，快取總計 {len(merged['dates'])} 個真實交易日，寫入 {out_path}")
     return result
 
@@ -416,8 +463,7 @@ def fetch_nikkei(years_back=5, incremental=True):
         "close": merged["close"],
     }
     out_path = os.path.join(DATA_DIR, "nikkei.json")
-    with open(out_path, "w", encoding="utf-8") as f:
-        json.dump(result, f, ensure_ascii=False)
+    _write_json(out_path, result)
     print(f"✅ 日經225 資料更新完成：本次新增 {max(new_count,0)} 筆，快取總計 {len(merged['dates'])} 個真實交易日，寫入 {out_path}")
     return result
 
@@ -473,8 +519,7 @@ def fetch_michigan_sentiment(incremental=True):
         "close": merged["close"],
     }
     out_path = os.path.join(DATA_DIR, "michigan.json")
-    with open(out_path, "w", encoding="utf-8") as f:
-        json.dump(result, f, ensure_ascii=False)
+    _write_json(out_path, result)
     print(f"✅ 密大信心指數 資料更新完成：本次新增 {max(new_count,0)} 筆，快取總計 {len(merged['dates'])} 個真實月份，寫入 {out_path}")
     return result
 
@@ -532,8 +577,7 @@ def fetch_jp_stock(code, key, name="", years_back=5, incremental=True):
         "volume": merged["volume"],
     }
     out_path = os.path.join(DATA_DIR, f"stock_{key}.json")
-    with open(out_path, "w", encoding="utf-8") as f:
-        json.dump(result, f, ensure_ascii=False)
+    _write_json(out_path, result)
     print(f"✅ {name or code} 資料更新完成：本次新增 {max(new_count,0)} 筆，快取總計 {len(merged['dates'])} 個真實交易日，寫入 {out_path}")
     return result
 
@@ -637,8 +681,7 @@ def fetch_fred_series(series_id, name="", years_back=5, incremental=True, cache_
         "close": merged["close"],
     }
     out_path = os.path.join(DATA_DIR, cache_file)
-    with open(out_path, "w", encoding="utf-8") as f:
-        json.dump(result, f, ensure_ascii=False)
+    _write_json(out_path, result)
     print(f"✅ {label} ({series_id}) 更新完成：本次新增 {max(new_count,0)} 筆，"
           f"快取總計 {len(merged['dates'])} 筆，最新 {merged['dates'][-1]} = {merged['close'][-1]}")
     return result
@@ -752,8 +795,7 @@ def fetch_tw_pmi(years_back=5, incremental=True):
         "nmi": merged["nmi"],
     }
     out_path = os.path.join(DATA_DIR, "tw_pmi.json")
-    with open(out_path, "w", encoding="utf-8") as f:
-        json.dump(result, f, ensure_ascii=False)
+    _write_json(out_path, result)
     print(f"✅ 臺灣PMI 更新完成：快取總計 {len(merged['dates'])} 個月，"
           f"最新 {merged['dates'][-1]} PMI={merged['pmi'][-1]} NMI={merged['nmi'][-1]}")
     return result
@@ -863,8 +905,7 @@ def fetch_tw_m1b(years_back=10, incremental=True):
         "yoy": merged["yoy"],
     }
     out_path = os.path.join(DATA_DIR, "tw_m1b.json")
-    with open(out_path, "w", encoding="utf-8") as f:
-        json.dump(result, f, ensure_ascii=False)
+    _write_json(out_path, result)
     print(f"✅ M1B 更新完成：快取總計 {len(merged['dates'])} 個月，"
           f"最新 {merged['dates'][-1]} = {merged['m1b'][-1]:,.0f} 百萬元（年增 {merged['yoy'][-1]}%）")
     return result
@@ -953,8 +994,7 @@ def fetch_tw_market_cap(incremental=True):
         "listed_count": merged["listed_count"],
     }
     out_path = os.path.join(DATA_DIR, "tw_market_cap.json")
-    with open(out_path, "w", encoding="utf-8") as f:
-        json.dump(result, f, ensure_ascii=False)
+    _write_json(out_path, result)
     print(f"✅ 上市櫃總市值 更新完成：本次來源給了 {len(out_dates)} 個月，"
           f"合併後快取總計 {len(merged['dates'])} 個月，"
           f"來源最新月份 {out_dates[-1]}（落後 {_months_behind(out_dates[-1])} 個月）")
@@ -1016,8 +1056,7 @@ def compute_tw_marketcap_m1b_ratio():
         "m1b": out_m1b,
     }
     out_path = os.path.join(DATA_DIR, "tw_marketcap_m1b.json")
-    with open(out_path, "w", encoding="utf-8") as f:
-        json.dump(result, f, ensure_ascii=False)
+    _write_json(out_path, result)
     print(f"✅ 市值貨幣比 計算完成：{len(out_dates)} 個月，"
           f"最新 {out_dates[-1]} = {out_ratio[-1]}（資料落後 {result['months_behind']} 個月）")
     return result
@@ -1076,8 +1115,7 @@ def fetch_index(symbol, key, name="", years_back=5, incremental=True):
         "close": merged["close"],
     }
     out_path = os.path.join(DATA_DIR, f"index_{key}.json")
-    with open(out_path, "w", encoding="utf-8") as f:
-        json.dump(result, f, ensure_ascii=False)
+    _write_json(out_path, result)
     print(f"✅ {label} 更新完成：本次新增 {max(new_count,0)} 筆，快取總計 {len(merged['dates'])} 個真實交易日")
     return result
 
@@ -1117,6 +1155,14 @@ if __name__ == "__main__":
     def _run(label, fn, *a, **kw):
         try:
             result = fn(*a, **kw)
+        except CacheUnreadable as e:
+            # 這一類跟「網路不通」完全不同：既有的歷史檔壞了，而歷史是累積出來
+            # 的，重跑不會長回來。所以要用 GitHub 的 error annotation 叫出來，
+            # 不要混在一堆 ❌ 裡面被滑過去。
+            print(f"::error::{label} 的歷史快取毀損：{e}")
+            print(f"❌ {label} 歷史快取毀損，已保留原檔不動：{e}")
+            failures.append(f"{label}（歷史快取毀損）")
+            return None
         except Exception as e:  # noqa: BLE001 - 單一來源爆掉不該讓其他來源跟著死
             print(f"❌ {label} 發生未預期例外：{e!r}")
             failures.append(label)
