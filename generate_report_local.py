@@ -2253,14 +2253,33 @@ def render_us_indices_section(indices):
 # ---------------------------------------------------------------------------
 # 美股：四組經濟指標
 # ---------------------------------------------------------------------------
+#: 每一條指標的歷史線用哪個顏色。照組別給，不是照序列——同一組裡的線本來就
+#: 各自一張圖，不需要互相分辨；顏色在這裡的作用是「捲到這裡時知道自己在哪一組」。
+US_GROUP_COLOURS = {
+    "growth": ("34,211,238", "#22d3ee"),
+    "labor": ("59,130,246", "#3b82f6"),
+    "inflation": ("244,63,94", "#f43f5e"),
+    "housing_sentiment": ("168,85,247", "#a855f7"),
+}
+
+
 def render_us_indicator_group(group, series_with_data):
     """
-    一組指標一個 fin-grid。這裡刻意不畫圖：這一組裡的單位有 %、有千人、
-    有指數，畫在同一張圖上沒有意義；分開畫十二張圖又會讓整份報告失焦。
-    數值、變化、以及「這個數字是哪個月的」才是這一格真正要回答的事。
+    一組指標一個 fin-grid，底下一個收起來的〔歷史趨勢〕。
+
+    **一格一張圖，不是一組一張圖。**這一組裡的單位有 %、有千人、有指數，畫在
+    同一張圖上沒有意義——那是這一段原本什麼圖都不畫的理由，而那個理由到現在
+    仍然成立。不畫圖的代價則是：一個數字加一個變化量說不出「它是從哪裡走到這裡
+    的」。4.1% 的失業率是連續第三個月持平，還是從 3.5% 一路爬上來的？那兩件事
+    對讀者的意思完全不同，而卡片上看起來一模一樣。
+
+    所以十二張圖都畫，但收在 `<details>` 裡：不展開的時候整份報告的長度沒有變，
+    展開的時候每一條有自己的軸、自己的單位、自己的週期切換。
+
+    回傳 ``(html, script)``。
     """
     if not series_with_data:
-        return ""
+        return "", ""
 
     boxes = []
     for meta, data in series_with_data:
@@ -2288,16 +2307,99 @@ def render_us_indicator_group(group, series_with_data):
         {('｜' + unit) if unit else ''}</div>
     </div>""")
 
+    charts_html, charts_js = _us_indicator_charts(group, series_with_data)
+
     tip_id = f"us{group['key'].title().replace('_', '')}Info"
     btn, popup = tip_button(tip_id, f"us_{group['key']}")
-    return f"""
+    html = f"""
   <div class="title-row" style="margin-top:18px;">
     <div class="sub-title" style="margin:0;">{group['label']}</div>
     {btn}
   </div>
   {popup}
   <div class="fin-grid">{''.join(boxes)}</div>
+{charts_html}
 """
+    return html, charts_js
+
+
+def _us_indicator_charts(group, series_with_data):
+    """一組指標的歷史線，每一條一張，收在同一個 `<details>` 裡。
+
+    VIX 在「房地產與信心」那一組裡是借放的（它不走 FRED，見呼叫端），而它本來
+    就有自己的一整個區塊——同一條線畫兩次，第二次只是讓人懷疑哪一張才算數。
+    所以這裡只畫有 FRED 序列代號的那幾條。
+    """
+    rgb, hex_colour = US_GROUP_COLOURS.get(group["key"], ("148,163,184", "#94a3b8"))
+    blocks, scripts = [], []
+    for meta, data in series_with_data:
+        series_id = (meta.get("id") or "").strip()
+        if not series_id or not data.get("dates"):
+            continue
+        key = f"usfr{series_id}"
+        unit = meta.get("unit", "")
+        blocks.append(f"""
+      <div class="ind-chart">
+        <div class="sub-title" style="margin:14px 0 6px;font-size:13px;">{meta['name']}
+          <span style="font-weight:400;color:var(--text-muted);font-size:11px;">{unit}</span></div>
+        <div class="tf-bar" id="tf-{key}">
+          <span style="font-size:11px;color:#64748b;margin-right:2px;">週期切換:</span>
+          <button class="tf-btn" onclick="simpleSetRange('{key}','1Y',this)">1Y</button>
+          <button class="tf-btn" onclick="simpleSetRange('{key}','3Y',this)">3Y</button>
+          <button class="tf-btn active" onclick="simpleSetRange('{key}','5Y',this)">5Y</button>
+          <button class="tf-btn" onclick="simpleSetRange('{key}','10Y',this)">10Y</button>
+          <button class="tf-btn" onclick="simpleSetRange('{key}','ALL',this)">全部</button>
+        </div>
+        <div class="chart-container short"><canvas id="{key}Chart"></canvas></div>
+        <div class="chart-source-box" title="資料來源與更新時間">
+          📌 <a href="https://fred.stlouisfed.org/series/{series_id}" target="_blank">FRED {series_id}</a>
+          　｜　資料截至 {fmt_period(data['dates'][-1], meta.get('freq', ''))}
+        </div>
+      </div>""")
+        scripts.append(f"""
+  {{
+    const d = {json.dumps(data['dates'], ensure_ascii=False)};
+    const c = {json.dumps(data['close'], ensure_ascii=False)};
+    const ch = new Chart(document.getElementById('{key}Chart'), {{
+      type: 'line',
+      data: {{ labels: d.map(fmtLabel), datasets: [{{
+        label: {json.dumps(meta['name'], ensure_ascii=False)}, data: c,
+        borderColor: '{hex_colour}',
+        backgroundColor: (x) => gradientFill(x, '{rgb}'),
+        fill: true, tension: 0, pointRadius: 0, pointHoverRadius: 4, borderWidth: 1.6
+      }}] }},
+      options: {{
+        responsive: true, maintainAspectRatio: false,
+        interaction: {{ mode: 'index', intersect: false }},
+        plugins: {{
+          legend: {{ display: false }},
+          tooltip: {{
+            backgroundColor: 'rgba(15,23,42,0.95)', titleColor:'#f8fafc', bodyColor:'#cbd5e1',
+            borderColor: '#334155', borderWidth: 1, padding: 10, boxPadding: 4,
+            callbacks: {{ title: tooltipFullDateTitle('{key}') }}
+          }}
+        }},
+        scales: {{
+          x: {{ type: 'category', ticks: {{ maxTicksLimit: 8, maxRotation: 0, color: '#94a3b8' }},
+               grid: {{ color: 'rgba(38,51,77,0.35)' }} }},
+          y: {{ position: 'left', grid: {{ color: 'rgba(38,51,77,0.35)' }} }}
+        }}
+      }}
+    }});
+    chartRegistry['{key}'] = {{ chart: ch, dates: d, close: c, currentDates: d.slice(), warnLevels: [] }};
+    simpleSetRange('{key}', '5Y', document.querySelector('#tf-{key} .tf-btn.active'));
+  }}""")
+    if not blocks:
+        return "", ""
+    return (
+        f"""
+    <details class="fold">
+      <summary>歷史趨勢（{len(blocks)} 項）</summary>
+      <div class="fold-body">{''.join(blocks)}</div>
+    </details>
+""",
+        "".join(scripts),
+    )
 
 
 def render_us_overview_table():
@@ -2532,7 +2634,11 @@ def build_html(taiex, vix, nikkei, michigan, murata, jp_stocks,
         if group["key"] == "housing_sentiment" and vix and vix.get("dates"):
             members.append(({"name": "VIX", "unit": "", "freq": "日"}, vix))
         if members:
-            group_html.append(render_us_indicator_group(group, members))
+            g_html, g_script = render_us_indicator_group(group, members)
+            if g_html:
+                group_html.append(g_html)
+            if g_script:
+                scripts.append(g_script)
 
     if group_html:
         group_html.append(render_us_overview_table())

@@ -308,6 +308,59 @@ def test_twse_mi_index_really_has_no_market_cap():
     print(f"  TWSE MI_INDEX ok：{len(tables)} 張表 / {len(all_fields)} 個欄位，確認沒有市值")
 
 
+def test_every_us_indicator_chart_is_wired_to_a_canvas_that_exists():
+    """十二條指標線，每一條都要有畫布、有資料、有週期切換。
+
+    這一段原本刻意不畫圖，理由是「單位不同畫在同一張圖上沒有意義」——那個理由
+    沒有錯，錯的是它推出的結論。一格一張圖就沒有這個問題，而缺了圖的代價是
+    4.1% 的失業率看不出它是持平第三個月還是從 3.5% 爬上來的。
+
+    這條測試守的是接線：canvas 的 id、chartRegistry 的鍵、tf-bar 的 id 三個必須
+    是同一個字串。錯開的話畫面上是一塊空白，而且**不會有任何錯誤**——Chart.js
+    拿到 null 就靜靜地什麼都不做。
+
+    VIX 不在裡面：它在「房地產與信心」那一組裡是借放的，而它本來就有自己的一整
+    個區塊。同一條線畫兩次，第二次只是讓人懷疑哪一張才算數。
+    """
+    import re
+
+    import generate_report_local as grl
+
+    groups = grl.load_us_indicator_groups()
+    series = grl.load_fred_series()
+    fred = {}
+    for meta in series:
+        cache = meta.get("cache") or f"fred_{meta['id'].lower()}.json"
+        path = os.path.join(BASE_DIR, "data", cache)
+        if os.path.exists(path):
+            with open(path, encoding="utf-8") as fh:
+                fred[meta["id"]] = json.load(fh)
+    assert fred, "data/ 裡一筆 FRED 序列都沒有，這條測試沒有東西可驗"
+
+    drawn = 0
+    for group in groups:
+        members = [(m, fred[m["id"]]) for m in series
+                   if m.get("group") == group["key"] and m["id"] in fred]
+        # VIX 在呼叫端被併進這一組——這裡照做，才驗得到「它不會被畫第二次」。
+        if group["key"] == "housing_sentiment":
+            members.append(({"name": "VIX", "unit": "", "freq": "日"},
+                            {"dates": ["2026-09-01"], "close": [15.0]}))
+        if not members:
+            continue
+        html, script = grl.render_us_indicator_group(group, members)
+        canvases = set(re.findall(r'<canvas id="(usfr[A-Z0-9]+)Chart"', html))
+        bars = set(re.findall(r'id="tf-(usfr[A-Z0-9]+)"', html))
+        keys = set(re.findall(r"chartRegistry\['(usfr[A-Z0-9]+)'\]", script))
+        assert canvases == keys == bars, (group["key"], canvases, keys, bars)
+        assert "usfrVIX" not in canvases, "VIX 被畫了第二次"
+        # 每一格的數值卡還在——圖是多出來的，不是拿來取代數字的。
+        for meta, _ in members:
+            assert meta["name"] in html
+        drawn += len(canvases)
+    assert drawn >= 10, f"只接上了 {drawn} 條，預期十二條左右"
+    print(f"  美股指標歷史線 ok：{drawn} 條，各自一張圖、一條軸")
+
+
 if __name__ == "__main__":
     tests = [v for k, v in sorted(globals().items()) if k.startswith("test_")]
     failed = 0
