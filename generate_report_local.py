@@ -214,17 +214,55 @@ CSS = """
      這是「在手機上新增一檔個股」唯一的入口——以前它只存在於 GitHub 的 Actions
      分頁裡，而那個分頁沒有任何地方會告訴你它在。按鈕做成綠色（和這一塊的色系
      一致），旁邊那行小字列出七個動作，這樣不必點進去就知道那裡能做什麼。 */
-  .manage-bar { display:flex; flex-wrap:wrap; align-items:center; gap:10px;
-                margin:0 0 14px 0; padding:10px 12px; border-radius:9px;
+  .manage-bar { margin:0 0 14px 0; padding:11px 12px; border-radius:9px;
                 background:rgba(16,185,129,0.07); border:1px solid rgba(16,185,129,0.28); }
-  .manage-btn { display:inline-flex; align-items:center; gap:6px; flex:0 0 auto;
-                font-size:12.5px; font-weight:700; text-decoration:none;
-                color:#052e21; background:#10b981; border-radius:7px;
-                padding:6px 13px; border:1px solid #10b981; }
-  .manage-btn:hover { background:#34d399; border-color:#34d399; }
-  .manage-hint { font-size:11.5px; color:var(--text-muted); line-height:1.6; min-width:0; }
-  .manage-hint code { font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
-                      font-size:11px; color:var(--text-main); }
+  /* 表單一行擺得下就一行，擺不下就自己折——手機上每一格各佔一行。
+     `min-width:0` 是必要的：flex 子元素預設不肯縮到內容寬度以下，少了它
+     placeholder 長的那兩格會把整列撐出橫向捲軸。 */
+  .manage-form { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+  .manage-form select, .manage-form input {
+        font:inherit; font-size:12.5px; color:var(--text-main); min-width:0;
+        background:rgba(2,6,23,0.45); border:1px solid var(--border-color);
+        border-radius:7px; padding:6px 9px; }
+  .manage-form select { flex:0 0 auto; }
+  .manage-form #mmCode  { flex:2 1 180px; }
+  .manage-form #mmPrice, .manage-form #mmPer, .manage-form #mmYears { flex:1 1 92px; }
+  .manage-form select:focus, .manage-form input:focus {
+        outline:2px solid #10b981; outline-offset:1px; border-color:#10b981; }
+  .manage-form button { flex:0 0 auto; font:inherit; font-size:12.5px; font-weight:700;
+        color:#052e21; background:#10b981; border:1px solid #10b981;
+        border-radius:7px; padding:6px 16px; cursor:pointer; }
+  .manage-form button:hover:not(:disabled) { background:#34d399; border-color:#34d399; }
+  .manage-form button:disabled { opacity:.5; cursor:progress; }
+
+  /* 狀態列。空的時候不佔高度——一條永遠在那裡的空白列會讓版面看起來壞掉。 */
+  .manage-status:not(:empty) { margin-top:8px; font-size:12px; line-height:1.6;
+        color:var(--text-muted); }
+  .manage-status.ok   { color:#34d399; }
+  .manage-status.warn { color:#f59e0b; }
+  .manage-status.bad  { color:#f87171; }
+
+  .manage-token { margin-top:9px; font-size:11.5px; }
+  .manage-token > summary { cursor:pointer; color:var(--text-muted); list-style:none;
+        display:inline-flex; align-items:center; gap:5px; }
+  .manage-token > summary::-webkit-details-marker { display:none; }
+  .manage-token > summary::before { content:'\\25B8'; transition:transform .15s;
+        display:inline-block; }
+  .manage-token[open] > summary::before { transform:rotate(90deg); }
+  .manage-token-body { margin-top:7px; color:var(--text-muted); line-height:1.7; }
+  .manage-token-body p { margin:0 0 6px; }
+  .manage-token-body b { color:var(--text-main); }
+  .manage-token-body code { font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+        font-size:11px; color:var(--text-main); }
+  .manage-token-row { display:flex; flex-wrap:wrap; gap:7px; margin-top:6px; }
+  .manage-token-row input { flex:1 1 220px; min-width:0; font:inherit; font-size:12px;
+        color:var(--text-main); background:rgba(2,6,23,0.45);
+        border:1px solid var(--border-color); border-radius:7px; padding:5px 9px; }
+  .manage-token-row button { font:inherit; font-size:11.5px; color:var(--text-muted);
+        background:rgba(148,163,184,0.08); border:1px solid var(--border-color);
+        border-radius:7px; padding:5px 11px; cursor:pointer; }
+  .manage-token-row button:hover { color:var(--text-main); border-color:#10b981; }
+  .manage-token-state { margin-top:5px; color:var(--text-muted); }
 
   /* 五大區塊。每一塊一個色系 —— 一打開報告看到的是五條收合的橫幅，
      顏色是用來「認位置」的：捲到一半也知道自己在哪一塊。
@@ -1422,6 +1460,37 @@ MANAGE_ACTIONS = (
 )
 
 
+def repo_slug():
+    """``owner/repo``；問不出來就回空字串。
+
+    為什麼不寫死 `metallicatw/market-monitor`：這支程式在本機也跑得起來（而且
+    這份 index.html 本機重新產生過不只一次），一個寫死的字串在 fork 或改名之後
+    會安靜地指向別人的 repo。
+
+    兩條路，都不需要新的設定檔：
+
+    1. 在 Actions 底下跑：`GITHUB_REPOSITORY` 是 runner 自己就有的。
+    2. 在本機跑：問 git 自己的 remote。**這一條是必要的**——只靠第一條的話，
+       本機重新產生一次報告，這一整塊就會安靜地消失，而下一次排程才會補回來。
+       一個時有時無的功能比沒有更難用。
+    """
+    repo = os.environ.get("GITHUB_REPOSITORY", "")
+    if not repo:
+        try:
+            out = subprocess.run(
+                ["git", "config", "--get", "remote.origin.url"],
+                capture_output=True, text=True, timeout=5,
+                cwd=os.path.dirname(os.path.abspath(__file__)),
+            ).stdout.strip()
+        except Exception:
+            out = ""
+        if out:
+            # https://github.com/owner/repo(.git) 與 git@github.com:owner/repo.git
+            tail = out.split("github.com", 1)[-1].lstrip(":/")
+            repo = tail[:-4] if tail.endswith(".git") else tail
+    return repo if repo.count("/") == 1 else ""
+
+
 def manage_url():
     """〔管理追蹤名單〕的 Actions 頁網址；找不到 repo 就回空字串。
 
@@ -1460,27 +1529,211 @@ def manage_url():
 
 
 def render_manage_bar():
-    """〔日股觀察〕上面那一列：一顆按鈕 ＋ 一行說明它能做什麼。
+    """〔日股觀察〕上面那一塊：**直接在這一頁**改追蹤名單。
 
-    這一列補的是一個純粹的**可發現性**缺口：`manage.yml` 早就寫好了、每個動作
-    都能用，但它只存在於 GitHub 的 Actions 分頁裡，而報告上沒有任何地方提到它。
-    等於功能做完了卻沒有入口——想在手機上加一檔個股，得先記得那個分頁在哪。
+    ## 為什麼是表單，不是一顆連到 Actions 的按鈕
 
-    `target="_blank"`：這份報告平常是嵌在 tw-six-metrics 的分頁裡（見頁首那段
-    註解），在 iframe 裡直接跳走會把外層那一頁一起換掉。
+    上一版是一顆連結。那還是「到後台去做」——只是換了一個入口。在手機上想加一檔
+    股票，要跳出報告、進 GitHub、找到 workflow、展開 Run workflow、填表、送出，
+    然後再自己走回來看結果。
+
+    這一版是表單：填代號、按送出、就在這一頁看進度。
+
+    ## 為什麼需要一把權杖，以及它放在哪裡
+
+    這一頁是 GitHub Pages 上的靜態 HTML，**沒有後端**。要改名單就得有東西在伺服
+    器上跑一趟（也就是一次 Actions），而觸發 Actions 的 API 需要授權。
+
+    所以權杖由**你自己貼一次**，存在**你自己瀏覽器**的 localStorage 裡。它不在
+    這份 HTML 裡，不在 repo 裡，也不會被 commit——這一頁是公開的，而權杖不是這
+    一頁的一部分。
+
+    要知道的兩件事：
+
+    * 它是真的憑證。存在你用過的每一台裝置的瀏覽器裡，拿到的人可以跑這個 repo
+      的 workflow。所以建議用 fine-grained PAT，只給這一個 repo、只給 Actions
+      讀寫、設一個到期日。
+    * GitHub Pages 的專案站台共用同一個 origin（`<帳號>.github.io`），所以你名下
+      其他 Pages 頁面讀得到同一份 localStorage。全部都是你自己的站，但值得知道。
+
+    ## 這裡不做什麼
+
+    不驗證權杖、不替你產生權杖、不把它送去任何第三方。它只會出現在一個地方：
+    送去 `api.github.com` 的那個 Authorization 標頭。
     """
-    url = manage_url()
-    if not url:
+    repo = repo_slug()
+    if not repo:
         return ""
-    actions = "／".join(MANAGE_ACTIONS)
+    actions = "".join(
+        f'<option value="{a}">{a}</option>' for a in MANAGE_ACTIONS
+    )
+    pat_url = (
+        "https://github.com/settings/personal-access-tokens/new"
+    )
     return f"""
   <div class="manage-bar">
-    <a class="manage-btn" href="{url}" target="_blank" rel="noopener">⚙️ 管理追蹤名單</a>
-    <div class="manage-hint">
-      在手機上也能改名單：到那一頁按 <code>Run workflow</code>，選動作、填代號送出，
-      雲端會改設定、抓資料、重新產生這份報告。<br>可做的動作：{actions}。
-    </div>
-  </div>"""
+    <form class="manage-form" onsubmit="return mmDispatch(event)">
+      <select id="mmAction" aria-label="要做什麼">{actions}</select>
+      <input id="mmCode" type="text" inputmode="latin" placeholder="代號（4063 或 shinetsu）"
+             aria-label="股票代號或檔名代號">
+      <input id="mmPrice" type="text" inputmode="decimal" placeholder="股價參考線"
+             aria-label="股價布局參考線（選填）">
+      <input id="mmPer" type="text" inputmode="decimal" placeholder="本益比"
+             aria-label="本益比布局參考線（選填）">
+      <input id="mmYears" type="text" inputmode="numeric" placeholder="季報年數" value="2"
+             aria-label="季報回溯年數">
+      <button type="submit" id="mmGo">送出</button>
+    </form>
+    <div class="manage-status" id="mmStatus" role="status"></div>
+    <details class="manage-token">
+      <summary>權杖設定</summary>
+      <div class="manage-token-body">
+        <p>這一頁是靜態網頁，沒有後端。要改名單得觸發一次 Actions，而那個 API
+        需要授權。權杖存在<b>你這台裝置的瀏覽器</b>裡，不在這份 HTML 裡，也不會
+        進 repo。</p>
+        <p>去 <a href="{pat_url}" target="_blank" rel="noopener">建一把 fine-grained
+        token</a>，設定照這三行：<br>
+        　Repository access → Only select repositories → <code>{repo}</code><br>
+        　Permissions → Repository permissions → <b>Actions: Read and write</b><br>
+        　Expiration → 設一個到期日（到期就再換一把）</p>
+        <div class="manage-token-row">
+          <input id="mmToken" type="password" placeholder="github_pat_…"
+                 autocomplete="off" aria-label="GitHub 權杖">
+          <button type="button" onclick="mmSaveToken()">儲存</button>
+          <button type="button" onclick="mmClearToken()">清除</button>
+        </div>
+        <div class="manage-token-state" id="mmTokenState"></div>
+      </div>
+    </details>
+  </div>
+  <script>
+  // 這一塊的全部狀態：一把權杖，存在 localStorage。沒有別的。
+  const MM_REPO  = {json.dumps(repo)};
+  const MM_WF    = {json.dumps(MANAGE_WORKFLOW)};
+  const MM_KEY   = 'mm.gh.token';
+
+  function mmToken()  {{ try {{ return localStorage.getItem(MM_KEY) || ''; }} catch (e) {{ return ''; }} }}
+  function mmSay(msg, kind) {{
+    const el = document.getElementById('mmStatus');
+    el.textContent = msg;
+    el.className = 'manage-status' + (kind ? ' ' + kind : '');
+  }}
+  function mmTokenState() {{
+    const el = document.getElementById('mmTokenState');
+    if (!el) return;
+    el.textContent = mmToken() ? '已存在這台裝置的瀏覽器裡。' : '尚未設定。';
+  }}
+  function mmSaveToken() {{
+    const v = document.getElementById('mmToken').value.trim();
+    try {{ v ? localStorage.setItem(MM_KEY, v) : localStorage.removeItem(MM_KEY); }} catch (e) {{}}
+    document.getElementById('mmToken').value = '';
+    mmTokenState();
+    mmSay(v ? '權杖已儲存。' : '權杖已清除。', 'ok');
+  }}
+  function mmClearToken() {{
+    try {{ localStorage.removeItem(MM_KEY); }} catch (e) {{}}
+    mmTokenState();
+    mmSay('權杖已清除。', 'ok');
+  }}
+
+  async function mmDispatch(ev) {{
+    ev.preventDefault();
+    const token = mmToken();
+    if (!token) {{
+      mmSay('還沒設定權杖——展開下面那一列設定一次就好。', 'warn');
+      return false;
+    }}
+    const action = document.getElementById('mmAction').value;
+    const code   = document.getElementById('mmCode').value.trim();
+    // 「只更新報告」和「列出目前名單」不需要代號；其他每一個都要。
+    // 擋在這裡而不是讓 workflow 跑一趟再失敗：那一趟要兩分鐘，而錯誤訊息會在
+    // 一個你已經離開的頁面上。
+    if (!code && action !== '只更新報告' && action !== '列出目前名單') {{
+      mmSay('這個動作要填代號。', 'warn');
+      return false;
+    }}
+    const inputs = {{ action: action }};
+    if (code) inputs.code = code;
+    const price = document.getElementById('mmPrice').value.trim();
+    const per   = document.getElementById('mmPer').value.trim();
+    const years = document.getElementById('mmYears').value.trim();
+    if (price) inputs.price_buy = price;
+    if (per)   inputs.per_buy   = per;
+    if (years) inputs.years     = years;
+
+    const btn = document.getElementById('mmGo');
+    btn.disabled = true;
+    mmSay('送出中…');
+    const since = new Date().toISOString();
+    try {{
+      const r = await fetch(
+        'https://api.github.com/repos/' + MM_REPO + '/actions/workflows/' + MM_WF + '/dispatches',
+        {{
+          method: 'POST',
+          headers: {{
+            'Accept': 'application/vnd.github+json',
+            'Authorization': 'Bearer ' + token,
+            'X-GitHub-Api-Version': '2022-11-28',
+            'Content-Type': 'application/json'
+          }},
+          body: JSON.stringify({{ ref: 'main', inputs: inputs }})
+        }}
+      );
+      // 每一個錯誤碼講的是不同的事，而「失敗了」對修它沒有幫助。
+      if (r.status === 401) {{ mmSay('權杖無效或已過期——重新設定一把。', 'bad'); btn.disabled = false; return false; }}
+      if (r.status === 403) {{ mmSay('權杖權限不足：要 Actions 的 Read and write。', 'bad'); btn.disabled = false; return false; }}
+      if (r.status === 404) {{ mmSay('找不到 ' + MM_REPO + ' 的 ' + MM_WF + '——權杖有沒有勾到這個 repo？', 'bad'); btn.disabled = false; return false; }}
+      if (r.status !== 204) {{
+        let msg = '';
+        try {{ msg = (await r.json()).message || ''; }} catch (e) {{}}
+        mmSay('送不出去（HTTP ' + r.status + '）' + (msg ? '：' + msg : ''), 'bad');
+        btn.disabled = false; return false;
+      }}
+    }} catch (e) {{
+      mmSay('連不上 GitHub：' + e.message, 'bad');
+      btn.disabled = false; return false;
+    }}
+    mmSay('已送出，雲端開始跑了…');
+    mmWatch(token, since, btn);
+    return false;
+  }}
+
+  // 盯著那一趟跑完沒有。
+  //
+  // dispatch 回的是 204、沒有 body，所以拿不到 run id——只能回頭去問「這個
+  // workflow 最新一趟是什麼時候開始的」，並且只認**送出之後**才建立的那一趟。
+  // 不比時間的話，畫面會立刻顯示上一次的結果，看起來像三秒就跑完了。
+  async function mmWatch(token, since, btn) {{
+    const started = Date.parse(since);
+    for (let i = 0; i < 100; i++) {{            // 100 × 6 秒 ≈ 10 分鐘
+      await new Promise(r => setTimeout(r, 6000));
+      let run = null;
+      try {{
+        const r = await fetch(
+          'https://api.github.com/repos/' + MM_REPO + '/actions/workflows/' + MM_WF + '/runs?per_page=5',
+          {{ headers: {{ 'Accept': 'application/vnd.github+json',
+                        'Authorization': 'Bearer ' + token,
+                        'X-GitHub-Api-Version': '2022-11-28' }} }}
+        );
+        const j = await r.json();
+        run = (j.workflow_runs || []).find(x => Date.parse(x.created_at) >= started - 5000);
+      }} catch (e) {{ continue; }}
+      if (!run) {{ mmSay('已送出，排隊中…'); continue; }}
+      if (run.status !== 'completed') {{ mmSay('執行中…（' + run.status + '）'); continue; }}
+      btn.disabled = false;
+      if (run.conclusion === 'success') {{
+        mmSay('完成了。報告已經重新產生——重新整理這一頁就會看到。', 'ok');
+      }} else {{
+        mmSay('那一趟沒有成功（' + run.conclusion + '）。到 Actions 看 log。', 'bad');
+      }}
+      return;
+    }}
+    btn.disabled = false;
+    mmSay('等太久了，這一頁不再盯著。到 Actions 看它跑完了沒。', 'warn');
+  }}
+
+  document.addEventListener('DOMContentLoaded', mmTokenState);
+  </script>"""
 
 
 def block_card(card_id, title, summary_html, body_html):

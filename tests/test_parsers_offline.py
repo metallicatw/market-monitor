@@ -361,24 +361,27 @@ def test_every_us_indicator_chart_is_wired_to_a_canvas_that_exists():
     print(f"  美股指標歷史線 ok：{drawn} 條，各自一張圖、一條軸")
 
 
-def test_the_report_offers_a_way_into_the_manage_workflow():
-    """`manage.yml` 的八個動作早就能用了，而報告上沒有任何地方提到它。
+def test_the_report_lets_you_change_the_list_without_leaving_the_page():
+    """「我要的是直接在前台操作，不是連結到後台。」
 
-    功能做完了卻沒有入口，在使用者那邊和沒做完是同一件事——想在手機上加一檔
-    個股，得先記得 GitHub 那個分頁在哪。這條守的是那個入口還在、指對地方、而且
-    小字列出來的動作和 workflow 真正的選項一致（不一致的時候沒有任何錯誤，只是
-    有人照著小字去找一個不存在的選項）。
+    上一版是一顆連到 Actions 的按鈕。那還是「到後台去做」，只是換了一個入口：
+    在手機上想加一檔股票，要跳出報告、進 GitHub、找到 workflow、展開 Run
+    workflow、填表、送出，然後再自己走回來看結果。
+
+    這一版是表單，就在報告上。這條守三件事：欄位齊、動作選單和 workflow 的
+    choice 逐字相同（不一致的時候 dispatch 會被 GitHub 打回來，而錯誤訊息只寫
+    「Required input is not provided」）、以及 repo 與 workflow 檔名是算出來的
+    不是寫死的。
     """
     import re
 
     import generate_report_local as grl
 
     bar = grl.render_manage_bar()
-    assert bar, "找不到管理列——本機沒有 remote 也應該由 GITHUB_REPOSITORY 接住"
-    assert "/actions/workflows/" + grl.MANAGE_WORKFLOW in bar
-    # 這份報告平常嵌在 tw-six-metrics 的分頁裡，在 iframe 裡直接跳走會把外層
-    # 那一頁一起換掉。
-    assert 'target="_blank"' in bar and 'rel="noopener"' in bar
+    assert bar, "找不到管理列"
+    assert 'onsubmit="return mmDispatch' in bar, "沒有表單，還是一顆連結？"
+    for field in ("mmAction", "mmCode", "mmPrice", "mmPer", "mmYears", "mmGo"):
+        assert f'id="{field}"' in bar, f"少了欄位 {field}"
 
     wf = open(os.path.join(BASE_DIR, ".github", "workflows",
                            grl.MANAGE_WORKFLOW), encoding="utf-8").read()
@@ -386,8 +389,41 @@ def test_the_report_offers_a_way_into_the_manage_workflow():
     options = tuple(m.strip() for m in re.findall(r"^\s*-\s*(\S.*)$", block, re.M))
     assert options == grl.MANAGE_ACTIONS, (options, grl.MANAGE_ACTIONS)
     for name in options:
-        assert name in bar, f"小字裡少了「{name}」"
-    print(f"  管理列 ok：{len(options)} 個動作，連到 {grl.MANAGE_WORKFLOW}")
+        assert f'<option value="{name}">' in bar, f"選單裡少了「{name}」"
+
+    # 送出的 inputs 名稱要和 workflow 的 inputs 一致。
+    for key in ("action", "code", "price_buy", "per_buy", "years"):
+        assert f"{key}:" in wf, f"workflow 沒有 {key} 這個 input"
+        assert key in bar, f"表單沒有送出 {key}"
+    print(f"  管理表單 ok：{len(options)} 個動作，5 個欄位")
+
+
+def test_no_credential_is_ever_baked_into_the_report():
+    """權杖由使用者自己貼，存在他自己的瀏覽器裡——**絕不**進這份 HTML。
+
+    這一頁是公開的。一把不小心被寫進產生器的權杖會直接躺在 GitHub Pages 上，
+    而且沒有任何症狀：功能照常運作。
+
+    所以這條測試在意的不是「現在沒有」，是「它不可能有」——產生器只寫得出讀取
+    localStorage 的程式碼，沒有任何路徑把一個字面值的權杖放進去。
+    """
+    import re
+
+    import generate_report_local as grl
+
+    bar = grl.render_manage_bar()
+    # GitHub 權杖的幾種前綴。出現在 HTML 裡就是出事了。
+    for prefix in ("github_pat_", "ghp_", "gho_", "ghs_", "ghu_"):
+        # 說明文字裡那個 placeholder（`github_pat_…`）是給人看的樣子，
+        # 後面沒有接任何字元；真的權杖後面會有一長串。
+        for m in re.finditer(re.escape(prefix) + r"[A-Za-z0-9_]{4,}", bar):
+            raise AssertionError(f"HTML 裡有疑似權杖：{m.group(0)[:20]}…")
+    assert "localStorage" in bar, "權杖應該存在瀏覽器，不是別的地方"
+    assert "api.github.com" in bar
+    # 權杖只能去一個地方：GitHub 的 API。
+    hosts = set(re.findall(r"https://([a-z0-9.\-]+)", bar))
+    assert hosts <= {"api.github.com", "github.com"}, hosts
+    print("  報告裡沒有任何憑證，權杖只送 api.github.com")
 
 
 def test_the_manage_link_survives_a_local_regeneration():
