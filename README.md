@@ -202,7 +202,15 @@ bvps_jpy                每股淨值
 ### 第一次設定（電腦上做一次就好）
 
 1. **建立 repo 並推上去**（`secrets.json` 已列入 .gitignore，不會被推上去）
-2. **Settings → Pages**：Source 選 `Deploy from a branch`，分支 `main`，資料夾 `/ (root)`
+2. **Settings → Pages**：Source 選 **`GitHub Actions`**（不是 `Deploy from a branch`）
+
+   > 這一項在 2026-09 改過。原本是從 `main` 根目錄讀 `index.html`，而那種設定
+   > 逼著一個每天重新產生的 1 MB 檔案被版控——每一次合併都撞在它身上，撞出來的
+   > 衝突還沒有哪一邊是對的（兩邊都是產生出來的），三天內發生三次。
+   >
+   > 現在 `index.html` 列在 `.gitignore` 裡，由 workflow 直接發布給 Pages。
+   > 網址一個字沒變。**還停在 `Deploy from a branch` 的話，deploy 那一步會失敗**
+   > ——而那個失敗是對的，因為那時候網頁上是一份不會再更新的舊報告。
 3. **Settings → Actions → General → Workflow permissions**：選 `Read and write permissions`
 4. **Settings → Secrets and variables → Actions → New repository secret**
    名稱填 `JQUANTS_API_KEY`，值貼上你的 J-Quants 金鑰
@@ -229,7 +237,9 @@ git commit -m "改了什麼"
 git push
 ```
 
-推上去約一分鐘後 GitHub Pages 自動更新，不用另外做什麼。
+推程式碼上去**不會**更新網頁——報告不在 git 裡，網頁是 workflow 產生報告之後
+直接發布的。要讓網頁跟上新程式碼，到 Actions 按一次〔管理追蹤名單〕→
+`只更新報告`，或等隔天早上的排程。
 
 ### 關鍵原則：本機不要產生「正式檔案」
 
@@ -365,7 +375,7 @@ python cleanup.py --delete   # 確認後執行
 ├── name_utils.py           公司名稱與檔名代號處理
 ├── cleanup.py              部署前整理檢查
 ├── secrets.json            API 金鑰（不進版控）
-├── index.html              產生出來的正式報告（GitHub Pages 讀這個）
+├── index.html              產生出來的正式報告（**不進 git**，由 workflow 發布給 Pages）
 ├── local_test/index.html   測試版報告，不影響正式版
 ├── tests/                  離線 parser 測試（不打網路）
 ├── reference/samples/      端點原始回應（fixture）＋各自的結論

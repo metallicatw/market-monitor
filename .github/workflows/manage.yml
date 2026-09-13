@@ -39,6 +39,9 @@ on:
 
 permissions:
   contents: write
+  # 發布 Pages 要的兩個。報告不再進 git，改由 deploy-pages 直接送上去。
+  pages: write
+  id-token: write
 
 concurrency:
   group: market-monitor-write
@@ -47,6 +50,9 @@ concurrency:
 jobs:
   manage:
     runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     env:
       JQUANTS_API_KEY: ${{ secrets.JQUANTS_API_KEY }}
     steps:
@@ -136,3 +142,38 @@ jobs:
             git commit -m "手機操作：${IN_ACTION} ${IN_CODE}"
             git push
           fi
+
+      # upload-pages-artifact 會把整個資料夾送上去，所以先挑出真的要公開的那一個。
+      # 直接送 repo 根目錄的話，config.json、data/、還有整包 Python 都會變成
+      # 公開網站的一部分。
+      - name: 挑出要公開的檔案
+        if: hashFiles('index.html') != ''
+        run: |
+          mkdir -p pages
+          cp index.html pages/index.html
+
+      # ── 發布報告到 GitHub Pages ────────────────────────────────────────
+      #
+      # 報告不再進 git（見 .gitignore 裡那段），所以它到得了網頁的唯一一條路就是
+      # 這三步。以前是「commit 上去，Pages 從 main 根目錄讀」，而那個設定逼著一個
+      # 每天重新產生的 1 MB 檔案被版控——每一次合併都撞在它身上，撞出來的衝突還
+      # 沒有哪一邊是對的（兩邊都是產生出來的）。
+      #
+      # ⚠️ 前提：Settings → Pages → Source 要是「GitHub Actions」，不是
+      #    「Deploy from a branch」。還停在後者的話，deploy 這一步會失敗——而
+      #    那個失敗是對的，因為那時候網頁上顯示的是一份不會再更新的舊報告。
+      #
+      # `if: hashFiles(...)`：報告產不出來的那幾次（來源掛掉）不要去發布，
+      # 讓網址上繼續是上一份好的。
+      - name: 準備發布
+        if: hashFiles('index.html') != ''
+        uses: actions/configure-pages@v5
+      - name: 打包報告
+        if: hashFiles('index.html') != ''
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: pages
+      - name: 發布
+        id: deployment
+        if: hashFiles('index.html') != ''
+        uses: actions/deploy-pages@v4

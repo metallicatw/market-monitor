@@ -14,3 +14,20 @@ venv/
 # 系統檔
 .DS_Store
 Thumbs.db
+
+# 產生出來的報告。**刻意不進版控。**
+#
+# 它以前是被 commit 的，因為 GitHub Pages 設成「Deploy from a branch」——那種
+# 設定下，檔案不在 git 裡就沒有網頁。代價是一個每天重新產生的 1 MB 檔案被版控：
+#
+#   * 每一次合併都撞在它身上，而且撞出來的衝突**沒有哪一邊是對的**——兩邊都是
+#     產生出來的。三天之內發生三次。
+#   * git 歷史每天長 1 MB。
+#   * 只有報告變的時候也要留一筆 commit（那些「手機操作：只更新報告」）。
+#
+# 改成由 workflow 直接發布給 Pages（actions/deploy-pages）之後，網址一個字沒變，
+# 而這個檔案不必存在於 git 裡。沒被追蹤的檔案不會衝突。
+index.html
+
+# upload-pages-artifact 的暫存資料夾（workflow 自己建的）
+pages/
