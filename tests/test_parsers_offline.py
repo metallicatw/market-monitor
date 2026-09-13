@@ -361,6 +361,54 @@ def test_every_us_indicator_chart_is_wired_to_a_canvas_that_exists():
     print(f"  美股指標歷史線 ok：{drawn} 條，各自一張圖、一條軸")
 
 
+def test_the_report_offers_a_way_into_the_manage_workflow():
+    """`manage.yml` 的八個動作早就能用了，而報告上沒有任何地方提到它。
+
+    功能做完了卻沒有入口，在使用者那邊和沒做完是同一件事——想在手機上加一檔
+    個股，得先記得 GitHub 那個分頁在哪。這條守的是那個入口還在、指對地方、而且
+    小字列出來的動作和 workflow 真正的選項一致（不一致的時候沒有任何錯誤，只是
+    有人照著小字去找一個不存在的選項）。
+    """
+    import re
+
+    import generate_report_local as grl
+
+    bar = grl.render_manage_bar()
+    assert bar, "找不到管理列——本機沒有 remote 也應該由 GITHUB_REPOSITORY 接住"
+    assert "/actions/workflows/" + grl.MANAGE_WORKFLOW in bar
+    # 這份報告平常嵌在 tw-six-metrics 的分頁裡，在 iframe 裡直接跳走會把外層
+    # 那一頁一起換掉。
+    assert 'target="_blank"' in bar and 'rel="noopener"' in bar
+
+    wf = open(os.path.join(BASE_DIR, ".github", "workflows",
+                           grl.MANAGE_WORKFLOW), encoding="utf-8").read()
+    block = wf.split("options:", 1)[1].split("code:", 1)[0]
+    options = tuple(m.strip() for m in re.findall(r"^\s*-\s*(\S.*)$", block, re.M))
+    assert options == grl.MANAGE_ACTIONS, (options, grl.MANAGE_ACTIONS)
+    for name in options:
+        assert name in bar, f"小字裡少了「{name}」"
+    print(f"  管理列 ok：{len(options)} 個動作，連到 {grl.MANAGE_WORKFLOW}")
+
+
+def test_the_manage_link_survives_a_local_regeneration():
+    """只靠 GITHUB_REPOSITORY 的話，本機重跑一次報告這顆按鈕就會消失。
+
+    而這份 index.html 本機重新產生過不只一次（併衝突的時候就是這樣解的）。
+    一顆時有時無的按鈕比沒有按鈕更難用：它會讓人以為功能被拿掉了。
+    """
+    import generate_report_local as grl
+
+    saved = os.environ.pop("GITHUB_REPOSITORY", None)
+    try:
+        url = grl.manage_url()          # 沒有 env，只能問 git remote
+    finally:
+        if saved is not None:
+            os.environ["GITHUB_REPOSITORY"] = saved
+    assert url.endswith("/actions/workflows/" + grl.MANAGE_WORKFLOW), url
+    assert url.count("/") >= 6, f"repo 段沒解析出來：{url}"
+    print(f"  本機也拿得到網址：{url}")
+
+
 if __name__ == "__main__":
     tests = [v for k, v in sorted(globals().items()) if k.startswith("test_")]
     failed = 0

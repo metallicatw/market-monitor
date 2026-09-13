@@ -30,6 +30,7 @@ generate_report_local.py
 import argparse
 import json
 import os
+import subprocess
 from datetime import date, datetime, timedelta, timezone
 
 # Windows 沒有內建 IANA 時區資料庫，zoneinfo 需要另外裝 tzdata 套件
@@ -208,6 +209,22 @@ CSS = """
   .expand-btn { font-size:11.5px; font-weight:600; color:var(--text-muted); background:rgba(148,163,184,0.08);
                 border:1px solid var(--border-color); border-radius:7px; padding:5px 12px; cursor:pointer; }
   .expand-btn:hover { color:var(--text-main); border-color:#22d3ee; }
+
+  /* 〔日股觀察〕那一格上面的管理列。
+     這是「在手機上新增一檔個股」唯一的入口——以前它只存在於 GitHub 的 Actions
+     分頁裡，而那個分頁沒有任何地方會告訴你它在。按鈕做成綠色（和這一塊的色系
+     一致），旁邊那行小字列出七個動作，這樣不必點進去就知道那裡能做什麼。 */
+  .manage-bar { display:flex; flex-wrap:wrap; align-items:center; gap:10px;
+                margin:0 0 14px 0; padding:10px 12px; border-radius:9px;
+                background:rgba(16,185,129,0.07); border:1px solid rgba(16,185,129,0.28); }
+  .manage-btn { display:inline-flex; align-items:center; gap:6px; flex:0 0 auto;
+                font-size:12.5px; font-weight:700; text-decoration:none;
+                color:#052e21; background:#10b981; border-radius:7px;
+                padding:6px 13px; border:1px solid #10b981; }
+  .manage-btn:hover { background:#34d399; border-color:#34d399; }
+  .manage-hint { font-size:11.5px; color:var(--text-muted); line-height:1.6; min-width:0; }
+  .manage-hint code { font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+                      font-size:11px; color:var(--text-main); }
 
   /* 五大區塊。每一塊一個色系 —— 一打開報告看到的是五條收合的橫幅，
      顏色是用來「認位置」的：捲到一半也知道自己在哪一塊。
@@ -1390,6 +1407,80 @@ BLOCK_TONES = {
     "jp":      "#a855f7",   # 日股總經　紫
     "jpstock": "#10b981",   # 日股觀察　綠
 }
+
+
+#: 〔管理追蹤名單〕那條 workflow 的檔名。連結指向它的 Actions 頁面，
+#: 那一頁上就是「Run workflow」的表單。
+MANAGE_WORKFLOW = "manage.yml"
+
+#: 那條 workflow 的動作，照它 inputs 裡 choice 的順序，一字不差。
+#: 寫在這裡是為了讓報告上那行小字和實際的選項一致——不一致的時候沒有任何錯誤，
+#: 只是有人照著小字去找一個不存在的選項。
+MANAGE_ACTIONS = (
+    "只更新報告", "新增個股", "新增個股並建立季報", "建立或重建季報",
+    "隱藏個股", "恢復顯示", "移除個股", "列出目前名單",
+)
+
+
+def manage_url():
+    """〔管理追蹤名單〕的 Actions 頁網址；找不到 repo 就回空字串。
+
+    為什麼不寫死 `metallicatw/market-monitor`：這支程式在本機也跑得起來（而且
+    這份 index.html 本機重新產生過不只一次），一個寫死的網址在 fork 或改名之後
+    會安靜地指向別人的 repo。
+
+    兩條路，都不需要新的設定檔：
+
+    1. 在 Actions 底下跑：`GITHUB_SERVER_URL` 與 `GITHUB_REPOSITORY` 是 runner
+       自己就有的。
+    2. 在本機跑：問 git 自己的 remote。**這一條是必要的**——只靠第一條的話，
+       本機重新產生一次報告，這顆按鈕就會安靜地消失，而下一次排程才會把它補
+       回來。一顆時有時無的按鈕比沒有按鈕更難用。
+
+    兩條都沒有（沒有 remote 的資料夾）就回空字串，報告上不會出現那一列。
+    """
+    server = os.environ.get("GITHUB_SERVER_URL", "https://github.com")
+    repo = os.environ.get("GITHUB_REPOSITORY", "")
+    if not repo:
+        try:
+            out = subprocess.run(
+                ["git", "config", "--get", "remote.origin.url"],
+                capture_output=True, text=True, timeout=5,
+                cwd=os.path.dirname(os.path.abspath(__file__)),
+            ).stdout.strip()
+        except Exception:
+            out = ""
+        if out:
+            # https://github.com/owner/repo(.git) 與 git@github.com:owner/repo.git
+            tail = out.split("github.com", 1)[-1].lstrip(":/")
+            repo = tail[:-4] if tail.endswith(".git") else tail
+    if not repo or repo.count("/") != 1:
+        return ""
+    return f"{server}/{repo}/actions/workflows/{MANAGE_WORKFLOW}"
+
+
+def render_manage_bar():
+    """〔日股觀察〕上面那一列：一顆按鈕 ＋ 一行說明它能做什麼。
+
+    這一列補的是一個純粹的**可發現性**缺口：`manage.yml` 早就寫好了、每個動作
+    都能用，但它只存在於 GitHub 的 Actions 分頁裡，而報告上沒有任何地方提到它。
+    等於功能做完了卻沒有入口——想在手機上加一檔個股，得先記得那個分頁在哪。
+
+    `target="_blank"`：這份報告平常是嵌在 tw-six-metrics 的分頁裡（見頁首那段
+    註解），在 iframe 裡直接跳走會把外層那一頁一起換掉。
+    """
+    url = manage_url()
+    if not url:
+        return ""
+    actions = "／".join(MANAGE_ACTIONS)
+    return f"""
+  <div class="manage-bar">
+    <a class="manage-btn" href="{url}" target="_blank" rel="noopener">⚙️ 管理追蹤名單</a>
+    <div class="manage-hint">
+      在手機上也能改名單：到那一頁按 <code>Run workflow</code>，選動作、填代號送出，
+      雲端會改設定、抓資料、重新產生這份報告。<br>可做的動作：{actions}。
+    </div>
+  </div>"""
 
 
 def block_card(card_id, title, summary_html, body_html):
@@ -2718,7 +2809,8 @@ def build_html(taiex, vix, nikkei, michigan, murata, jp_stocks,
             stock_chips.append(chip("觸發布局", f"{buy_hits} 檔", "buy"))
         blocks.append(block_card(
             "jpstock", "日股觀察", "".join(stock_chips),
-            f'<div class="jp-stock-grid">{"".join(jp_html_list)}</div>'))
+            render_manage_bar()
+            + f'<div class="jp-stock-grid">{"".join(jp_html_list)}</div>'))
 
     html = f"""<!DOCTYPE html>
 <html lang="zh-TW">

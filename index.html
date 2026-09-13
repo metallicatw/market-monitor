@@ -70,6 +70,22 @@
                 border:1px solid var(--border-color); border-radius:7px; padding:5px 12px; cursor:pointer; }
   .expand-btn:hover { color:var(--text-main); border-color:#22d3ee; }
 
+  /* 〔日股觀察〕那一格上面的管理列。
+     這是「在手機上新增一檔個股」唯一的入口——以前它只存在於 GitHub 的 Actions
+     分頁裡，而那個分頁沒有任何地方會告訴你它在。按鈕做成綠色（和這一塊的色系
+     一致），旁邊那行小字列出七個動作，這樣不必點進去就知道那裡能做什麼。 */
+  .manage-bar { display:flex; flex-wrap:wrap; align-items:center; gap:10px;
+                margin:0 0 14px 0; padding:10px 12px; border-radius:9px;
+                background:rgba(16,185,129,0.07); border:1px solid rgba(16,185,129,0.28); }
+  .manage-btn { display:inline-flex; align-items:center; gap:6px; flex:0 0 auto;
+                font-size:12.5px; font-weight:700; text-decoration:none;
+                color:#052e21; background:#10b981; border-radius:7px;
+                padding:6px 13px; border:1px solid #10b981; }
+  .manage-btn:hover { background:#34d399; border-color:#34d399; }
+  .manage-hint { font-size:11.5px; color:var(--text-muted); line-height:1.6; min-width:0; }
+  .manage-hint code { font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+                      font-size:11px; color:var(--text-main); }
+
   /* 五大區塊。每一塊一個色系 —— 一打開報告看到的是五條收合的橫幅，
      顏色是用來「認位置」的：捲到一半也知道自己在哪一塊。
      色相由 --blk 帶進來，其餘規則共用，不要為每一塊各寫一份。 */
@@ -270,7 +286,7 @@
 
          時間戳留著，而且現在是報告的第一行：嵌起來的時候它剛好接在那個分頁的
          標題底下，這正是它該在的位置——「你正在看的這一份是什麼時候的」。 -->
-      <div class="page-subtitle stamp-lead">報告生成時間：2026-09-12 22:57　｜　報告資料基準：2026/09/11</div>
+      <div class="page-subtitle stamp-lead">報告生成時間：2026-09-13 14:53　｜　報告資料基準：2026/09/11</div>
     </div>
     <button class="mode-toggle-btn" id="modeToggleBtn" onclick="toggleViewMode()">🖥️ 電腦版／📱 手機版</button>
   </div>
@@ -1173,7 +1189,14 @@ VIX 是市場對未來 30 天波動的預期，俗稱恐慌指數。它不預測
     <span class="card-chev" aria-hidden="true">⌄</span>
   </button>
   <div class="card-body">
-<div class="jp-stock-grid">
+
+  <div class="manage-bar">
+    <a class="manage-btn" href="https://github.com/metallicatw/market-monitor/actions/workflows/manage.yml" target="_blank" rel="noopener">⚙️ 管理追蹤名單</a>
+    <div class="manage-hint">
+      在手機上也能改名單：到那一頁按 <code>Run workflow</code>，選動作、填代號送出，
+      雲端會改設定、抓資料、重新產生這份報告。<br>可做的動作：只更新報告／新增個股／新增個股並建立季報／建立或重建季報／隱藏個股／恢復顯示／移除個股／列出目前名單。
+    </div>
+  </div><div class="jp-stock-grid">
 <div class="section-card collapsed" id="card-kao" data-card="kao">
   <button class="card-head" type="button" onclick="toggleCard('kao')" aria-expanded="false">
     <span class="card-head-main">
