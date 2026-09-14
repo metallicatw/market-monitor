@@ -143,6 +143,14 @@
       "enabled": true,
       "price_buy": null,
       "per_buy": null
+    },
+    {
+      "key": "stellachemifa",
+      "code": "4109.T",
+      "name": "STELLA CHEMIFA CORPORATION",
+      "enabled": false,
+      "price_buy": null,
+      "per_buy": null
     }
   ],
   "us_indices": [
