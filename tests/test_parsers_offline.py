@@ -445,6 +445,44 @@ def test_every_field_says_what_it_is_and_what_its_default_is():
     print(f"  {len(grl.MANAGE_FIELD_HINTS)} 個欄位的說明寫在欄位上面，和 workflow 一致")
 
 
+def test_every_button_sends_a_code_the_workflow_will_accept():
+    """按鈕送出去的代號，必須通過 manage.yml 自己那一關。
+
+    這一條是踩出來的。第一版按鈕送的是 `code`，而 `code` 是 Yahoo 的 ticker
+    ——「4452.T」。manage.yml 裡有一段 shell 只收數字與英文字母（那一關擋的是
+    把奇怪的字送進 manage_stock.py），於是每一次按 🙈 或 🗑️ 都是：
+
+        Error: 股票代號只能是數字或英文字母，收到的是：4109.T
+
+    而且**前端完全看不出來**：dispatch 回 204，報告上顯示「已送出，雲端開始
+    跑了…」，兩分鐘後才變成「那一趟沒有成功」。
+
+    `manage_stock._find()` 兩種都認（key 或 code），而 key 永遠是英數，所以送
+    key 是唯一不會撞到那一關的寫法。這條測試直接拿 workflow 裡那個字元類別去
+    比對每一顆按鈕真的送出去的字串。
+    """
+    import re
+
+    import generate_report_local as grl
+
+    wf = open(os.path.join(BASE_DIR, ".github", "workflows",
+                           grl.MANAGE_WORKFLOW), encoding="utf-8").read()
+    # workflow 用 shell 的 case 擋：`*[!0-9A-Za-z]*` 就是「有任何一個字元不是英數」。
+    assert "*[!0-9A-Za-z]*" in wf, "workflow 的代號檢查改了，這條測試要跟著改"
+    ok = re.compile(r"^[0-9A-Za-z]+$")
+
+    stocks = grl.load_jp_stocks(include_disabled=True)
+    assert stocks, "設定裡一檔都沒有"
+    for s in stocks:
+        assert ok.match(s["key"]), f'檔名代號 {s["key"]!r} 過不了 workflow 那一關'
+
+    # 隱藏列上那幾顆按鈕真的送的是什麼。
+    row = grl.render_hidden_row(stocks[:3])
+    for sent in re.findall(r'data-code="([^"]*)"', row):
+        assert ok.match(sent), f"隱藏列送出 {sent!r}，workflow 會退回來"
+    print(f"  {len(stocks)} 檔的代號都過得了 workflow 那一關")
+
+
 def test_hiding_a_stock_is_not_a_one_way_door():
     """〔恢復顯示〕要有地方按得到。
 
@@ -457,10 +495,14 @@ def test_hiding_a_stock_is_not_a_one_way_door():
     import generate_report_local as grl
 
     row = grl.render_hidden_row([
-        {"key": "x", "code": "9999.T", "name": "測試公司"},
+        {"key": "testco", "code": "9999.T", "name": "測試公司"},
     ])
     assert "恢復顯示" in row, "那一列不會送出〔恢復顯示〕"
-    assert 'data-code="9999.T"' in row, "代號沒有跟著按鈕走"
+    # 送出的是檔名代號（英數，過得了 workflow 那一關）；畫面上顯示的是 Yahoo
+    # ticker，因為那是人看得懂的那一個。兩者刻意不同。
+    assert 'data-code="testco"' in row, "代號沒有跟著按鈕走"
+    assert 'data-code="9999.T"' not in row, "又送 Yahoo ticker 了，workflow 會退回來"
+    assert "9999.T" in row, "畫面上要看得到代號"
     assert "測試公司" in row
     # 沒有隱藏中的股票就整列不畫——一條空的分隔線不是資訊。
     assert grl.render_hidden_row([]) == ""

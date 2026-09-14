@@ -1887,9 +1887,12 @@ def render_hidden_row(hidden):
     """
     if not hidden:
         return ""
+    # data-code 送 `key` 不是 `code`，理由和個股卡上那兩顆按鈕一樣（見
+    # render_jp_stock_section）：`code` 是 Yahoo ticker，帶著一個點，過不了
+    # manage.yml 那一關。畫面上顯示的仍然是 `code`——那是人看得懂的那一個。
     chips = "".join(
         '<button type="button" class="hidden-chip" '
-        f'data-code="{s["code"]}" onclick="return mmCardAct(this,\'恢復顯示\')" '
+        f'data-code="{s["key"]}" onclick="return mmCardAct(this,\'恢復顯示\')" '
         f'title="恢復顯示 {s["name"]}">👁️ {s["name"]}'
         f'<span class="hidden-code">{s["code"]}</span></button>'
         for s in hidden
@@ -2214,11 +2217,19 @@ def render_jp_stock_section(stock, fin, key, quarterly=None, annual=None):
     # 代號就寫在他正要操作的那張卡片的標題上。按鈕直接帶著代號走，打錯不可能。
     #
     # 移除要按兩下（見 mmCardAct）：隱藏可以按張眼還原，移除不行。
+    #
+    # 送出的是**檔名代號**（`key`，例如 kao／shinetsu），不是 `code`。
+    # 第一版送 `code`，而 `code` 是 Yahoo 的 ticker——「4452.T」。manage.yml 只
+    # 收數字與英文字母（那一關擋的是把奇怪的字送進 manage_stock.py），於是每一次
+    # 按下去都是：
+    #     Error: 股票代號只能是數字或英文字母，收到的是：4109.T
+    # `manage_stock._find()` 兩種都認（key 或 code），而 key 永遠是英數，所以送
+    # key 是唯一不會撞到那一關的寫法。
     actions_html = (
-        f'<button type="button" class="card-act" data-code="{code}"'
+        f'<button type="button" class="card-act" data-code="{key}"'
         f' onclick="return mmCardAct(this,\'隱藏個股\')"'
         f' title="隱藏 {name}——之後可以在下面那一列還原">🙈</button>'
-        f'<button type="button" class="card-act danger" data-code="{code}"'
+        f'<button type="button" class="card-act danger" data-code="{key}"'
         f' onclick="return mmCardAct(this,\'移除個股\')"'
         f' title="從名單移除 {name}">🗑️</button>'
     )
