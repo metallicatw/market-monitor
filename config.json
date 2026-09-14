@@ -148,7 +148,7 @@
       "key": "stellachemifa",
       "code": "4109.T",
       "name": "STELLA CHEMIFA CORPORATION",
-      "enabled": false,
+      "enabled": true,
       "price_buy": null,
       "per_buy": null
     }
