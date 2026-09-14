@@ -263,6 +263,49 @@ CSS = """
         border-radius:7px; padding:5px 11px; cursor:pointer; }
   .manage-token-row button:hover { color:var(--text-main); border-color:#10b981; }
   .manage-token-state { margin-top:5px; color:var(--text-muted); }
+  .manage-token-how { margin:7px 0 0; }
+  .manage-token-how a { color:var(--text-muted); }
+
+  /* 個股卡右上角的操作鈕。`.card-head` 是一顆 <button>，所以這一排是它的
+     兄弟、絕對定位疊上去——按鈕裡面塞按鈕在 HTML 上無效。
+     留 34px 給右邊那個 ⌄，不然兩個會重疊。 */
+  .section-card { position:relative; }
+  .card-acts { position:absolute; top:12px; right:36px; display:flex; gap:5px;
+        z-index:2; }
+  .section-card.collapsed .card-acts { top:9px; }
+  /* 固定寬高。兩顆按鈕的總寬度是 .card-head 那條 padding-right 算出來的，
+     所以它們**不能**隨狀態變寬——按下去之後變寬會把摘要列擠掉。 */
+  .card-act { font:inherit; font-size:13px; line-height:1; cursor:pointer;
+        width:28px; height:26px; padding:0; display:inline-flex;
+        align-items:center; justify-content:center;
+        background:rgba(148,163,184,0.10); border:1px solid var(--border-color);
+        border-radius:7px; color:var(--text-muted); }
+  .card-act:hover { border-color:#10b981; background:rgba(16,185,129,0.14); }
+  .card-act.danger:hover { border-color:#f87171; background:rgba(248,113,113,0.14); }
+  /* 待確認：只換顏色，寬度一格不動。要再按一次這件事寫在狀態列上。 */
+  .card-act.armed { color:#fca5a5; border-color:#f87171;
+        background:rgba(248,113,113,0.22); }
+  /* 給那兩顆按鈕和 ⌄ 讓出位置。不留的話摘要列會從它們底下穿過去——
+     在 1,300px 寬的兩欄版面上，被蓋住的正是最右邊那個「可布局」徽章。 */
+  .section-card.has-acts > .card-head { padding-right:102px; }
+  @media (max-width:520px) {
+    .card-acts { right:32px; gap:4px; }
+    .section-card.has-acts > .card-head { padding-right:94px; }
+  }
+
+  /* 〔隱藏中〕那一列：〔恢復顯示〕唯一的家。隱藏起來的個股照定義沒有卡片，
+     沒有這一列就等於隱藏是單向操作。 */
+  .hidden-row { display:flex; flex-wrap:wrap; align-items:center; gap:7px;
+        margin-top:14px; padding-top:12px; border-top:1px dashed var(--border-color); }
+  .hidden-label { font-size:11.5px; color:var(--text-muted); }
+  .hidden-chip { font:inherit; font-size:11.5px; cursor:pointer; color:var(--text-muted);
+        background:rgba(148,163,184,0.08); border:1px solid var(--border-color);
+        border-radius:999px; padding:4px 11px; display:inline-flex; align-items:center;
+        gap:6px; }
+  .hidden-chip:hover { color:var(--text-main); border-color:#10b981;
+        background:rgba(16,185,129,0.12); }
+  .hidden-code { font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+        font-size:10.5px; opacity:.7; }
 
   /* 五大區塊。每一塊一個色系 —— 一打開報告看到的是五條收合的橫幅，
      顏色是用來「認位置」的：捲到一半也知道自己在哪一塊。
@@ -1413,14 +1456,25 @@ def source_links(urls, limit=2):
     return html
 
 
-def collapsible(card_id, title, summary_html, body_html, open_by_default=False, alert=False):
+def collapsible(card_id, title, summary_html, body_html, open_by_default=False,
+                alert=False, actions_html=""):
     """把一個區塊包成可折疊的卡片。
 
     一律預設收合，讓整份報告一眼掃完；需要細看時點一下展開。
     收合狀態會記在瀏覽器裡，下次打開會維持上次的選擇。
     alert 參數保留給摘要列上色使用，不再影響預設展開與否。
+
+    ``actions_html`` 是卡片右上角那幾顆操作鈕（日股個股卡上的隱藏與移除）。
+    它是 `.card-head` 的**兄弟**、不是子節點，理由是 `.card-head` 自己就是一個
+    `<button>`——按鈕裡面塞按鈕在 HTML 上無效，瀏覽器會把內層那顆拆到外面去，
+    而拆出去之後點它會順便把卡片展開或收合。
     """
     collapsed_cls = "" if open_by_default else " collapsed"
+    acts = f'<span class="card-acts">{actions_html}</span>' if actions_html else ""
+    # `has-acts` 存在的唯一理由是那條 padding-right：只有帶按鈕的卡片要讓位，
+    # 其他每一張卡片的摘要列還是可以用到最右邊。
+    if actions_html:
+        collapsed_cls += " has-acts"
     return f"""
 <div class="section-card{collapsed_cls}" id="card-{card_id}" data-card="{card_id}">
   <button class="card-head" type="button" onclick="toggleCard('{card_id}')" aria-expanded="{str(open_by_default).lower()}">
@@ -1430,6 +1484,7 @@ def collapsible(card_id, title, summary_html, body_html, open_by_default=False, 
     </span>
     <span class="card-chev" aria-hidden="true">⌄</span>
   </button>
+  {acts}
   <div class="card-body">
 {body_html}
   </div>
@@ -1451,13 +1506,42 @@ BLOCK_TONES = {
 #: 那一頁上就是「Run workflow」的表單。
 MANAGE_WORKFLOW = "manage.yml"
 
-#: 那條 workflow 的動作，照它 inputs 裡 choice 的順序，一字不差。
-#: 寫在這裡是為了讓報告上那行小字和實際的選項一致——不一致的時候沒有任何錯誤，
-#: 只是有人照著小字去找一個不存在的選項。
+#: 那條 workflow 的動作，照它 inputs 裡 choice 的順序，一字不差。不一致的時候
+#: 沒有任何錯誤，只是送出去的動作名稱 workflow 認不得，落到「只更新報告」。
+#:
+#: 三個動作**不在**這條清單裡，因為它們不再是下拉選單裡的選項——它們是按鈕，
+#: 貼在它們作用的那一檔股票旁邊：
+#:
+#:   隱藏個股 ／ 移除個股 → 每一張個股卡右上角（見 render_jp_stock_section）
+#:   恢復顯示            → 卡片底下那一列隱藏中的股票（見 render_hidden_row）
+#:
+#: 它們仍然是 manage.yml 認得的動作字串，只是不由這個選單送出。把「對哪一檔做」
+#: 這件事交給位置，而不是交給一個要再打一次代號的輸入框。
 MANAGE_ACTIONS = (
-    "只更新報告", "新增個股", "新增個股並建立季報", "建立或重建季報",
-    "隱藏個股", "恢復顯示", "移除個股", "列出目前名單",
+    "只更新報告", "新增個股", "建立或重建季報",
 )
+
+#: 那三個不在選單裡的動作，以及它們貼在哪。
+#:
+#: 它們仍然是 manage.yml 認得的動作字串——只是送出它們的不是選單，是按鈕。
+#: `MANAGE_ACTIONS + CARD_ACTIONS` 必須**剛好**等於 workflow 的 choice 清單：
+#: 少一個代表有動作按不到，多一個代表送出去的字串 workflow 認不得（而它會安靜地
+#: 落到「只更新報告」）。tests 裡那一條就是在比這件事。
+CARD_ACTIONS = (
+    "隱藏個股",   # 個股卡右上角 🙈
+    "恢復顯示",   # 卡片底下〔隱藏中〕那一列 👁️
+    "移除個股",   # 個股卡右上角 🗑️，要按兩下
+)
+
+#: 表單每一格的說明。文字抄自 manage.yml 的 `description`，一字不差——那是這些
+#: 欄位在 Actions 的 Run workflow 表單上長的樣子，兩邊不一致的時候沒有任何錯誤，
+#: 只是同一個欄位在兩個地方叫不同的名字。
+MANAGE_FIELD_HINTS = {
+    "code": "股票代號或檔名代號（例如 4063 或 shinetsu）",
+    "price_buy": "股價布局參考線（選填，新增個股時用）",
+    "per_buy": "本益比布局參考線（選填，留空用預設 20）",
+    "years": "季報回溯年數（預設 2）",
+}
 
 
 def repo_slug():
@@ -1570,32 +1654,25 @@ def render_manage_bar():
     pat_url = (
         "https://github.com/settings/personal-access-tokens/new"
     )
+    h = MANAGE_FIELD_HINTS
     return f"""
   <div class="manage-bar">
     <form class="manage-form" onsubmit="return mmDispatch(event)">
       <select id="mmAction" aria-label="要做什麼">{actions}</select>
-      <input id="mmCode" type="text" inputmode="latin" placeholder="代號（4063 或 shinetsu）"
-             aria-label="股票代號或檔名代號">
-      <input id="mmPrice" type="text" inputmode="decimal" placeholder="股價參考線"
-             aria-label="股價布局參考線（選填）">
-      <input id="mmPer" type="text" inputmode="decimal" placeholder="本益比"
-             aria-label="本益比布局參考線（選填）">
-      <input id="mmYears" type="text" inputmode="numeric" placeholder="季報年數" value="2"
-             aria-label="季報回溯年數">
+      <input id="mmCode" type="text" inputmode="latin" placeholder="{h["code"]}"
+             aria-label="{h["code"]}">
+      <input id="mmPrice" type="text" inputmode="decimal" placeholder="{h["price_buy"]}"
+             aria-label="{h["price_buy"]}">
+      <input id="mmPer" type="text" inputmode="decimal" placeholder="{h["per_buy"]}"
+             aria-label="{h["per_buy"]}">
+      <input id="mmYears" type="text" inputmode="numeric" placeholder="{h["years"]}" value="2"
+             aria-label="{h["years"]}">
       <button type="submit" id="mmGo">送出</button>
     </form>
     <div class="manage-status" id="mmStatus" role="status"></div>
     <details class="manage-token">
-      <summary>權杖設定</summary>
+      <summary>輸入權杖</summary>
       <div class="manage-token-body">
-        <p>這一頁是靜態網頁，沒有後端。要改名單得觸發一次 Actions，而那個 API
-        需要授權。權杖存在<b>你這台裝置的瀏覽器</b>裡，不在這份 HTML 裡，也不會
-        進 repo。</p>
-        <p>去 <a href="{pat_url}" target="_blank" rel="noopener">建一把 fine-grained
-        token</a>，設定照這三行：<br>
-        　Repository access → Only select repositories → <code>{repo}</code><br>
-        　Permissions → Repository permissions → <b>Actions: Read and write</b><br>
-        　Expiration → 設一個到期日（到期就再換一把）</p>
         <div class="manage-token-row">
           <input id="mmToken" type="password" placeholder="github_pat_…"
                  autocomplete="off" aria-label="GitHub 權杖">
@@ -1603,6 +1680,9 @@ def render_manage_bar():
           <button type="button" onclick="mmClearToken()">清除</button>
         </div>
         <div class="manage-token-state" id="mmTokenState"></div>
+        <p class="manage-token-how"><a href="{pat_url}" target="_blank"
+        rel="noopener" title="Only select repositories → {repo}；Permissions → Actions: Read and write；設一個到期日"
+        >去 GitHub 建一把</a></p>
       </div>
     </details>
   </div>
@@ -1636,19 +1716,14 @@ def render_manage_bar():
     mmSay('權杖已清除。', 'ok');
   }}
 
-  async function mmDispatch(ev) {{
+  // 表單那條路：把五個欄位收成 inputs，交給 mmSend。
+  function mmDispatch(ev) {{
     ev.preventDefault();
-    const token = mmToken();
-    if (!token) {{
-      mmSay('還沒設定權杖——展開下面那一列設定一次就好。', 'warn');
-      return false;
-    }}
     const action = document.getElementById('mmAction').value;
     const code   = document.getElementById('mmCode').value.trim();
-    // 「只更新報告」和「列出目前名單」不需要代號；其他每一個都要。
-    // 擋在這裡而不是讓 workflow 跑一趟再失敗：那一趟要兩分鐘，而錯誤訊息會在
-    // 一個你已經離開的頁面上。
-    if (!code && action !== '只更新報告' && action !== '列出目前名單') {{
+    // 只有「只更新報告」不需要代號。擋在這裡而不是讓 workflow 跑一趟再失敗：
+    // 那一趟要兩分鐘，而錯誤訊息會出現在一個你已經離開的頁面上。
+    if (!code && action !== '只更新報告') {{
       mmSay('這個動作要填代號。', 'warn');
       return false;
     }}
@@ -1660,8 +1735,18 @@ def render_manage_bar():
     if (price) inputs.price_buy = price;
     if (per)   inputs.per_buy   = per;
     if (years) inputs.years     = years;
+    mmSend(inputs, document.getElementById('mmGo'));
+    return false;
+  }}
 
-    const btn = document.getElementById('mmGo');
+  // 送出與盯梢。表單與卡片上那幾顆按鈕共用這一條——兩份實作會在其中一邊改了
+  // 錯誤處理之後安靜地不一樣。
+  async function mmSend(inputs, btn) {{
+    const token = mmToken();
+    if (!token) {{
+      mmSay('還沒設定權杖——展開〔輸入權杖〕貼一次就好。', 'warn');
+      return false;
+    }}
     btn.disabled = true;
     mmSay('送出中…');
     const since = new Date().toISOString();
@@ -1732,8 +1817,67 @@ def render_manage_bar():
     mmSay('等太久了，這一頁不再盯著。到 Actions 看它跑完了沒。', 'warn');
   }}
 
+  // ── 貼在股票旁邊的那幾顆按鈕 ────────────────────────────────────
+  //
+  // 個股卡右上角的 🙈／🗑️，以及底下那一列隱藏中的股票上的 👁️。它們走的是和
+  // 上面那張表單**完全一樣**的一條路（mmSend），差別只在代號從 data-code 來，
+  // 不是從輸入框來——所以按鈕不可能把代號打錯。
+  //
+  // 🗑️ 要按兩下才會真的送出：隱藏按 👁️ 就還原得回來，移除不行。第一下把按鈕
+  // 換成「再按一次」，四秒沒有第二下就自己變回去。不用 confirm()：那會鎖住整個
+  // 分頁，而這一頁上還有十幾張圖在跑。
+  function mmCardAct(btn, action) {{
+    const code = btn.dataset.code || '';
+    if (!code) return false;
+    if (btn.classList.contains('danger') && !btn.dataset.armed) {{
+      // 只換顏色，**不換文字**：按鈕變寬會把卡片的摘要列擠掉。要再按一次這件事
+      // 寫在狀態列上，那裡本來就是這一塊講話的地方。
+      btn.dataset.armed = '1';
+      btn.classList.add('armed');
+      mmSay('再按一次 🗑️ 才會把 ' + code + ' 從名單移除。', 'warn');
+      setTimeout(function () {{
+        if (!btn.dataset.armed) return;
+        delete btn.dataset.armed;
+        btn.classList.remove('armed');
+        mmSay('');
+      }}, 4000);
+      return false;
+    }}
+    delete btn.dataset.armed;
+    btn.classList.remove('armed');
+    mmSend({{ action: action, code: code }}, btn);
+    return false;
+  }}
+
   document.addEventListener('DOMContentLoaded', mmTokenState);
   </script>"""
+
+
+def render_hidden_row(hidden):
+    """卡片底下那一列「隱藏中」。
+
+    ## 為什麼這一列非有不可
+
+    〔恢復顯示〕這個動作要能被按到，就得有個地方看得到隱藏起來的是哪幾檔——而
+    隱藏起來的個股**照定義**不會有卡片。原本那個答案是下拉選單裡的〔列出目前
+    名單〕：跑一趟 Actions、等兩分鐘、去 log 裡讀一份名單、回來再跑第二趟把它
+    還原。拿掉那個動作而不補上這一列，就等於把隱藏做成了單向操作。
+
+    所以這一列不是裝飾，它是〔恢復顯示〕的家。沒有隱藏中的股票就整列不畫。
+    """
+    if not hidden:
+        return ""
+    chips = "".join(
+        '<button type="button" class="hidden-chip" '
+        f'data-code="{s["code"]}" onclick="return mmCardAct(this,\'恢復顯示\')" '
+        f'title="恢復顯示 {s["name"]}">👁️ {s["name"]}'
+        f'<span class="hidden-code">{s["code"]}</span></button>'
+        for s in hidden
+    )
+    return (
+        '<div class="hidden-row"><span class="hidden-label">隱藏中</span>'
+        f'{chips}</div>'
+    )
 
 
 def block_card(card_id, title, summary_html, body_html):
@@ -2044,9 +2188,24 @@ def render_jp_stock_section(stock, fin, key, quarterly=None, annual=None):
   {annual_html}
 """
 
+    # 卡片右上角那兩顆：隱藏這一檔、把它從名單移除。
+    #
+    # 它們原本是下拉選單裡的兩個動作，而那條路要求讀者把代號**再打一次**——
+    # 代號就寫在他正要操作的那張卡片的標題上。按鈕直接帶著代號走，打錯不可能。
+    #
+    # 移除要按兩下（見 mmCardAct）：隱藏可以按張眼還原，移除不行。
+    actions_html = (
+        f'<button type="button" class="card-act" data-code="{code}"'
+        f' onclick="return mmCardAct(this,\'隱藏個股\')"'
+        f' title="隱藏 {name}——之後可以在下面那一列還原">🙈</button>'
+        f'<button type="button" class="card-act danger" data-code="{code}"'
+        f' onclick="return mmCardAct(this,\'移除個股\')"'
+        f' title="從名單移除 {name}">🗑️</button>'
+    )
     section_html = collapsible(
         key, f"{name} ({code})", "".join(summary_chips), body_html,
         alert=bool(buy or per_buy_for_chip),
+        actions_html=actions_html,
     )
 
     buy_dataset_js = ""
@@ -3060,10 +3219,17 @@ def build_html(taiex, vix, nikkei, michigan, murata, jp_stocks,
         stock_chips = [chip("追蹤中", f"{len(jp_html_list)} 檔")]
         if buy_hits:
             stock_chips.append(chip("觸發布局", f"{buy_hits} 檔", "buy"))
+        # 隱藏中的那幾檔排在卡片底下。`include_disabled=True` 之後扣掉正在顯示
+        # 的，剩下的就是 enabled=false 的——不另外開一條讀設定的路，兩條路遲早
+        # 會對不上。
+        shown_keys = {s["key"] for s in JP_STOCK_CONFIG}
+        hidden = [s for s in load_jp_stocks(include_disabled=True)
+                  if s["key"] not in shown_keys]
         blocks.append(block_card(
             "jpstock", "日股觀察", "".join(stock_chips),
             render_manage_bar()
-            + f'<div class="jp-stock-grid">{"".join(jp_html_list)}</div>'))
+            + f'<div class="jp-stock-grid">{"".join(jp_html_list)}</div>'
+            + render_hidden_row(hidden)))
 
     html = f"""<!DOCTYPE html>
 <html lang="zh-TW">

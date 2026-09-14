@@ -10,15 +10,23 @@ on:
         required: true
         default: "只更新報告"
         type: choice
+        # 〔新增個股〕與〔新增個股並建立季報〕原本是兩個選項。它們不是兩件事
+        # ——加進名單之後接著一定是建季報，而先加、後建那條路只是把同一件事拆成
+        # 兩次操作，中間夾一個「名單裡有這檔、點進去沒有季報」的狀態。併成一個，
+        # 而留下來的那個**一律建季報**。
+        #
+        # 〔列出目前名單〕拿掉了：報告頁上每一檔都有一張資訊卡，名單本來就攤在
+        # 眼前。跑一次 Actions 只為了在 log 裡印一份同樣的東西，是繞遠路。
+        #
+        # 併掉／拿掉的那兩個字串**不必**在這裡留相容用的別名：這條 workflow 的
+        # 呼叫端只有報告頁上那張表單，而它和這裡一起改。
         options:
           - 只更新報告
           - 新增個股
-          - 新增個股並建立季報
           - 建立或重建季報
           - 隱藏個股
           - 恢復顯示
           - 移除個股
-          - 列出目前名單
       code:
         description: "股票代號或檔名代號（例如 4063 或 shinetsu）"
         required: false
@@ -94,9 +102,9 @@ jobs:
           if [ -n "$IN_PER_BUY" ]; then EXTRA="$EXTRA --per-buy $IN_PER_BUY"; fi
 
           case "$ACTION" in
+            # 新增就一定建季報（--build）。分成兩步的那個版本拿掉了，理由寫在
+            # 上面 options 那一段。
             "新增個股")
-              python manage_stock.py add "$CODE" $EXTRA ;;
-            "新增個股並建立季報")
               python manage_stock.py add "$CODE" --build --years "$YEARS" $EXTRA ;;
             "建立或重建季報")
               python manage_stock.py build "$CODE" --years "$YEARS" ;;
@@ -106,18 +114,19 @@ jobs:
               python manage_stock.py show "$CODE" ;;
             "移除個股")
               python manage_stock.py remove "$CODE" ;;
-            "列出目前名單")
-              python manage_stock.py list ;;
             *)
               echo "只更新報告，不改名單" ;;
           esac
 
+      # 這一步留著，而且**沒有** if：它現在是這條 workflow 的收據。
+      #
+      # 〔列出目前名單〕那個動作拿掉之後，「我改完之後名單長怎樣」這個問題還在，
+      # 只是不必再專程跑一趟——每一次操作的 log 裡都會有一份改完之後的名單。
       - name: 目前名單
         run: python manage_stock.py list
 
       - name: 更新資料並產生報告
         id: update
-        if: inputs.action != '列出目前名單'
         run: python run.py update
 
       # 為什麼要 `|| steps.update.outcome == 'failure'`：
@@ -128,7 +137,7 @@ jobs:
       #
       # 名單的改動與報告能不能產生是兩件事。名單先存起來，報告下一次排程會補。
       - name: 有變動才提交
-        if: inputs.action != '列出目前名單' && (success() || steps.update.outcome == 'failure')
+        if: success() || steps.update.outcome == 'failure'
         env:
           IN_ACTION: ${{ inputs.action }}
           IN_CODE: ${{ inputs.code }}

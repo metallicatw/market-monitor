@@ -387,15 +387,73 @@ def test_the_report_lets_you_change_the_list_without_leaving_the_page():
                            grl.MANAGE_WORKFLOW), encoding="utf-8").read()
     block = wf.split("options:", 1)[1].split("code:", 1)[0]
     options = tuple(m.strip() for m in re.findall(r"^\s*-\s*(\S.*)$", block, re.M))
-    assert options == grl.MANAGE_ACTIONS, (options, grl.MANAGE_ACTIONS)
-    for name in options:
+
+    # workflow 的每一個動作都要有地方按得到，而按得到的每一個動作 workflow 都要
+    # 認得。兩邊各自漏掉的症狀不一樣，但都不會報錯：
+    #
+    #   * 選單裡少一個 → 那個功能從前台消失，而沒有人會發現它曾經在。
+    #   * 選單裡多一個 → dispatch 送出一個 workflow 不認得的字串，case 落到
+    #     `*)`，於是它「成功地」只更新了報告，名單一個字都沒改。
+    #
+    # 所以比的是集合相等，不是 MANAGE_ACTIONS 自己等於 options——那三個貼在股票
+    # 旁邊的動作（隱藏／恢復／移除）也是 workflow 的動作，只是不由選單送出。
+    assert set(options) == set(grl.MANAGE_ACTIONS) | set(grl.CARD_ACTIONS), (
+        sorted(options), sorted(set(grl.MANAGE_ACTIONS) | set(grl.CARD_ACTIONS))
+    )
+    assert not set(grl.MANAGE_ACTIONS) & set(grl.CARD_ACTIONS), "同一個動作有兩個入口"
+    for name in grl.MANAGE_ACTIONS:
         assert f'<option value="{name}">' in bar, f"選單裡少了「{name}」"
+    for name in grl.CARD_ACTIONS:
+        assert f'<option value="{name}">' not in bar, f"「{name}」不該還留在選單裡"
 
     # 送出的 inputs 名稱要和 workflow 的 inputs 一致。
     for key in ("action", "code", "price_buy", "per_buy", "years"):
         assert f"{key}:" in wf, f"workflow 沒有 {key} 這個 input"
         assert key in bar, f"表單沒有送出 {key}"
-    print(f"  管理表單 ok：{len(options)} 個動作，5 個欄位")
+    print(f"  管理表單 ok：選單 {len(grl.MANAGE_ACTIONS)} 個動作"
+          f"＋股票旁邊 {len(grl.CARD_ACTIONS)} 個，5 個欄位")
+
+
+def test_every_field_says_what_it_is_and_what_its_default_is():
+    """每一格的說明文字抄自 workflow 的 description，一字不差。
+
+    以前是自己縮寫過的版本（「本益比」對上 workflow 的「本益比布局參考線（選填，
+    留空用預設 20）」）。縮寫掉的正是「選填」和「預設 20」——也就是一個沒看過
+    Actions 那張表單的人唯一需要知道的兩件事。
+
+    不一致不會報錯，只會讓同一個欄位在兩個地方叫不同的名字。
+    """
+    import generate_report_local as grl
+
+    wf = open(os.path.join(BASE_DIR, ".github", "workflows",
+                           grl.MANAGE_WORKFLOW), encoding="utf-8").read()
+    bar = grl.render_manage_bar()
+    for key, text in grl.MANAGE_FIELD_HINTS.items():
+        assert f'description: "{text}"' in wf, f"{key} 的說明和 workflow 不一樣"
+        assert f'placeholder="{text}"' in bar, f"{key} 的說明沒有出現在表單上"
+    print(f"  {len(grl.MANAGE_FIELD_HINTS)} 個欄位的說明和 workflow 一致")
+
+
+def test_hiding_a_stock_is_not_a_one_way_door():
+    """〔恢復顯示〕要有地方按得到。
+
+    隱藏起來的個股照定義沒有卡片，所以「恢復」這個動作沒有天然的位置。原本的
+    答案是選單裡的〔列出目前名單〕：跑一趟 Actions、等兩分鐘、去 log 裡讀名單、
+    回來再跑第二趟。那個動作拿掉了，取而代之的是卡片底下那一列。
+
+    沒有這一列，隱藏就變成單向操作——而那不會報錯，只會讓一檔股票再也回不來。
+    """
+    import generate_report_local as grl
+
+    row = grl.render_hidden_row([
+        {"key": "x", "code": "9999.T", "name": "測試公司"},
+    ])
+    assert "恢復顯示" in row, "那一列不會送出〔恢復顯示〕"
+    assert 'data-code="9999.T"' in row, "代號沒有跟著按鈕走"
+    assert "測試公司" in row
+    # 沒有隱藏中的股票就整列不畫——一條空的分隔線不是資訊。
+    assert grl.render_hidden_row([]) == ""
+    print("  〔恢復顯示〕有家了")
 
 
 def test_no_credential_is_ever_baked_into_the_report():
