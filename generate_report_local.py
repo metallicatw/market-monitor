@@ -216,22 +216,36 @@ CSS = """
      一致），旁邊那行小字列出七個動作，這樣不必點進去就知道那裡能做什麼。 */
   .manage-bar { margin:0 0 14px 0; padding:11px 12px; border-radius:9px;
                 background:rgba(16,185,129,0.07); border:1px solid rgba(16,185,129,0.28); }
-  /* 表單一行擺得下就一行，擺不下就自己折——手機上每一格各佔一行。
-     `min-width:0` 是必要的：flex 子元素預設不肯縮到內容寬度以下，少了它
-     placeholder 長的那兩格會把整列撐出橫向捲軸。 */
-  .manage-form { display:flex; flex-wrap:wrap; gap:8px; align-items:center; }
+  /* 說明寫在欄位**上面**，不是塞進 placeholder。
+     
+     第一版是塞 placeholder 的：一列五格橫排，每格的說明就是 workflow 的
+     description。問題是那幾句話都很長，而格子很窄——「本益比布局參考線（選填，
+     留空用預設 20）」在 200px 的格子裡被截成「本益比布局參考線（選填，留空用預」，
+     而被截掉的正是「預設 20」，也就是那句話唯一有資訊的部分。
+     
+     而且 placeholder 一打字就消失。這幾格是「偶爾用一次」的東西，每次都要重新
+     想「這一格填什麼單位」——那正是說明該一直在的理由。
+     
+     所以照 Actions 那張 Run workflow 表單的排法：一格一列，說明在上、輸入在下，
+     欄寬夠就並排、不夠就自己折。 */
+  .manage-form { display:grid; gap:10px 14px;
+        grid-template-columns:repeat(auto-fit,minmax(228px,1fr)); align-items:end; }
+  .mm-field { display:flex; flex-direction:column; gap:4px; min-width:0; }
+  .mm-lab { font-size:11.5px; line-height:1.5; color:var(--text-muted); }
+  .mm-lab .req { color:#f87171; margin-left:3px; }
   .manage-form select, .manage-form input {
-        font:inherit; font-size:12.5px; color:var(--text-main); min-width:0;
+        font:inherit; font-size:12.5px; color:var(--text-main); min-width:0; width:100%;
         background:rgba(2,6,23,0.45); border:1px solid var(--border-color);
         border-radius:7px; padding:6px 9px; }
-  .manage-form select { flex:0 0 auto; }
-  .manage-form #mmCode  { flex:2 1 180px; }
-  .manage-form #mmPrice, .manage-form #mmPer, .manage-form #mmYears { flex:1 1 92px; }
   .manage-form select:focus, .manage-form input:focus {
         outline:2px solid #10b981; outline-offset:1px; border-color:#10b981; }
-  .manage-form button { flex:0 0 auto; font:inherit; font-size:12.5px; font-weight:700;
+  /* 送出自己佔一格，和最後一個欄位切齊底部；但它不跟著格子一起變寬——
+     一顆橫跨 280px 的「送出」看起來像一條橫幅，不像一顆按鈕。 */
+  /* `align-self`（不是 justify-self）：按鈕的父層 .mm-field 是縱向 flex，
+     而縱向 flex 的 stretch 拉的是**橫向**——justify-self 在那裡沒有作用。 */
+  .manage-form button { align-self:start; font:inherit; font-size:12.5px; font-weight:700;
         color:#052e21; background:#10b981; border:1px solid #10b981;
-        border-radius:7px; padding:6px 16px; cursor:pointer; }
+        border-radius:7px; padding:7px 16px; cursor:pointer; }
   .manage-form button:hover:not(:disabled) { background:#34d399; border-color:#34d399; }
   .manage-form button:disabled { opacity:.5; cursor:progress; }
 
@@ -1536,7 +1550,12 @@ CARD_ACTIONS = (
 #: 表單每一格的說明。文字抄自 manage.yml 的 `description`，一字不差——那是這些
 #: 欄位在 Actions 的 Run workflow 表單上長的樣子，兩邊不一致的時候沒有任何錯誤，
 #: 只是同一個欄位在兩個地方叫不同的名字。
+#:
+#: 它們是欄位**上面**的標籤，不是 placeholder。placeholder 那一版有兩個毛病：
+#: 格子一窄就被截掉（而被截掉的永遠是句尾那個「預設 20」，也就是唯一有資訊的
+#: 部分），以及一打字就消失——這幾格是偶爾用一次的東西，說明該一直在。
 MANAGE_FIELD_HINTS = {
+    "action": "要做什麼",
     "code": "股票代號或檔名代號（例如 4063 或 shinetsu）",
     "price_buy": "股價布局參考線（選填，新增個股時用）",
     "per_buy": "本益比布局參考線（選填，留空用預設 20）",
@@ -1658,16 +1677,17 @@ def render_manage_bar():
     return f"""
   <div class="manage-bar">
     <form class="manage-form" onsubmit="return mmDispatch(event)">
-      <select id="mmAction" aria-label="要做什麼">{actions}</select>
-      <input id="mmCode" type="text" inputmode="latin" placeholder="{h["code"]}"
-             aria-label="{h["code"]}">
-      <input id="mmPrice" type="text" inputmode="decimal" placeholder="{h["price_buy"]}"
-             aria-label="{h["price_buy"]}">
-      <input id="mmPer" type="text" inputmode="decimal" placeholder="{h["per_buy"]}"
-             aria-label="{h["per_buy"]}">
-      <input id="mmYears" type="text" inputmode="numeric" placeholder="{h["years"]}" value="2"
-             aria-label="{h["years"]}">
-      <button type="submit" id="mmGo">送出</button>
+      <label class="mm-field"><span class="mm-lab">{h["action"]}<span class="req">*</span></span>
+        <select id="mmAction">{actions}</select></label>
+      <label class="mm-field"><span class="mm-lab">{h["code"]}</span>
+        <input id="mmCode" type="text" inputmode="latin"></label>
+      <label class="mm-field"><span class="mm-lab">{h["price_buy"]}</span>
+        <input id="mmPrice" type="text" inputmode="decimal"></label>
+      <label class="mm-field"><span class="mm-lab">{h["per_buy"]}</span>
+        <input id="mmPer" type="text" inputmode="decimal"></label>
+      <label class="mm-field"><span class="mm-lab">{h["years"]}</span>
+        <input id="mmYears" type="text" inputmode="numeric" value="2"></label>
+      <div class="mm-field"><button type="submit" id="mmGo">送出</button></div>
     </form>
     <div class="manage-status" id="mmStatus" role="status"></div>
     <details class="manage-token">

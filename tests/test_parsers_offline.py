@@ -415,13 +415,18 @@ def test_the_report_lets_you_change_the_list_without_leaving_the_page():
 
 
 def test_every_field_says_what_it_is_and_what_its_default_is():
-    """每一格的說明文字抄自 workflow 的 description，一字不差。
+    """每一格的說明文字抄自 workflow 的 description，一字不差，而且**看得到全文**。
 
-    以前是自己縮寫過的版本（「本益比」對上 workflow 的「本益比布局參考線（選填，
-    留空用預設 20）」）。縮寫掉的正是「選填」和「預設 20」——也就是一個沒看過
-    Actions 那張表單的人唯一需要知道的兩件事。
+    兩次都栽在同一句話的句尾：
 
-    不一致不會報錯，只會讓同一個欄位在兩個地方叫不同的名字。
+    1. 第一版是自己縮寫過的（「本益比」對上「本益比布局參考線（選填，留空用預設
+       20）」）。縮寫掉的正是「選填」和「預設 20」。
+    2. 第二版照抄了全文，但塞進 placeholder。格子只有 200 px 寬，於是畫面上是
+       「本益比布局參考線（選填，留空用預」——又把「預設 20」吃掉了。而且
+       placeholder 一打字就消失，可是這幾格是偶爾用一次的東西。
+
+    所以現在是欄位**上面**的標籤（`.mm-lab`），和 Actions 那張 Run workflow 表單
+    同一個排法。這條測試釘住那個結構：不是 placeholder，是標籤。
     """
     import generate_report_local as grl
 
@@ -430,8 +435,14 @@ def test_every_field_says_what_it_is_and_what_its_default_is():
     bar = grl.render_manage_bar()
     for key, text in grl.MANAGE_FIELD_HINTS.items():
         assert f'description: "{text}"' in wf, f"{key} 的說明和 workflow 不一樣"
-        assert f'placeholder="{text}"' in bar, f"{key} 的說明沒有出現在表單上"
-    print(f"  {len(grl.MANAGE_FIELD_HINTS)} 個欄位的說明和 workflow 一致")
+        assert f'<span class="mm-lab">{text}' in bar, f"{key} 的說明沒有寫在欄位上面"
+    # 只看那張表單。權杖那一格的 placeholder（`github_pat_…`）留著是對的：
+    # 它是格式範例、不是說明，而且短到不會被截。
+    form = bar[bar.index("<form"):bar.index("</form>")]
+    assert "placeholder=" not in form, "說明又被塞回 placeholder 了，長的那幾句會被截掉"
+    # 每一格都要有標籤：少一格不會報錯，只會讓那一格變成一個沒有名字的輸入框。
+    assert bar.count('class="mm-lab"') == len(grl.MANAGE_FIELD_HINTS)
+    print(f"  {len(grl.MANAGE_FIELD_HINTS)} 個欄位的說明寫在欄位上面，和 workflow 一致")
 
 
 def test_hiding_a_stock_is_not_a_one_way_door():
