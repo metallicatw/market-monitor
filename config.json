@@ -140,7 +140,7 @@
       "key": "tokyoelectron",
       "code": "8035.T",
       "name": "東京威力科創",
-      "enabled": false,
+      "enabled": true,
       "price_buy": null,
       "per_buy": null
     },
