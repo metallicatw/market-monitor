@@ -48,6 +48,16 @@ jobs:
       - name: 離線 parser 測試
         run: python tests/test_parsers_offline.py
 
+      # 卡片上那幾顆按鈕現在**不等雲端**：按下去畫面就改，跑失敗才還原。那段還原
+      # 邏輯只有真的把 DOM 動一遍才驗得出來（卡片有沒有回到原來的位置、還原鈕有
+      # 沒有跟著收掉），所以這一條把產生器實際送出去的那段 JS 接上一個極小的 DOM，
+      # 在 node 裡原封不動跑一次。
+      #
+      # node 是 ubuntu runner 內建的，這裡沒有 setup-node、也沒有 npm install
+      # ——上面那句「刻意零第三方依賴」仍然成立。
+      - name: 卡片按鈕的 JS
+        run: python tests/test_card_actions_js.py
+
       # 報告產生器有 1,900 行 f-string。語法錯誤在排程上是「今天沒有報告」，
       # 在這裡是三秒鐘就看得到的紅字。
       - name: 語法檢查

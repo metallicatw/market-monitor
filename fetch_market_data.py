@@ -1388,7 +1388,33 @@ if __name__ == "__main__":
     )
     parser.add_argument("--include-hidden", action="store_true",
                         help="連 config.json 中 enabled=false 的隱藏個股也一併更新股價快取")
+    # `--only` 是給「把某一檔從隱藏還原」用的。
+    #
+    # 隱藏中的個股不會被抓（上面 load_jp_stocks(include_disabled=False)），所以
+    # 一檔被藏了兩週再還原，它的快取就是兩週前的。還原之後不補抓，畫面上會出現
+    # 一張看起來正常、其實停在兩週前的卡片——那比慢還糟。
+    #
+    # 但「補抓一檔」不該連帶把 TAIEX 五年、二十幾條 FRED 二十五年、還有另外
+    # 十幾檔個股全部重抓一遍。那是這條路以前之所以要跑好幾分鐘的原因，而那幾
+    # 分鐘裡有 99% 跟使用者剛剛按的那顆眼睛沒有關係。
+    parser.add_argument("--only", metavar="KEY", default="",
+                        help="只更新這一檔個股的股價快取（檔名代號或股票代號），總經與指數全部略過")
     args = parser.parse_args()
+
+    if args.only:
+        target = args.only.strip()
+        wanted = [s for s in load_jp_stocks(include_disabled=True)
+                  if s["key"] == target or s["code"].upper() == target.upper()]
+        if not wanted:
+            print(f"❌ config.json 裡找不到「{target}」")
+            sys.exit(1)
+        s = wanted[0]
+        print(f"只更新 {s['name']}（{s['code']}）的股價快取。")
+        if fetch_jp_stock(s["code"], s["key"], name=s["name"]) is None:
+            print(f"❌ {s['name']} 沒抓到，既有快取維持原狀。")
+            sys.exit(2)
+        print("✅ 完成。")
+        sys.exit(0)
 
     # 每個來源都記錄成功/失敗。失敗不是印一行就算了 —— 最後會彙總，
     # 而且整支程式會以非 0 結束碼退出，這樣排程/CI 才會真的出聲。

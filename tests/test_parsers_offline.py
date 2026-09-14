@@ -504,9 +504,24 @@ def test_hiding_a_stock_is_not_a_one_way_door():
     assert 'data-code="9999.T"' not in row, "又送 Yahoo ticker 了，workflow 會退回來"
     assert "9999.T" in row, "畫面上要看得到代號"
     assert "測試公司" in row
-    # 沒有隱藏中的股票就整列不畫——一條空的分隔線不是資訊。
-    assert grl.render_hidden_row([]) == ""
-    print("  〔恢復顯示〕有家了")
+    assert 'id="mm-hidden-row"' in row, "沒有 id，JS 找不到這一列"
+
+    # 這裡原本斷言「沒有隱藏中的股票就整列不畫」（回傳空字串）。反過來了，理由：
+    #
+    # 現在按下 🙈 的那一刻，卡片就從畫面上消失、同時在這一列長出一顆 👁️——不等
+    # 雲端（見 mmLocalApply）。而「長出一顆」需要有個容器可以掛。整列不畫的話，
+    # **第一次**隱藏就沒有地方掛，那顆還原鈕會掉在地上，而畫面上看不出任何異狀：
+    # 卡片確實不見了，只是再也叫不回來。
+    #
+    # 「一條空的分隔線不是資訊」仍然成立，所以空的時候掛 `hidden` 藏起來（CSS
+    # 那邊補了 `.hidden-row[hidden]{display:none}`，因為 display:flex 壓得過
+    # [hidden] 的預設值）。看得見的結果一樣，能掛東西上去的容器還在。
+    empty = grl.render_hidden_row([])
+    assert 'id="mm-hidden-row"' in empty, "空的時候整列不見了，第一次隱藏會沒地方掛"
+    assert " hidden>" in empty, "空的那一列沒有藏起來"
+    assert "hidden-chip" not in empty, "空的卻長了 chip 出來"
+    assert " hidden>" not in row, "有隱藏個股卻把整列藏起來"
+    print("  〔恢復顯示〕有家了（空的時候容器還在，只是藏著）")
 
 
 def test_no_credential_is_ever_baked_into_the_report():
@@ -554,6 +569,79 @@ def test_the_manage_link_survives_a_local_regeneration():
     assert url.endswith("/actions/workflows/" + grl.MANAGE_WORKFLOW), url
     assert url.count("/") >= 6, f"repo 段沒解析出來：{url}"
     print(f"  本機也拿得到網址：{url}")
+
+
+def test_toggling_one_stock_does_not_refetch_the_whole_world():
+    """按一下 🙈 不該重抓 TAIEX 五年與二十幾條 FRED。
+
+    以前 manage.yml 不管哪個動作都跑 `python run.py update`，而那支的第一件事是
+    fetch_market_data.py：TAIEX 五年、臺灣 PMI、M1B、上市櫃總市值、VIX、每一檔
+    美股指數、二十幾條 FRED（每條二十五年）、日經，然後才輪到個股。幾十趟網路
+    來回，跑好幾分鐘——而〔隱藏個股〕做的事是把 config.json 裡的一個布林值改掉。
+
+    那幾分鐘不是「慢」而已：使用者按下去之後看著一顆轉圈的按鈕，會以為卡住了、
+    再按一次，於是同一個動作送出兩趟。
+
+    〔恢復顯示〕是唯一要抓的——隱藏期間那一檔沒有被抓，快取停在被藏起來的那天。
+    但它只抓那一檔（`--only`），不是藉機重抓整個世界。
+    """
+    wf = os.path.join(BASE_DIR, ".github", "workflows", "manage.yml")
+    with open(wf, encoding="utf-8") as f:
+        body = f.read()
+    step = body.split("更新資料並產生報告", 1)[1].split("有變動才提交", 1)[0]
+
+    for action in ("隱藏個股", "移除個股"):
+        assert action in step, f"{action} 沒有走到快的那條路"
+    # 這兩個動作所在的那一段裡不能出現 `run.py update`。分支是用 case 寫的，
+    # 所以拿第一個 `;;` 當邊界。
+    fast = step.split('"隱藏個股"|"移除個股")', 1)[1].split(";;", 1)[0]
+    assert "run.py report" in fast, "隱藏／移除沒有改用只重畫報告的那條路"
+    assert "run.py update" not in fast, "隱藏／移除還是在重抓整個世界"
+
+    show = step.split('"恢復顯示")', 1)[1].split(";;", 1)[0]
+    assert "--only" in show, "恢復顯示沒有用 --only，等於又把整個世界重抓一遍"
+    assert "run.py update" not in show, "恢復顯示還是在重抓整個世界"
+
+    # `--only` 真的存在，不是寫在 workflow 裡的一個幻想。
+    src = os.path.join(BASE_DIR, "fetch_market_data.py")
+    with open(src, encoding="utf-8") as f:
+        fetch_src = f.read()
+    assert '"--only"' in fetch_src, "fetch_market_data.py 不認得 --only"
+    print("  隱藏／移除只重畫報告；恢復顯示只補抓那一檔")
+
+
+def test_every_action_either_shows_up_at_once_or_refreshes_when_it_is_done():
+    """每一個動作都要有回饋，而且**恰好**是兩種回饋的其中一種。
+
+    〔隱藏個股〕〔移除個股〕在畫面上就是「把這張卡片拿掉」，瀏覽器自己做得到，
+    所以按下去就做掉，雲端那一趟降級成背景存檔。
+
+    其餘的動作（新增一檔、重建季報、恢復顯示、只更新報告）改的東西只有伺服器畫
+    得出來，所以跑完自動重新整理。
+
+    漏掉一個動作不會報錯，只會變成「按下去沒有反應，跑完也不會更新」——使用者能
+    看到的唯一線索是狀態列上一行字，而他多半已經捲到別的地方去了。
+    """
+    import generate_report_local as grl
+
+    every = set(grl.MANAGE_ACTIONS) | set(grl.CARD_ACTIONS)
+    local = set(grl.LOCAL_FIRST_ACTIONS)
+    rebuild = set(grl.REBUILD_ACTIONS)
+    assert local | rebuild == every, f"沒有分類到的動作：{every - (local | rebuild)}"
+    assert not (local & rebuild), f"同時屬於兩類：{local & rebuild}"
+
+    # 兩張表要真的出現在送到瀏覽器的那份 JS 裡，字串一字不差。Python 這邊分類
+    # 對了、JS 那邊拼錯一個字，結果是同一種「安靜地沒有回饋」。
+    bar = grl.render_manage_bar()
+    for action in local:
+        assert f'"{action}": 1' in bar.split("MM_NEEDS_REBUILD", 1)[0], \
+            f"{action} 沒進 MM_LOCAL_FIRST"
+    for action in rebuild:
+        assert f'"{action}": 1' in bar.split("MM_NEEDS_REBUILD", 1)[1].split("\n", 1)[0], \
+            f"{action} 沒進 MM_NEEDS_REBUILD"
+    assert "location.replace" in bar, "跑完沒有自動重新整理"
+    assert "mmLocalRevert" in bar, "失敗之後沒有把畫面還原回去的路"
+    print(f"  {len(local)} 個立即反映、{len(rebuild)} 個跑完自動重整，沒有漏的")
 
 
 if __name__ == "__main__":

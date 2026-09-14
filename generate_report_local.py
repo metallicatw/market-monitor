@@ -311,6 +311,9 @@ CSS = """
      沒有這一列就等於隱藏是單向操作。 */
   .hidden-row { display:flex; flex-wrap:wrap; align-items:center; gap:7px;
         margin-top:14px; padding-top:12px; border-top:1px dashed var(--border-color); }
+  /* `display:flex` 比 `[hidden]` 的預設 `display:none` 強，所以沒有這一條的話，
+     空的那一列會照樣佔一條虛線出來。 */
+  .hidden-row[hidden] { display:none; }
   .hidden-label { font-size:11.5px; color:var(--text-muted); }
   .hidden-chip { font:inherit; font-size:11.5px; cursor:pointer; color:var(--text-muted);
         background:rgba(148,163,184,0.08); border:1px solid var(--border-color);
@@ -1547,6 +1550,22 @@ CARD_ACTIONS = (
     "移除個股",   # 個股卡右上角 🗑️，要按兩下
 )
 
+#: 按下去**先在畫面上做掉**、雲端那一趟降級成背景存檔的動作。
+#:
+#: 這兩個在畫面上是同一件事：把這張卡片拿掉。瀏覽器自己做得到，不必等雲端跑完
+#: 一整趟——而那一趟裡跟這顆按鈕真正有關的工作，是把 config.json 裡的一個布林
+#: 值改掉。
+LOCAL_FIRST_ACTIONS = ("隱藏個股", "移除個股")
+
+#: 只有伺服器畫得出來、所以跑完要自動重新整理的動作。
+#:
+#: 刻意用「扣掉」而不是再列一次：每一個動作一定**恰好**落在兩類的其中一類。
+#: 兩邊都手寫的話，新增一個動作而忘了登記，它就會變成「按下去沒有立即回饋，
+#: 跑完也不會自動更新」——一個不報錯、只是感覺壞掉的狀態。
+REBUILD_ACTIONS = tuple(
+    a for a in MANAGE_ACTIONS + CARD_ACTIONS if a not in LOCAL_FIRST_ACTIONS
+)
+
 #: 表單每一格的說明。文字抄自 manage.yml 的 `description`，一字不差——那是這些
 #: 欄位在 Actions 的 Run workflow 表單上長的樣子，兩邊不一致的時候沒有任何錯誤，
 #: 只是同一個欄位在兩個地方叫不同的名字。
@@ -1674,6 +1693,10 @@ def render_manage_bar():
         "https://github.com/settings/personal-access-tokens/new"
     )
     h = MANAGE_FIELD_HINTS
+    # 在 f-string 外面先算好。JS 的物件字面值是一對大括號，在 f-string 裡面要寫成
+    # 四個，而那時候它已經不是「看得出來在做什麼」的程式碼了。
+    local_first_js = json.dumps({a: 1 for a in LOCAL_FIRST_ACTIONS}, ensure_ascii=False)
+    rebuild_js = json.dumps({a: 1 for a in REBUILD_ACTIONS}, ensure_ascii=False)
     return f"""
   <div class="manage-bar">
     <form class="manage-form" onsubmit="return mmDispatch(event)">
@@ -1759,6 +1782,72 @@ def render_manage_bar():
     return false;
   }}
 
+  // ── 先在畫面上做掉，再讓雲端補存檔 ──────────────────────────────
+  //
+  // 〔隱藏個股〕與〔移除個股〕在畫面上是同一件事：把這張卡片拿掉。瀏覽器自己
+  // 做得到，一毫秒的事。以前它要等雲端跑完整趟——而那一趟裡真正跟這顆按鈕有關
+  // 的工作是「把 config.json 裡的一個布林值改掉」，其餘幾分鐘是在重抓 TAIEX
+  // 五年、二十幾條 FRED 二十五年、還有另外十幾檔個股（見 manage.yml 那一段）。
+  //
+  // 所以順序倒過來：按下去先把畫面改好，dispatch 照送，雲端那一趟降級成背景的
+  // 存檔動作。跑成功就什麼都不用做（畫面早就是對的），失敗才把畫面還原回去。
+  //
+  // 〔恢復顯示〕做不到同一件事，而且理由很硬：要還原的那張卡片**不在**這一頁
+  // 上——隱藏中的個股根本沒有被畫出來，它的圖表、季報、布局線都沒有一起送下來。
+  // 這種一定要伺服器重畫的動作，改成跑完之後自動重新整理（見 mmWatch）。
+  const MM_LOCAL_FIRST = {local_first_js};
+  const MM_NEEDS_REBUILD = {rebuild_js};
+
+  function mmBumpCount(delta) {{
+    const el = document.getElementById('mm-watch-count');
+    if (!el) return;
+    const n = parseInt(el.textContent, 10);
+    if (!isNaN(n)) el.textContent = (n + delta) + ' 檔';
+  }}
+
+  function mmHiddenRow() {{ return document.getElementById('mm-hidden-row'); }}
+
+  // 回傳一個「怎麼還原回去」的小包裹，失敗時交給 mmLocalRevert。記下 next 是
+  // 為了插回**原來的位置**：append 回去的話，還原之後卡片會跑到最後一張。
+  function mmLocalApply(action, btn) {{
+    const code = btn.dataset.code || '';
+    const card = document.getElementById('card-' + code);
+    if (!card || !card.parentNode) return null;
+    const undo = {{ card: card, grid: card.parentNode, next: card.nextSibling, chip: null }};
+    card.parentNode.removeChild(card);
+    if (action === '隱藏個股') {{
+      const row = mmHiddenRow();
+      if (row) {{
+        const chip = document.createElement('button');
+        chip.type = 'button';
+        chip.className = 'hidden-chip';
+        chip.dataset.code = code;
+        const name = btn.dataset.name || code;
+        chip.title = '恢復顯示 ' + name;
+        chip.textContent = '👁️ ' + name;
+        const tick = document.createElement('span');
+        tick.className = 'hidden-code';
+        tick.textContent = btn.dataset.ticker || '';
+        chip.appendChild(tick);
+        chip.onclick = function () {{ return mmCardAct(chip, '恢復顯示'); }};
+        row.appendChild(chip);
+        row.hidden = false;
+        undo.chip = chip;
+      }}
+    }}
+    mmBumpCount(-1);
+    return undo;
+  }}
+
+  function mmLocalRevert(undo) {{
+    if (!undo) return;
+    if (undo.chip && undo.chip.parentNode) undo.chip.parentNode.removeChild(undo.chip);
+    const row = mmHiddenRow();
+    if (row && !row.querySelector('.hidden-chip')) row.hidden = true;
+    undo.grid.insertBefore(undo.card, undo.next);
+    mmBumpCount(1);
+  }}
+
   // 送出與盯梢。表單與卡片上那幾顆按鈕共用這一條——兩份實作會在其中一邊改了
   // 錯誤處理之後安靜地不一樣。
   async function mmSend(inputs, btn) {{
@@ -1768,7 +1857,12 @@ def render_manage_bar():
       return false;
     }}
     btn.disabled = true;
-    mmSay('送出中…');
+    const action = inputs.action || '';
+    // 畫面先改。送不出去的三種情況（權杖壞、網路斷、GitHub 回非 204）在下面
+    // 每一條 return 之前都會 mmLocalRevert，所以不會留下一張「看起來隱藏了、
+    // 其實沒有」的畫面。
+    const undo = MM_LOCAL_FIRST[action] ? mmLocalApply(action, btn) : null;
+    mmSay(undo ? '已更新畫面，正在存回雲端…' : '送出中…');
     const since = new Date().toISOString();
     try {{
       const r = await fetch(
@@ -1785,21 +1879,23 @@ def render_manage_bar():
         }}
       );
       // 每一個錯誤碼講的是不同的事，而「失敗了」對修它沒有幫助。
-      if (r.status === 401) {{ mmSay('權杖無效或已過期——重新設定一把。', 'bad'); btn.disabled = false; return false; }}
-      if (r.status === 403) {{ mmSay('權杖權限不足：要 Actions 的 Read and write。', 'bad'); btn.disabled = false; return false; }}
-      if (r.status === 404) {{ mmSay('找不到 ' + MM_REPO + ' 的 ' + MM_WF + '——權杖有沒有勾到這個 repo？', 'bad'); btn.disabled = false; return false; }}
+      if (r.status === 401) {{ mmLocalRevert(undo); mmSay('權杖無效或已過期——重新設定一把。', 'bad'); btn.disabled = false; return false; }}
+      if (r.status === 403) {{ mmLocalRevert(undo); mmSay('權杖權限不足：要 Actions 的 Read and write。', 'bad'); btn.disabled = false; return false; }}
+      if (r.status === 404) {{ mmLocalRevert(undo); mmSay('找不到 ' + MM_REPO + ' 的 ' + MM_WF + '——權杖有沒有勾到這個 repo？', 'bad'); btn.disabled = false; return false; }}
       if (r.status !== 204) {{
         let msg = '';
         try {{ msg = (await r.json()).message || ''; }} catch (e) {{}}
+        mmLocalRevert(undo);
         mmSay('送不出去（HTTP ' + r.status + '）' + (msg ? '：' + msg : ''), 'bad');
         btn.disabled = false; return false;
       }}
     }} catch (e) {{
+      mmLocalRevert(undo);
       mmSay('連不上 GitHub：' + e.message, 'bad');
       btn.disabled = false; return false;
     }}
-    mmSay('已送出，雲端開始跑了…');
-    mmWatch(token, since, btn);
+    if (!undo) mmSay('已送出，雲端開始跑了…');
+    mmWatch(token, since, btn, {{ undo: undo, reload: !!MM_NEEDS_REBUILD[action] }});
     return false;
   }}
 
@@ -1808,7 +1904,12 @@ def render_manage_bar():
   // dispatch 回的是 204、沒有 body，所以拿不到 run id——只能回頭去問「這個
   // workflow 最新一趟是什麼時候開始的」，並且只認**送出之後**才建立的那一趟。
   // 不比時間的話，畫面會立刻顯示上一次的結果，看起來像三秒就跑完了。
-  async function mmWatch(token, since, btn) {{
+  //
+  // `opts.reload`：這個動作改的東西只有伺服器畫得出來（新的一張卡、新的季報、
+  // 重抓過的資料），所以跑完就自己重新整理，不再要求使用者手動按一次。
+  // `opts.undo`：這個動作已經先在畫面上做掉了，跑失敗要還原回去。
+  async function mmWatch(token, since, btn, opts) {{
+    opts = opts || {{}};
     const started = Date.parse(since);
     for (let i = 0; i < 100; i++) {{            // 100 × 6 秒 ≈ 10 分鐘
       await new Promise(r => setTimeout(r, 6000));
@@ -1823,18 +1924,37 @@ def render_manage_bar():
         const j = await r.json();
         run = (j.workflow_runs || []).find(x => Date.parse(x.created_at) >= started - 5000);
       }} catch (e) {{ continue; }}
-      if (!run) {{ mmSay('已送出，排隊中…'); continue; }}
-      if (run.status !== 'completed') {{ mmSay('執行中…（' + run.status + '）'); continue; }}
+      if (!run) {{ if (!opts.undo) mmSay('已送出，排隊中…'); continue; }}
+      if (run.status !== 'completed') {{
+        mmSay(opts.undo ? '存回雲端中…（' + run.status + '）' : '執行中…（' + run.status + '）');
+        continue;
+      }}
       btn.disabled = false;
       if (run.conclusion === 'success') {{
-        mmSay('完成了。報告已經重新產生——重新整理這一頁就會看到。', 'ok');
+        if (opts.reload) {{
+          mmSay('完成了，重新整理…', 'ok');
+          // 為什麼要帶一個時間戳：Pages 前面有 CDN，瀏覽器自己也快取 index.html。
+          // 直接 location.reload() 有機會拿回剛剛那一份舊的，然後畫面看起來像
+          // 「跑完了但什麼都沒變」——那比不自動重新整理更難解釋。
+          // 展開了哪幾張卡片記在 localStorage 裡，換一個查詢字串不影響它。
+          location.replace(location.pathname + '?t=' + Date.now() + location.hash);
+          return;
+        }}
+        mmSay('完成了，已經存回雲端。', 'ok');
       }} else {{
-        mmSay('那一趟沒有成功（' + run.conclusion + '）。到 Actions 看 log。', 'bad');
+        mmLocalRevert(opts.undo);
+        mmSay('那一趟沒有成功（' + run.conclusion + '）。'
+              + (opts.undo ? '畫面已還原成原本的樣子。' : '') + '到 Actions 看 log。', 'bad');
       }}
       return;
     }}
     btn.disabled = false;
-    mmSay('等太久了，這一頁不再盯著。到 Actions 看它跑完了沒。', 'warn');
+    // 這裡**不**還原畫面：等太久不等於失敗，多半是 runner 在排隊。這時候把卡片
+    // 變回來，而雲端過三分鐘又真的把它隱藏了，畫面與名單就對不上了。說清楚狀態
+    // 是懸著的，讓使用者自己決定要不要重新整理。
+    mmSay('等太久了，這一頁不再盯著'
+          + (opts.undo ? '（畫面維持你剛剛操作後的樣子）' : '')
+          + '。到 Actions 看它跑完了沒。', 'warn');
   }}
 
   // ── 貼在股票旁邊的那幾顆按鈕 ────────────────────────────────────
@@ -1883,10 +2003,17 @@ def render_hidden_row(hidden):
     名單〕：跑一趟 Actions、等兩分鐘、去 log 裡讀一份名單、回來再跑第二趟把它
     還原。拿掉那個動作而不補上這一列，就等於把隱藏做成了單向操作。
 
-    所以這一列不是裝飾，它是〔恢復顯示〕的家。沒有隱藏中的股票就整列不畫。
+    所以這一列不是裝飾，它是〔恢復顯示〕的家。
+
+    ## 為什麼空的時候也要畫（只是掛著 hidden）
+
+    按下 🙈 的那一刻，卡片就要從畫面上消失、同時在這一列長出一顆 👁️——不等雲端
+    （見 mmLocalApply）。而「長出一顆」需要有個地方可以長。這一列在沒有隱藏個股
+    時直接回傳空字串的話，第一次隱藏就沒有容器可以掛，那顆眼睛會掉在地上。
+
+    所以一律畫，空的時候掛 `hidden`；JS 放第一顆進去時把 `hidden` 拿掉，最後一顆
+    被拿走時再掛回去。伺服器重畫時走的是同一條規則，兩邊不會分岔。
     """
-    if not hidden:
-        return ""
     # data-code 送 `key` 不是 `code`，理由和個股卡上那兩顆按鈕一樣（見
     # render_jp_stock_section）：`code` 是 Yahoo ticker，帶著一個點，過不了
     # manage.yml 那一關。畫面上顯示的仍然是 `code`——那是人看得懂的那一個。
@@ -1897,8 +2024,10 @@ def render_hidden_row(hidden):
         f'<span class="hidden-code">{s["code"]}</span></button>'
         for s in hidden
     )
+    blank = "" if hidden else " hidden"
     return (
-        '<div class="hidden-row"><span class="hidden-label">隱藏中</span>'
+        f'<div class="hidden-row" id="mm-hidden-row"{blank}>'
+        '<span class="hidden-label">隱藏中</span>'
         f'{chips}</div>'
     )
 
@@ -1926,10 +2055,17 @@ def block_card(card_id, title, summary_html, body_html):
 """
 
 
-def chip(label, value, tone=""):
-    """摘要列上的一格小資訊。tone 可用 up / down / buy / warn 上色。"""
+def chip(label, value, tone="", vid=""):
+    """摘要列上的一格小資訊。tone 可用 up / down / buy / warn 上色。
+
+    ``vid`` 給值的那一格一個 id，讓 JS 改得到它。目前只有〔日股觀察〕的「追蹤中
+    N 檔」用得上：按下 🙈 之後卡片馬上少一張，而摘要列上那個數字如果還停在原本
+    的 N，那一列就變成在說謊。
+    """
     cls = f"chip {tone}".strip()
-    return f'<span class="{cls}"><span class="chip-k">{label}</span><span class="chip-v">{value}</span></span>'
+    vattr = f' id="{vid}"' if vid else ""
+    return (f'<span class="{cls}"><span class="chip-k">{label}</span>'
+            f'<span class="chip-v"{vattr}>{value}</span></span>')
 
 
 # 日本焦點個股（可重複套用於多檔股票）
@@ -2225,11 +2361,17 @@ def render_jp_stock_section(stock, fin, key, quarterly=None, annual=None):
     #     Error: 股票代號只能是數字或英文字母，收到的是：4109.T
     # `manage_stock._find()` 兩種都認（key 或 code），而 key 永遠是英數，所以送
     # key 是唯一不會撞到那一關的寫法。
+    # data-name／data-ticker 是給 mmLocalApply 用的：按下 🙈 的那一刻，畫面上要
+    # 立刻長出一顆「👁️ 花王 4452.T」的還原鈕，而那兩個字串只有這裡知道。不帶著
+    # 走的話，JS 就得回去剖析卡片標題「花王 (4452.T)」——那是把顯示格式偷偷變成
+    # 一份資料契約，標題哪天多一個字就靜靜壞掉。
     actions_html = (
         f'<button type="button" class="card-act" data-code="{key}"'
+        f' data-name="{name}" data-ticker="{code}"'
         f' onclick="return mmCardAct(this,\'隱藏個股\')"'
         f' title="隱藏 {name}——之後可以在下面那一列還原">🙈</button>'
         f'<button type="button" class="card-act danger" data-code="{key}"'
+        f' data-name="{name}" data-ticker="{code}"'
         f' onclick="return mmCardAct(this,\'移除個股\')"'
         f' title="從名單移除 {name}">🗑️</button>'
     )
@@ -3247,7 +3389,7 @@ def build_html(taiex, vix, nikkei, michigan, murata, jp_stocks,
     if jp_html_list:
         buy_hits = sum(1 for kind, text in alerts
                        if kind == "buy" and "布局參考線" in text)
-        stock_chips = [chip("追蹤中", f"{len(jp_html_list)} 檔")]
+        stock_chips = [chip("追蹤中", f"{len(jp_html_list)} 檔", vid="mm-watch-count")]
         if buy_hits:
             stock_chips.append(chip("觸發布局", f"{buy_hits} 檔", "buy"))
         # 隱藏中的那幾檔排在卡片底下。`include_disabled=True` 之後扣掉正在顯示

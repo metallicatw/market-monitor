@@ -125,9 +125,41 @@ jobs:
       - name: 目前名單
         run: python manage_stock.py list
 
+      # 為什麼這一步要分岔，而不是一律 `python run.py update`：
+      #
+      # `run.py update` 的第一件事是 fetch_market_data.py，而那支程式抓的是
+      # TAIEX 五年、臺灣 PMI、M1B、上市櫃總市值、VIX、每一檔美股指數、二十幾條
+      # FRED 序列（每條二十五年）、日經，然後才輪到名單上每一檔個股。幾十趟
+      # 網路來回，跑好幾分鐘——這就是按一下 🙈 要等那麼久的全部原因。
+      #
+      # 而〔隱藏個股〕改的是 config.json 裡的一個布林值，〔移除個股〕是從陣列裡
+      # 拿掉一個元素。這兩件事跟上面那幾十趟來回一點關係都沒有：報告只要拿既有
+      # 快取重畫一次（`run.py report`）就好，秒級。
+      #
+      # 〔恢復顯示〕是唯一的例外，而且例外得剛好：隱藏期間那一檔不會被抓（見
+      # fetch_market_data.py 的 load_jp_stocks(include_disabled=False)），所以
+      # 它的快取停在被藏起來的那一天。還原之後不補抓，畫面上會出現一張看起來
+      # 正常、其實是舊資料的卡片——那比慢還糟。所以補抓，但只補那一檔
+      # （`--only`），不是藉機把整個世界重抓一遍。
       - name: 更新資料並產生報告
         id: update
-        run: python run.py update
+        env:
+          IN_ACTION: ${{ inputs.action }}
+          IN_CODE: ${{ inputs.code }}
+        run: |
+          set -e
+          case "$IN_ACTION" in
+            "隱藏個股"|"移除個股")
+              echo "只改名單，不抓資料：拿既有快取重畫報告。"
+              python run.py report ;;
+            "恢復顯示")
+              echo "補抓 $IN_CODE 這一檔（隱藏期間沒抓到的那一段），其餘來源略過。"
+              python fetch_market_data.py --only "$IN_CODE" \
+                || echo "::warning::補抓失敗，先用既有快取產生報告。"
+              python run.py report ;;
+            *)
+              python run.py update ;;
+          esac
 
       # 為什麼要 `|| steps.update.outcome == 'failure'`：
       #
