@@ -132,7 +132,7 @@
       "key": "marubeni",
       "code": "8002.T",
       "name": "丸紅",
-      "enabled": true,
+      "enabled": false,
       "price_buy": null,
       "per_buy": null
     },
