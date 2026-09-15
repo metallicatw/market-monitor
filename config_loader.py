@@ -169,7 +169,10 @@ DEFAULT_US_FRED_SERIES = [
     {"id": "PPIACO", "name": "PPI", "group": "inflation"},
     {"id": "HOUST", "name": "新屋開工", "group": "housing_sentiment"},
     {"id": "PERMIT", "name": "營建許可", "group": "housing_sentiment"},
-    {"id": "UMCSENT", "name": "密大消費者信心", "group": "housing_sentiment", "cache": "michigan.json"},
+    # in_group=False：照樣抓、照樣存 michigan.json（底下那塊 VIX＆密大信心要用），
+    # 只是不在〔房地產與信心〕那一組再畫一次趨勢圖。
+    {"id": "UMCSENT", "name": "密大消費者信心", "group": "housing_sentiment",
+     "cache": "michigan.json", "in_group": False},
 ]
 
 DEFAULT_US_INDICATOR_GROUPS = [
@@ -217,6 +220,11 @@ def load_fred_series(include_disabled=False):
     每筆至少要有 id（FRED 序列代號）；name / group / unit / freq 是給報告用的，
     cache 可覆寫存檔檔名（UMCSENT 沿用既有的 michigan.json 就是靠這個）。
 
+    in_group 預設 True；設成 False 表示「照樣抓，但不要在那一組裡畫趨勢圖」。
+    這和 enabled=False 不一樣：enabled=False 是連抓都不抓，快取檔會跟著過期，
+    而報告裡別的地方如果正在讀那一份快取（密大信心就是），就會靜靜地空掉。
+    「這個指標我在別的地方已經畫過了」要用 in_group，不要用 enabled。
+
     ⚠️ ISM 製造業/服務業 PMI 不在這裡，因為沒有免費官方源 ——
        FRED 的 NAPM 序列在 2016 年因授權問題下架，實測回 404。
     """
@@ -247,11 +255,13 @@ def load_fred_series(include_disabled=False):
                 "cache": item.get("cache"),
                 "years_back": _fred_years_back(item, freq),
                 "enabled": bool(item.get("enabled", True)),
+                "in_group": bool(item.get("in_group", True)),
             })
     # 走內建預設清單那條路的時候，上面那個迴圈沒跑過，這裡補上。
     for x in items:
         if not x.get("years_back"):
             x["years_back"] = _fred_years_back(x, x.get("freq", ""))
+        x["in_group"] = bool(x.get("in_group", True))
     if include_disabled:
         return items
     return [x for x in items if x.get("enabled", True)]

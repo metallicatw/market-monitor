@@ -321,6 +321,13 @@ def test_every_us_indicator_chart_is_wired_to_a_canvas_that_exists():
 
     VIX 不在裡面：它在「房地產與信心」那一組裡是借放的，而它本來就有自己的一整
     個區塊。同一條線畫兩次，第二次只是讓人懷疑哪一張才算數。
+
+    密大消費者信心（UMCSENT）也沒有圖，理由一模一樣——它在底下那一塊和 VIX 疊在
+    一起畫，那張圖的資訊比這裡多。它靠的是 in_group=False，而不是 enabled=False：
+    見 test_密大信心照樣抓只是不在那一組裡畫。
+
+    注意「沒有圖」不等於「不在這一組」：它的**數值卡**還在上面那一排，和 VIX
+    一樣。這一組叫「房地產與信心」，「信心」那半邊就是它。
     """
     import re
 
@@ -339,6 +346,8 @@ def test_every_us_indicator_chart_is_wired_to_a_canvas_that_exists():
 
     drawn = 0
     for group in groups:
+        # in_group 不在這裡過濾：跳過的是圖，不是整筆。密大信心的數值卡照樣
+        # 要出現在這一排上（見下面那個 `meta["name"] in html` 的迴圈）。
         members = [(m, fred[m["id"]]) for m in series
                    if m.get("group") == group["key"] and m["id"] in fred]
         # VIX 在呼叫端被併進這一組——這裡照做，才驗得到「它不會被畫第二次」。
@@ -353,12 +362,67 @@ def test_every_us_indicator_chart_is_wired_to_a_canvas_that_exists():
         keys = set(re.findall(r"chartRegistry\['(usfr[A-Z0-9]+)'\]", script))
         assert canvases == keys == bars, (group["key"], canvases, keys, bars)
         assert "usfrVIX" not in canvases, "VIX 被畫了第二次"
+        assert "usfrUMCSENT" not in canvases, "密大消費者信心被畫了第二次"
         # 每一格的數值卡還在——圖是多出來的，不是拿來取代數字的。
         for meta, _ in members:
             assert meta["name"] in html
         drawn += len(canvases)
-    assert drawn >= 10, f"只接上了 {drawn} 條，預期十二條左右"
+    assert drawn >= 10, f"只接上了 {drawn} 條，預期十一條左右"
     print(f"  美股指標歷史線 ok：{drawn} 條，各自一張圖、一條軸")
+
+
+def test_密大信心照樣抓只是不在那一組裡畫():
+    """把圖拿掉的正確做法是 in_group=False，不是 enabled=False。
+
+    密大消費者信心的趨勢圖從〔房地產與信心〕那一組拿掉了，因為底下有一整塊
+    〔VIX 恐慌指數 ＆ 密大消費者信心〕在講同一條線，而且是和 VIX 疊著看的。
+
+    問題是「拿掉」有兩種寫法，而錯的那一種不會當場壞：
+      enabled=False  → 連抓都不抓 → data/michigan.json 停在最後一次抓到的那天
+                       → 底下那一塊照樣畫得出來，只是永遠停在那一天。沒有錯誤
+                         訊息，沒有紅字，要有人記得「咦這個數字上個月就是這樣」
+                         才會發現。
+      in_group=False → 照抓、照存，只是不在那一組再畫一次。
+
+    所以這條測試綁的是兩件事一起成立：還在抓（enabled 是 True，而且 cache 仍是
+    michigan.json——底下那一塊讀的就是這個檔名），以及不在那一組裡（in_group
+    是 False）。將來有人想「順手清掉沒在用的指標」，會先撞到這裡。
+    """
+    import generate_report_local as grl
+
+    series = {m["id"]: m for m in grl.load_fred_series(include_disabled=True)}
+    umc = series.get("UMCSENT")
+    assert umc, "UMCSENT 整筆不見了——底下那塊 VIX＆密大信心會跟著空掉"
+
+    assert umc.get("enabled", True) is True, (
+        "UMCSENT 被關掉了。這樣 data/michigan.json 不會再更新，而底下那一塊"
+        "〔VIX 恐慌指數 ＆ 密大消費者信心〕讀的就是它——畫面上不會報錯，只會"
+        "永遠停在最後一次抓到的那一天。要拿掉趨勢圖請用 in_group=False。"
+    )
+    assert umc.get("cache") == "michigan.json", (
+        "UMCSENT 的快取檔名被改了。底下那一塊寫死讀 michigan.json，"
+        "改了檔名等於把那一塊斷線。"
+    )
+    assert umc.get("in_group") is False, (
+        "UMCSENT 又回到〔房地產與信心〕那一組了——同一條線會在同一頁出現兩次。"
+    )
+
+    # 抓資料那一側看到的還是它：fetch_market_data 走的是 load_fred_series()
+    # 的預設（不含 disabled）那條路。
+    assert "UMCSENT" in {m["id"] for m in grl.load_fred_series()}, \
+        "UMCSENT 從要抓的清單裡消失了"
+
+    # 拿掉的是圖，不是整筆：上面那一排數值卡它還要在。這一組叫「房地產與信心」，
+    # 新屋開工和營建許可都是房地產，「信心」那半邊就是它——把數值卡也一起拿掉，
+    # 這一組就只剩房地產了。
+    fake = {"dates": ["2026-07-01", "2026-08-01"], "close": [58.2, 55.2]}
+    group = {"key": "housing_sentiment", "label": "🏠 房地產與信心"}
+    html, script = grl.render_us_indicator_group(group, [(umc, fake)])
+    assert "密大消費者信心" in html, "數值卡也被拿掉了——這一組會只剩房地產"
+    assert "55.2" in html, "數值卡沒有數字"
+    assert "usfrUMCSENT" not in html, "趨勢圖還在"
+    assert "usfrUMCSENT" not in script, "趨勢圖的 JS 還在"
+    print("  密大信心 ok：照樣抓（michigan.json）、數值卡還在、只是不再畫第二張圖")
 
 
 def test_the_report_lets_you_change_the_list_without_leaving_the_page():
@@ -508,7 +572,7 @@ def test_hiding_a_stock_is_not_a_one_way_door():
 
     # 這裡原本斷言「沒有隱藏中的股票就整列不畫」（回傳空字串）。反過來了，理由：
     #
-    # 現在按下 🙈 的那一刻，卡片就從畫面上消失、同時在這一列長出一顆 👁️——不等
+    # 現在按下閉眼的那一刻，卡片就從畫面上消失、同時在這一列長出一顆睜眼——不等
     # 雲端（見 mmLocalApply）。而「長出一顆」需要有個容器可以掛。整列不畫的話，
     # **第一次**隱藏就沒有地方掛，那顆還原鈕會掉在地上，而畫面上看不出任何異狀：
     # 卡片確實不見了，只是再也叫不回來。
@@ -522,6 +586,59 @@ def test_hiding_a_stock_is_not_a_one_way_door():
     assert "hidden-chip" not in empty, "空的卻長了 chip 出來"
     assert " hidden>" not in row, "有隱藏個股卻把整列藏起來"
     print("  〔恢復顯示〕有家了（空的時候容器還在，只是藏著）")
+
+
+def test_那三顆按鈕的圖示是自己畫的不是_emoji():
+    """閉眼／睜眼／垃圾桶——三顆都是內嵌 SVG，而且兩個地方畫的眼睛是同一顆。
+
+    原本用的是 emoji，兩個毛病：
+
+    1. Unicode 沒有「閉上的眼睛」這個字，所以〔隱藏〕只好借 🙈（非禮勿視的猴子）。
+       那是一隻猴子。
+    2. emoji 長什麼樣由作業系統決定。同一個 🗑️ 在 Windows 上是一個淺灰色的小桶
+       子，疊在 28×26 的深色按鈕上幾乎看不出是垃圾桶——而這件事在開發機上看不
+       出來，因為那不是同一套字型。
+
+    這條測試守三件事，第三件是真正會壞的那一件：
+
+    * 三顆是三張不同的 SVG（複製貼上改錯一個常數 → 兩顆長一樣，功能卻不同）。
+    * 線條吃 currentColor（hover 和「再按一次」只換 color，圖示要跟著變）。
+    * **伺服器畫的睜眼和 JS 畫的睜眼是同一個字串**。還原鈕有兩條產生路徑：
+      重新整理之後由 render_hidden_row 畫，按下閉眼的當下由 mmLocalApply 畫。
+      兩邊各寫一份的話，畫面上會出現兩種不一樣的眼睛，而且要「按一下、再重新
+      整理」才看得到差別——不會有人在改的當下發現。
+    """
+    import json as _json
+
+    import generate_report_local as grl
+
+    icons = {"ICON_EYE": grl.ICON_EYE, "ICON_EYE_OFF": grl.ICON_EYE_OFF,
+             "ICON_TRASH": grl.ICON_TRASH}
+    for name, svg in icons.items():
+        assert svg.startswith("<svg") and svg.endswith("</svg>"), f"{name} 不是一張 SVG"
+        assert "currentColor" in svg, f"{name} 沒吃 currentColor，hover 變色時會卡住"
+        assert "<path" in svg, f"{name} 是空的"
+    assert len(set(icons.values())) == 3, "三顆圖示裡有重複的"
+
+    # 卡片上那兩顆：閉眼＝隱藏、垃圾桶＝移除，而且都要有給讀螢幕軟體的名字。
+    # emoji 那一版本身就是文字，念得出來；換成 SVG 之後沒有 aria-label 的話，
+    # 那兩顆就變成「一個按鈕」和「一個按鈕」。
+    import inspect
+
+    src = inspect.getsource(grl.render_jp_stock_section)
+    acts = src.split("actions_html = (", 1)[1].split("\n    )", 1)[0]
+    assert "{ICON_EYE_OFF}" in acts, "隱藏鈕沒有用閉眼圖示"
+    assert "{ICON_TRASH}" in acts, "移除鈕沒有用垃圾桶圖示"
+    assert acts.count("aria-label=") == 2, "那兩顆按鈕沒有各自的名字"
+
+    bar = grl.render_manage_bar()
+    assert _json.dumps(grl.ICON_EYE) in bar, (
+        "JS 那一側畫的還原鈕沒有用 ICON_EYE。兩邊各寫一份的話，"
+        "剛按下閉眼長出來的那顆、和重新整理之後畫出來的那顆會長得不一樣。"
+    )
+    for bad in ("🙈", "🗑", "👁"):
+        assert bad not in bar, f"管理列裡還留著 {bad}"
+    print("  圖示 ok：三張各自的 SVG，伺服器和 JS 畫的是同一顆眼睛")
 
 
 def test_no_credential_is_ever_baked_into_the_report():

@@ -294,6 +294,11 @@ CSS = """
         align-items:center; justify-content:center;
         background:rgba(148,163,184,0.10); border:1px solid var(--border-color);
         border-radius:7px; color:var(--text-muted); }
+  /* 裡面是一張 16px 的 inline SVG（見 ICON_EYE_OFF／ICON_TRASH）。`display:block`
+     是必要的：inline 的 SVG 會照文字基線排，底下留一條 descender 的空隙，
+     28×26 的按鈕裡看起來就是整個圖示往上偏 2px。線條顏色吃 `currentColor`，
+     所以 hover 和 .armed 只要換 `color` 就好，不必再為圖示寫一份規則。 */
+  .card-act svg { display:block; }
   .card-act:hover { border-color:#10b981; background:rgba(16,185,129,0.14); }
   .card-act.danger:hover { border-color:#f87171; background:rgba(248,113,113,0.14); }
   /* 待確認：只換顏色，寬度一格不動。要再按一次這件事寫在狀態列上。 */
@@ -319,6 +324,9 @@ CSS = """
         background:rgba(148,163,184,0.08); border:1px solid var(--border-color);
         border-radius:999px; padding:4px 11px; display:inline-flex; align-items:center;
         gap:6px; }
+  /* 這一顆的字是 11.5px，16px 的圖示會比字高出一截；縮到 13px 才和字齊。
+     `flex:0 0 auto` 擋的是名字太長時 flex 去壓縮圖示——被壓扁的眼睛比沒有還糟。 */
+  .hidden-chip svg { width:13px; height:13px; flex:0 0 auto; display:block; }
   .hidden-chip:hover { color:var(--text-main); border-color:#10b981;
         background:rgba(16,185,129,0.12); }
   .hidden-code { font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
@@ -1545,9 +1553,9 @@ MANAGE_ACTIONS = (
 #: 少一個代表有動作按不到，多一個代表送出去的字串 workflow 認不得（而它會安靜地
 #: 落到「只更新報告」）。tests 裡那一條就是在比這件事。
 CARD_ACTIONS = (
-    "隱藏個股",   # 個股卡右上角 🙈
-    "恢復顯示",   # 卡片底下〔隱藏中〕那一列 👁️
-    "移除個股",   # 個股卡右上角 🗑️，要按兩下
+    "隱藏個股",   # 個股卡右上角，閉眼圖示
+    "恢復顯示",   # 卡片底下〔隱藏中〕那一列，睜眼圖示
+    "移除個股",   # 個股卡右上角垃圾桶，要按兩下
 )
 
 #: 按下去**先在畫面上做掉**、雲端那一趟降級成背景存檔的動作。
@@ -1695,6 +1703,9 @@ def render_manage_bar():
     h = MANAGE_FIELD_HINTS
     # 在 f-string 外面先算好。JS 的物件字面值是一對大括號，在 f-string 裡面要寫成
     # 四個，而那時候它已經不是「看得出來在做什麼」的程式碼了。
+    # 圖示先轉成 JS 字面值。SVG 裡沒有大括號，但它會被放進一個 f-string，所以
+    # 讓 json.dumps 處理引號與跳脫比手動接字串安全。
+    eye_js = json.dumps(ICON_EYE)
     local_first_js = json.dumps({a: 1 for a in LOCAL_FIRST_ACTIONS}, ensure_ascii=False)
     rebuild_js = json.dumps({a: 1 for a in REBUILD_ACTIONS}, ensure_ascii=False)
     return f"""
@@ -1824,7 +1835,12 @@ def render_manage_bar():
         chip.dataset.code = code;
         const name = btn.dataset.name || code;
         chip.title = '恢復顯示 ' + name;
-        chip.textContent = '👁️ ' + name;
+        // 圖示是一個寫死的常數（見 ICON_EYE），所以 innerHTML 這裡沒有注入面：
+        // 唯一會變的是名字與代號，而那兩個都走 textContent。
+        chip.innerHTML = {eye_js};
+        const nm = document.createElement('span');
+        nm.textContent = name;
+        chip.appendChild(nm);
         const tick = document.createElement('span');
         tick.className = 'hidden-code';
         tick.textContent = btn.dataset.ticker || '';
@@ -1959,11 +1975,11 @@ def render_manage_bar():
 
   // ── 貼在股票旁邊的那幾顆按鈕 ────────────────────────────────────
   //
-  // 個股卡右上角的 🙈／🗑️，以及底下那一列隱藏中的股票上的 👁️。它們走的是和
+  // 個股卡右上角的閉眼／垃圾桶，以及底下那一列隱藏中的股票上的睜眼。走的是和
   // 上面那張表單**完全一樣**的一條路（mmSend），差別只在代號從 data-code 來，
   // 不是從輸入框來——所以按鈕不可能把代號打錯。
   //
-  // 🗑️ 要按兩下才會真的送出：隱藏按 👁️ 就還原得回來，移除不行。第一下把按鈕
+  // 垃圾桶要按兩下才會真的送出：隱藏按睜眼就還原得回來，移除不行。第一下把按鈕
   // 換成「再按一次」，四秒沒有第二下就自己變回去。不用 confirm()：那會鎖住整個
   // 分頁，而這一頁上還有十幾張圖在跑。
   function mmCardAct(btn, action) {{
@@ -1974,7 +1990,7 @@ def render_manage_bar():
       // 寫在狀態列上，那裡本來就是這一塊講話的地方。
       btn.dataset.armed = '1';
       btn.classList.add('armed');
-      mmSay('再按一次 🗑️ 才會把 ' + code + ' 從名單移除。', 'warn');
+      mmSay('再按一次垃圾桶才會把 ' + code + ' 從名單移除。', 'warn');
       setTimeout(function () {{
         if (!btn.dataset.armed) return;
         delete btn.dataset.armed;
@@ -2007,7 +2023,7 @@ def render_hidden_row(hidden):
 
     ## 為什麼空的時候也要畫（只是掛著 hidden）
 
-    按下 🙈 的那一刻，卡片就要從畫面上消失、同時在這一列長出一顆 👁️——不等雲端
+    按下閉眼的那一刻，卡片就要從畫面上消失、同時在這一列長出一顆睜眼——不等雲端
     （見 mmLocalApply）。而「長出一顆」需要有個地方可以長。這一列在沒有隱藏個股
     時直接回傳空字串的話，第一次隱藏就沒有容器可以掛，那顆眼睛會掉在地上。
 
@@ -2020,7 +2036,7 @@ def render_hidden_row(hidden):
     chips = "".join(
         '<button type="button" class="hidden-chip" '
         f'data-code="{s["key"]}" onclick="return mmCardAct(this,\'恢復顯示\')" '
-        f'title="恢復顯示 {s["name"]}">👁️ {s["name"]}'
+        f'title="恢復顯示 {s["name"]}">{ICON_EYE}<span>{s["name"]}</span>'
         f'<span class="hidden-code">{s["code"]}</span></button>'
         for s in hidden
     )
@@ -2055,11 +2071,64 @@ def block_card(card_id, title, summary_html, body_html):
 """
 
 
+#: 卡片上那三顆按鈕的圖示。內嵌 SVG，不是 emoji。
+#:
+#: emoji 在這裡有兩個毛病，而且都不是「不好看」而已：
+#:
+#: 1. **意思不對**。Unicode 根本沒有「閉上的眼睛」這個字，所以「隱藏」只能借
+#:    🙈（非禮勿視的猴子）——那是一隻猴子，讀者要先想一下猴子和隱藏的關係。
+#: 2. **長相由作業系統決定**。同一個 🗑️ 在 Windows 上是一個灰灰的小桶子、在
+#:    macOS 上是另一個樣子，而且尺寸、線條粗細、對比度都不受我們控制。放在一顆
+#:    28×26 的深色按鈕上，Windows 那一版幾乎看不出是垃圾桶。
+#:
+#: 換成 SVG 之後三顆是同一套線條（1.6px、圓端點、currentColor），所以 hover 和
+#: 「再按一次」的變色直接跟著按鈕的 color 走，不必另外處理。
+#:
+#: 24×24 的 viewBox、16px 的實際尺寸——線稿圖示在 16px 以下會糊掉，而按鈕是 28px。
+_ICON = ('<svg viewBox="0 0 24 24" width="16" height="16" fill="none" '
+         'stroke="currentColor" stroke-width="1.6" stroke-linecap="round" '
+         'stroke-linejoin="round" aria-hidden="true">{}</svg>')
+
+#: 睜開的眼睛：恢復顯示。
+ICON_EYE = _ICON.format(
+    '<path d="M2 12s3.6-6.5 10-6.5S22 12 22 12s-3.6 6.5-10 6.5S2 12 2 12Z"/>'
+    '<circle cx="12" cy="12" r="2.6"/>'
+)
+
+#: 閉上的眼睛（下彎的眼皮＋四根睫毛）：隱藏。
+#:
+#: 一開始畫的是常見的那種「睜眼再加一道斜線」。在 16px 上那是一團亂線：眼睛的
+#: 上下兩道弧、瞳孔那一圈、再加一條對角線，四組筆畫互相穿過，放大看得出是眼睛，
+#: 縮到按鈕上只看得到一個叉。
+#:
+#: 這一版只有五筆，而且和睜眼那一顆是同一個形狀翻過來——上彎是睜、下彎是閉，
+#: 兩顆擺在一起意思自己就出來了。睫毛不能省：少了睫毛，下彎的那一條在 16px 上
+#: 和一條普通的弧線分不出來。
+ICON_EYE_OFF = _ICON.format(
+    '<path d="M2.6 9.8C4.9 13.2 8.2 15 12 15s7.1-1.8 9.4-5.2"/>'
+    '<path d="M4.3 13.3 2.8 15.9"/>'
+    '<path d="M8.6 15 7.9 17.9"/>'
+    '<path d="M15.4 15l.7 2.9"/>'
+    '<path d="M19.7 13.3l1.5 2.6"/>'
+)
+
+#: 垃圾桶：從名單移除。
+#:
+#: 蓋子、提把、桶身、桶身上兩道直紋——四個特徵都有才認得出來。少了提把它像
+#: 一個杯子，少了直紋它像一個梯形。
+ICON_TRASH = _ICON.format(
+    '<path d="M4 7h16"/>'
+    '<path d="M9.5 7V5.2A1.2 1.2 0 0 1 10.7 4h2.6a1.2 1.2 0 0 1 1.2 1.2V7"/>'
+    '<path d="M6.4 7.9 7.2 19a1.6 1.6 0 0 0 1.6 1.5h6.4a1.6 1.6 0 0 0 1.6-1.5l.8-11.1"/>'
+    '<path d="M10.4 11v6"/><path d="M13.6 11v6"/>'
+)
+
+
 def chip(label, value, tone="", vid=""):
     """摘要列上的一格小資訊。tone 可用 up / down / buy / warn 上色。
 
     ``vid`` 給值的那一格一個 id，讓 JS 改得到它。目前只有〔日股觀察〕的「追蹤中
-    N 檔」用得上：按下 🙈 之後卡片馬上少一張，而摘要列上那個數字如果還停在原本
+    N 檔」用得上：按下閉眼之後卡片馬上少一張，而摘要列上那個數字如果還停在原本
     的 N，那一列就變成在說謊。
     """
     cls = f"chip {tone}".strip()
@@ -2361,19 +2430,21 @@ def render_jp_stock_section(stock, fin, key, quarterly=None, annual=None):
     #     Error: 股票代號只能是數字或英文字母，收到的是：4109.T
     # `manage_stock._find()` 兩種都認（key 或 code），而 key 永遠是英數，所以送
     # key 是唯一不會撞到那一關的寫法。
-    # data-name／data-ticker 是給 mmLocalApply 用的：按下 🙈 的那一刻，畫面上要
-    # 立刻長出一顆「👁️ 花王 4452.T」的還原鈕，而那兩個字串只有這裡知道。不帶著
+    # data-name／data-ticker 是給 mmLocalApply 用的：按下閉眼的那一刻，畫面上要
+    # 立刻長出一顆「〔睜眼〕花王 4452.T」的還原鈕，而那兩個字串只有這裡知道。不帶著
     # 走的話，JS 就得回去剖析卡片標題「花王 (4452.T)」——那是把顯示格式偷偷變成
     # 一份資料契約，標題哪天多一個字就靜靜壞掉。
     actions_html = (
         f'<button type="button" class="card-act" data-code="{key}"'
         f' data-name="{name}" data-ticker="{code}"'
         f' onclick="return mmCardAct(this,\'隱藏個股\')"'
-        f' title="隱藏 {name}——之後可以在下面那一列還原">🙈</button>'
+        f' aria-label="隱藏 {name}"'
+        f' title="隱藏 {name}——之後可以在下面那一列還原">{ICON_EYE_OFF}</button>'
         f'<button type="button" class="card-act danger" data-code="{key}"'
         f' data-name="{name}" data-ticker="{code}"'
         f' onclick="return mmCardAct(this,\'移除個股\')"'
-        f' title="從名單移除 {name}">🗑️</button>'
+        f' aria-label="從名單移除 {name}"'
+        f' title="從名單移除 {name}">{ICON_TRASH}</button>'
     )
     section_html = collapsible(
         key, f"{name} ({code})", "".join(summary_chips), body_html,
@@ -3005,12 +3076,19 @@ def _us_indicator_charts(group, series_with_data):
     VIX 在「房地產與信心」那一組裡是借放的（它不走 FRED，見呼叫端），而它本來
     就有自己的一整個區塊——同一條線畫兩次，第二次只是讓人懷疑哪一張才算數。
     所以這裡只畫有 FRED 序列代號的那幾條。
+
+    密大消費者信心（in_group=False）走的是同一條路，只是理由要自己標出來：它有
+    FRED 序列代號，跳不掉，所以用旗標。跳掉的**只有圖**——上面那一排數值卡它還
+    在，而且應該在：這一組叫「房地產與信心」，新屋開工和營建許可都是房地產，
+    「信心」那半邊就是它。圖不必畫第二次，數字要留在該有的位置上。
     """
     rgb, hex_colour = US_GROUP_COLOURS.get(group["key"], ("148,163,184", "#94a3b8"))
     blocks, scripts = [], []
     for meta, data in series_with_data:
         series_id = (meta.get("id") or "").strip()
         if not series_id or not data.get("dates"):
+            continue
+        if not meta.get("in_group", True):
             continue
         key = f"usfr{series_id}"
         unit = meta.get("unit", "")

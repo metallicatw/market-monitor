@@ -287,8 +287,10 @@
       "unit": "指數(1966Q1=100)",
       "freq": "月",
       "enabled": true,
+      "in_group": false,
       "cache": "michigan.json",
-      "_註": "沿用既有的 michigan.json 檔名，報告舊有的讀取路徑不用改。"
+      "_註": "沿用既有的 michigan.json 檔名，報告舊有的讀取路徑不用改。",
+      "_註2": "enabled 一定要留 true：底下〔VIX 恐慌指數 ＆ 密大消費者信心〕那一塊讀的就是這一份 michigan.json，關掉它等於順手把那一塊弄空。要讓它不要再出現在〔房地產與信心〕的趨勢圖裡，改的是 in_group，不是 enabled。"
     }
   ],
   "_說明_美股": "us_fred_series 每一筆的 id 就是 FRED 序列代號，換 id 即可換指標，不需要 API key。ISM PMI 沒有免費官方源（FRED 的 NAPM 已下架，實測回 404），所以清單裡沒有它。VIX 走 CBOE 官方 CSV（fetch_vix），不從 FRED 抓，因為 CBOE 那份是逐日且更即時。"
