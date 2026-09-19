@@ -236,6 +236,61 @@ def test_上層把_None_算成失敗():
     )
 
 
+
+# ── 三、嵌起來的時候不要有兩顆「切換手機版」 ──────────────────────────
+
+
+def test_嵌在_iframe_裡就收起那顆切換鈕():
+    """這份報告平常嵌在 tw-six-metrics 的〔全球市場監控＋日股觀察〕分頁裡，
+    而那一頁自己就有一顆「切換手機版」。兩顆並存不只是重複：
+
+      外面那顆把版面寬度釘成 430px，而 iframe 跟著變窄之後，這份報告裡本來就
+      有的響應式 CSS 會自己切成手機版面——外面那顆已經把這件事做完了。
+
+      裡面這顆是 force-desktop／force-mobile，它會蓋掉那個響應式判斷。在一個
+      430px 寬的 iframe 裡按「切換為電腦版」，得到的是被硬塞成兩欄的版面。
+
+    單獨開啟（metallicatw.github.io/market-monitor/）照常顯示——那時候它是唯一
+    的切換方式。
+    """
+    import inspect
+
+    import generate_report_local as grl
+
+    src = inspect.getsource(grl)
+    assert "function isEmbedded()" in src, "沒有判斷有沒有被嵌起來"
+    assert "window.self !== window.top" in src
+    after_init = src.split("applyViewMode('auto')", 1)[1][:400]
+    assert "hideToggleWhenEmbedded()" in after_init, (
+        "載入的時候沒有呼叫 hideToggleWhenEmbedded()——判斷寫了但沒有接上去"
+    )
+    # 跨站的 iframe 讀 window.top 會丟例外。接不到就當作「有被嵌」——少一顆
+    # 按鈕，比在一個窄框裡給一顆會把版面弄壞的按鈕好。
+    # 切到**下一個 function**，不是下一個 `}`——`try { ... }` 裡面那一個先出現，
+    # 切在那裡看到的是半截，而半截裡剛好沒有 catch。
+    block = src.split("function isEmbedded()", 1)[1].split("function ", 1)[0]
+    assert "catch" in block and "return true" in block, (
+        "讀 window.top 丟例外的時候沒有當成「有被嵌」"
+    )
+
+
+def test_hidden_打得贏那個_display():
+    """`.mode-toggle-btn` 設了 `display:inline-flex`，而屬性選擇器和 class 同權重。
+
+    `[hidden]` 那一條寫在後面才會贏。少了它，`btn.hidden = true` 設下去完全
+    沒有作用——而 DOM 上那個屬性看起來是對的，檢查元素也看得到。
+    """
+    import inspect
+
+    import generate_report_local as grl
+
+    css = inspect.getsource(grl)
+    base = css.index(".mode-toggle-btn { flex-shrink:0")
+    guard = css.index(".mode-toggle-btn[hidden]")
+    assert guard > base, "[hidden] 那一條寫在 display 前面，權重一樣所以輸了"
+    assert "display:none" in css[guard:guard + 80]
+
+
 if __name__ == "__main__":
     tests = [v for k, v in sorted(globals().items()) if k.startswith("test_")]
     failed = 0

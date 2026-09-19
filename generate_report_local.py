@@ -455,6 +455,10 @@ CSS = """
   .mode-toggle-btn { flex-shrink:0; display:inline-flex; align-items:center; gap:6px; background:rgba(59,130,246,0.14);
                       border:1px solid rgba(59,130,246,0.5); color:#93c5fd; font-size:12.5px; font-weight:700;
                       padding:8px 16px; border-radius:22px; cursor:pointer; white-space:nowrap; transition:background .2s,transform .15s; }
+  /* `hidden` 要打得贏上面那一行的 `display:inline-flex`——屬性選擇器的權重
+     和 class 一樣，寫在後面才會贏。少了這一條，`btn.hidden = true` 設下去
+     完全沒有作用，而 DOM 上那個屬性看起來是對的。 */
+  .mode-toggle-btn[hidden] { display:none; }
   .mode-toggle-btn:hover { background:rgba(59,130,246,0.28); transform:translateY(-1px); }
   .mode-toggle-btn:active { transform:translateY(0); }
   .summary-box { margin-top:16px; padding:16px 18px; border-radius:12px; border:1px solid var(--border-color); background:var(--bg-card); }
@@ -755,6 +759,30 @@ SHARED_JS = """
       });
       fitAllCardHeads();
     }, 60);
+  }
+  /* 嵌在別人頁面裡的時候，這顆鈕要收起來。
+   *
+   * 這份報告平常是嵌在 tw-six-metrics 的〔全球市場監控＋日股觀察〕分頁裡，
+   * 而**那一頁自己就有一顆**「切換手機版」。兩顆並存不只是重複：
+   *
+   *   外面那顆做的是把版面寬度釘成 430px（`:root[data-view=mobile] .wrap`），
+   *   而 iframe 跟著變窄之後，這份報告裡本來就有的響應式 CSS 會自己切成手機
+   *   版面——也就是說**外面那顆已經把這件事做完了**。
+   *
+   *   裡面這顆做的是 `force-desktop` / `force-mobile`，它會蓋掉那個響應式判斷。
+   *   在一個 430px 寬的 iframe 裡按下「切換為電腦版」，得到的是一份被硬塞成
+   *   兩欄的版面——那不是任何人想要的結果。
+   *
+   * 所以：嵌起來就收掉，單獨開啟（metallicatw.github.io/market-monitor/）照常
+   * 顯示——那時候它是唯一的切換方式。用 `window.self !== window.top` 判斷，
+   * 跨站的 iframe 讀 `top` 會丟例外，所以包在 try 裡，讀不到就當作沒有嵌。 */
+  function isEmbedded() {
+    try { return window.self !== window.top; } catch (e) { return true; }
+  }
+  function hideToggleWhenEmbedded() {
+    if (!isEmbedded()) return;
+    const btn = document.getElementById('modeToggleBtn');
+    if (btn) btn.hidden = true;
   }
   function toggleViewMode() {
     const btn = document.getElementById('modeToggleBtn');
@@ -3505,6 +3533,7 @@ def build_html(taiex, vix, nikkei, michigan, murata, jp_stocks,
   // 刻意放在獨立的 script 區塊：上面任何一張圖表若出錯（例如 CDN 沒載入），
   // 也不會連帶讓折疊、縮字、版型切換這些基本功能失效。
   applyViewMode('auto');   // 載入時不強制，交給響應式 CSS
+  hideToggleWhenEmbedded();  // 嵌在 tw-six-metrics 裡的時候外面那一層已經有了
   clearSavedCardStates();
   setInitialCardStates();  // 兩層全部收合
   requestAnimationFrame(function () {{ requestAnimationFrame(fitAllCardHeads); }});
