@@ -335,6 +335,27 @@ def fetch_taiex(years_back=5, sleep_sec=1.5, incremental=True):
             time.sleep(sleep_sec)
         failed_months = still_failed
 
+    # 一個月都沒抓到 ＝ 這一支徹底失敗，不是「部分失敗」。
+    #
+    # 上層的判定是 `if result is None: failures.append(...)`，所以只要回了一個
+    # 非 None 的 dict 就算成功。而下面那段合併在「什麼都沒抓到」的時候會原封不動
+    # 回傳既有快取、把 `fetched_at` 蓋成今天，然後回一個看起來很正常的 dict——
+    # 於是 TWSE 掛一整天的結果是：
+    #
+    #     ✅ 所有資料源都成功更新。     ← 程式這樣說
+    #     dates[-1] = 兩個星期前         ← 資料實際上是這樣
+    #
+    # 而且 exit 0、job 全綠。頁面那邊反而是誠實的（它自己算預期交易日，掛一個
+    # 「資料尚未更新到今天」的 chip）——**頁面誠實、程式碼撒謊**，而排程只看
+    # 程式碼的結束碼。
+    #
+    # 條件是 `failed_months and not out_dates`，不是只看 `not out_dates`：
+    # 增量模式下「這幾個月都抓過了、沒有新的交易日」也是空的，那是正常的。
+    if failed_months and not out_dates:
+        print(f"❌ TAIEX：{len(failed_months)} 個月份全部失敗（{failed_months}），"
+              "一天新資料都沒拿到。既有快取原封不動保留，但這一支這次不算成功。")
+        return None
+
     # 跟既有快取合併（增量模式下，這步會把新抓的這幾個月接到舊資料後面）
     merged = _merge_series(existing, out_dates, {
         "close": out_close, "volume_shares": out_vol, "value_twd": out_val,
@@ -1380,6 +1401,10 @@ def fetch_index(symbol, key, name="", years_back=5, incremental=True):
 #   每季財報公布後更新一次。
 
 
+# `config.json` 被改壞的時候丟 `config_loader.ConfigBroken`，而那支模組在
+# **import 的時候**就裝好了 excepthook：印一句人話、結束碼 1，不吐 traceback。
+# 這裡不用再包一層——包在 `if __name__ == "__main__"` 裡的裝飾器對
+# `generate_report_local.py` 那種 import 時就讀設定的程式來不及攔。
 if __name__ == "__main__":
     import argparse
 

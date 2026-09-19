@@ -6,8 +6,12 @@ fetch_market_data.py 與 generate_report_local.py 都從這裡取得設定，
 確保兩支程式看到的個股清單與門檻永遠一致。
 
 設計原則：
-1. config.json 不存在或格式錯誤時，一律退回內建預設值，並印出警告，
-   絕不讓整個流程掛掉（監控報告的可用性優先）。
+1. config.json **不存在**時退回內建預設值並印出警告——那是第一次跑，還沒有設定。
+   config.json **在、但讀不開**時丟 ConfigBroken 讓整支停下來。這兩件事原本
+   混在一起，理由是「監控報告的可用性優先」，而實測的結果是：拿一份壞掉的
+   config.json 跑，16 檔日股變成內建的 10 檔，六檔從報告上無聲消失，頁面上
+   沒有任何一個字說少了東西，結束碼 0、job 全綠。**一份少了六檔的報告不是
+   「可用」，是錯的**，而錯得看不出來比停下來糟。
 2. 缺欄位就補預設值，不強制使用者每次都要寫完整。
 3. 對明顯的設定錯誤（key 重複、缺必填欄位）主動示警，避免默默產生錯誤報告。
 """
@@ -82,19 +86,70 @@ DEFAULT_JP_STOCKS = [
 ]
 
 
+class ConfigBroken(RuntimeError):
+    """`config.json` 在，但讀不開。
+
+    這和「檔案不存在」是**完全不同的兩件事**，而原本的程式把它們混在一起：
+    兩種情況都退回 `DEFAULT_*` 那份內建清單，印一行警告，然後照常跑完。
+
+    檔案不存在的時候退回預設是對的——那是第一次跑，還沒有設定。
+    檔案在、但被改壞的時候退回預設是**災難**，因為預設清單和使用者實際追蹤的
+    清單不一樣：實測拿一份壞掉的 config.json 跑，16 檔日股變成內建的 10 檔，
+    advantest、fanuc、ibiden、marubeni、shinetsu、tokyoelectron 六檔直接從報告
+    上消失——而消失的方式是「那幾張卡片不見了」，頁面上沒有任何一個字說少了東西，
+    結束碼是 0，job 全綠。
+
+    所以這裡改成丟例外。少了六檔不該是一個警告，那是一份錯的報告。
+    """
+
+
 def _load_raw():
     if not os.path.exists(CONFIG_PATH):
+        # 還沒有設定檔——這是第一次跑，用內建預設是對的。
         print(f"⚠️ 找不到 {CONFIG_PATH}，本次使用內建預設設定。")
         return {}
     try:
         with open(CONFIG_PATH, "r", encoding="utf-8") as f:
             return json.load(f)
     except json.JSONDecodeError as e:
-        print(f"⚠️ config.json 格式錯誤（{e}），本次使用內建預設設定。請檢查逗號/括號是否寫錯。")
-        return {}
-    except Exception as e:
-        print(f"⚠️ 讀取 config.json 失敗（{e}），本次使用內建預設設定。")
-        return {}
+        raise ConfigBroken(
+            f"config.json 格式錯誤（{e}）。\n"
+            "   這次**不產生報告**——退回內建預設清單的話，你追蹤中的個股會從\n"
+            "   報告上無聲消失，而頁面上不會有任何一個字說少了東西。\n"
+            "   多半是逗號或括號寫錯了，修好再跑一次。"
+        ) from e
+    except OSError as e:
+        raise ConfigBroken(
+            f"讀不到 config.json（{e}）。這次不產生報告，理由同上。"
+        ) from e
+
+
+def _config_broken_excepthook(kind, value, tb):
+    """設定檔壞掉的時候印一句人話就停，不要吐一頁 traceback。
+
+    traceback 的問題不是難看，是它把「設定檔第 12 行少一個逗號」埋在二十行堆疊
+    中間——而看 Actions log 的人只會看到最後一行 `json.decoder.JSONDecodeError`，
+    然後開始查 JSON 解析器。
+    """
+    if not isinstance(value, ConfigBroken):
+        return _PREVIOUS_EXCEPTHOOK(kind, value, tb)
+    print(f"\n❌ {value}", file=sys.stderr)
+    if os.environ.get("GITHUB_ACTIONS") == "true":
+        head = str(value).splitlines()[0]
+        print(f"::error title=設定檔壞了::{head}", file=sys.stderr)
+    raise SystemExit(1)
+
+
+#: 裝在這裡、而不是各支程式的 `main` 上，是因為 `generate_report_local.py`
+#: **在 import 的時候**就呼叫 `load_thresholds()` 與 `load_jp_stocks()`
+#: （模組層級的 `_TH` 與 `JP_STOCK_CONFIG`）。包在 `if __name__ == "__main__"`
+#: 裡的裝飾器根本來不及攔——例外在那之前就丟出來了。
+#:
+#: 每一支會讀設定的程式都一定 import 這個模組，所以裝在這裡就是全部都蓋到，
+#: 而且沒有「下一支新的忘了接上」這回事。上面的 `_setup_console_encoding()`
+#: 也是同一個理由在同一個位置。
+_PREVIOUS_EXCEPTHOOK = sys.excepthook
+sys.excepthook = _config_broken_excepthook
 
 
 def load_thresholds():

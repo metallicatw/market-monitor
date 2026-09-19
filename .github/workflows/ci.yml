@@ -58,6 +58,13 @@ jobs:
       - name: 卡片按鈕的 JS
         run: python tests/test_card_actions_js.py
 
+      # 兩種「成功地產出一份錯的東西」：設定檔被改壞卻安靜退回內建清單（報告上
+      # 少六檔，而頁面上沒有一個字說少了東西），以及 TAIEX 一個月都沒抓到卻回了
+      # 既有快取（程式說「全部成功更新」，資料停在兩週前）。兩種的結束碼都是 0、
+      # job 都是綠的——也就是這條 CI 以外沒有人會發現。
+      - name: 設定檔與失敗傳遞
+        run: python tests/test_config_and_failures.py
+
       # 報告產生器有 1,900 行 f-string。語法錯誤在排程上是「今天沒有報告」，
       # 在這裡是三秒鐘就看得到的紅字。
       - name: 語法檢查
