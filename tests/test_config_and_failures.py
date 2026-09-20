@@ -291,6 +291,89 @@ def test_hidden_打得贏那個_display():
     assert "display:none" in css[guard:guard + 80]
 
 
+# ---------------------------------------------------------------------------
+# 市值貨幣比：「落後兩個月」是正常的，不是壞掉
+
+
+def test_月更新的來源落後兩個月要說是正常的():
+    """使用者回報「市值貨幣比落後 2 個月」，而那其實是來源就這麼慢。
+
+    分子分母都來自中央銀行的月度 OpenData，次月才公布上個月的數字——
+    2026-09-20 實際去抓 EF15M01（M1B）與 EG27M01（上市總市值），兩份最新都是
+    2026M07。所以一個月裡有大半時間看起來就是「落後兩個月」。
+
+    問題不在資料，在畫面：那一格原本只寫「資料月份 2026/07」，而讀的人沒辦法
+    分辨這是**來源就這麼慢**還是**抓取壞掉了**——那兩件事該做的處置完全相反，
+    而那一格正是為了回答這個問題才存在的。
+    """
+    import generate_report_local as grl
+    note = grl.vintage_note("2026-07-01", months_behind=2, freq="月",
+                            normal_lag=grl.TW_MC_M1B_NORMAL_LAG)
+    assert "2026/07" in note
+    assert "目前最新" in note, f"沒有說這是來源最新的一筆：{note}"
+    assert "stale" not in note, f"正常的落後不該染警示色：{note}"
+
+
+def test_超過正常範圍還是要示警():
+    """真的壞掉（來源停更、抓取失敗沿用舊快取）長得不一樣，而且要看得出來。"""
+    import generate_report_local as grl
+    note = grl.vintage_note("2026-05-01", months_behind=4, freq="月",
+                            normal_lag=grl.TW_MC_M1B_NORMAL_LAG)
+    assert "stale" in note and "落後 4 個月" in note, note
+
+
+def test_沒給正常範圍的照舊():
+    """`normal_lag` 是選用的。其他幾十處呼叫沒有給，行為不可以跟著變。"""
+    import generate_report_local as grl
+    assert grl.vintage_note("2026-07-01", months_behind=2, freq="月") == (
+        '<span class="vintage">資料月份 2026/07｜月頻</span>'
+    )
+
+
+def test_正常的落後不要寫進摘要列():
+    """摘要列是警報區。把「落後 2 個月」每天放在那裡，等於每天放一則不是警報的話。
+
+    這一條看的是原始碼：那一段要拿 `TW_MC_M1B_NORMAL_LAG` 去比，而不是
+    `if behind`（任何落後都寫）。
+    """
+    import inspect
+
+    import generate_report_local as grl
+    src = inspect.getsource(grl)
+    seg = src[src.index('stale_note = f"，資料月份'):]
+    seg = seg[:seg.index("if last_ratio")]
+    assert "TW_MC_M1B_NORMAL_LAG" in seg, seg
+    assert "if behind and behind >" in seg, seg
+
+
+def test_卡片真的把正常範圍傳進去():
+    """`vintage_note` 支援 `normal_lag` 是一回事，卡片有沒有用它是另一回事。
+
+    漏掉的症狀是：函式測起來好好的，畫面上那一格還是什麼都不說——而這整個
+    改動的目的就是那一格。
+    """
+    import inspect
+
+    import generate_report_local as grl
+
+    src = inspect.getsource(grl.render_tw_marketcap_m1b_section)
+    assert "normal_lag=TW_MC_M1B_NORMAL_LAG" in src, (
+        "市值貨幣比那張卡片沒有把正常落後範圍傳給 vintage_note"
+    )
+
+
+def test_說明文字沒有再說_M1B_只落後一個月():
+    """說明裡原本寫「M1B 落後一個月」。實測不是——兩邊都是一到兩個月。
+
+    一句寫錯的說明比沒有說明糟：它讓「落後兩個月」看起來更像壞掉了。
+    """
+    import explanations
+
+    text = explanations.TIPS["tw_marketcap_m1b"][1]
+    assert "M1B 落後一個月" not in text, "說明還寫著 M1B 只落後一個月"
+    assert "落後一到兩個月" in text, text[:200]
+
+
 if __name__ == "__main__":
     tests = [v for k, v in sorted(globals().items()) if k.startswith("test_")]
     failed = 0

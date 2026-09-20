@@ -67,6 +67,20 @@ TW_MC_M1B_LOW = _TH["tw_marketcap_m1b_low"]         # 備援：歷史不足時�
 TW_MC_M1B_PCT_HIGH = _TH["tw_marketcap_m1b_pct_high"]  # 主要判準：≥ 第 N 百分位 => 吃緊
 TW_MC_M1B_PCT_LOW = _TH["tw_marketcap_m1b_pct_low"]    # 主要判準：≤ 第 N 百分位 => 寬鬆
 
+#: 市值貨幣比**正常**會落後幾個月。
+#:
+#: 分子分母都來自中央銀行的月度 OpenData，而央行是次月才公布上個月的數字。
+#: 所以一個月裡有大半時間看起來是「落後兩個月」：
+#:
+#:     2026-09-20 實際抓 EF15M01（M1B）與 EG27M01（上市總市值），兩份最新都是
+#:     2026M07——八月那一筆央行還沒公布。（data.gov.tw 那份資料集的
+#:     updateFrequency 也寫著「每 1 月」。）
+#:
+#: 寫 2 而不是 1，是因為使用者回報的正是這件事：九月看到七月，看起來像壞掉了。
+#: 這個數字唯一的用途是讓畫面上那一格說出「這已經是來源最新的一筆」。
+#: 真的壞掉（來源停更、抓取失敗沿用舊快取）會超過 2，那時候警示色照常出現。
+TW_MC_M1B_NORMAL_LAG = 2
+
 US_INDEX_CONFIG = load_us_indices()
 US_FRED_CONFIG = load_fred_series()
 US_GROUP_CONFIG = load_us_indicator_groups()
@@ -2668,12 +2682,21 @@ def titled_row(title, tip_id=None, tip_key=None, level="section-title"):
 """
 
 
-def vintage_note(iso_month, months_behind=None, freq=""):
+def vintage_note(iso_month, months_behind=None, freq="", normal_lag=None):
     """
     誠實標示這格數字代表的是哪個月，而不是讓人以為是「今天」。
 
     落後三個月以上會加上警示色 —— 不是資料錯了，是來源本來就慢，
     但看報告的人有權利一眼知道。
+
+    `normal_lag`：這個來源**正常**會落後幾個月。給了之後，落後在正常範圍內時
+    會多一句「來源每月更新，這已經是最新的一筆」。
+
+    為什麼要那一句：月更新的來源在一個月裡有大半時間看起來是「落後兩個月」
+    （九月中看 M1B，最新就是七月——八月那一筆央行還沒公布）。而畫面上只寫
+    「資料月份 2026/07」的時候，讀的人沒有辦法分辨這是**來源就這麼慢**還是
+    **抓取壞掉了**，而那兩件事該做的處置完全相反。這一格就是為了回答那個問題
+    而存在的，卻剛好沒有回答它。
     """
     if not iso_month:
         return ""
@@ -2684,6 +2707,10 @@ def vintage_note(iso_month, months_behind=None, freq=""):
     if months_behind is not None and months_behind >= 3:
         return (f'<span class="vintage stale">資料月份 {disp}'
                 f'（落後 {months_behind} 個月）{suffix}</span>')
+    if (normal_lag is not None and months_behind is not None
+            and months_behind <= normal_lag):
+        return (f'<span class="vintage">資料月份 {disp}{suffix}'
+                f'｜來源每月更新，這是目前最新的一筆</span>')
     return f'<span class="vintage">資料月份 {disp}{suffix}</span>'
 
 
@@ -2943,7 +2970,7 @@ def render_tw_marketcap_m1b_section(ratio_data):
       <span class="stat-chg" style="color:{chg_color};">{diff_txt} 較上月</span>
     </div>
     <div class="stat-sub">
-      {vintage_note(dates[-1], behind, freq="月")}
+      {vintage_note(dates[-1], behind, freq="月", normal_lag=TW_MC_M1B_NORMAL_LAG)}
       ｜總市值 {cap_t:,.1f} 兆元 ÷ M1B {m1b_t:,.1f} 兆元
       ｜{zone_basis}
       {span_txt}
@@ -3320,9 +3347,13 @@ def collect_alerts(taiex, vix, nikkei, michigan, murata, jp_stocks,
         last_ratio = tw_mc_m1b["ratio"][-1]
         month = tw_mc_m1b["dates"][-1][:7].replace("-", "/")
         behind = tw_mc_m1b.get("months_behind")
-        # 這個指標本來就落後好幾個月，摘要列一定要把資料月份講出來，
-        # 不然會被誤讀成「現在」的狀態
-        stale_note = f"，資料月份 {month}" + (f"、落後 {behind} 個月" if behind else "")
+        # 這個指標本來就落後，摘要列一定要把資料月份講出來，不然會被誤讀成
+        # 「現在」的狀態。而落後幾個月**只在超出正常範圍時**才值得說——分子分母
+        # 都是央行的月度資料，次月才公布，所以一個月裡大半時間本來就是落後兩個
+        # 月。把「落後 2 個月」寫在摘要列上，等於每天在警報區放一則不是警報的話。
+        stale_note = f"，資料月份 {month}"
+        if behind and behind > TW_MC_M1B_NORMAL_LAG:
+            stale_note += f"、落後 {behind} 個月"
         if last_ratio >= TW_MC_M1B_HIGH:
             alerts.append(("warn", f"市值貨幣比 {last_ratio:.2f}，"
                                    f"高於 {TW_MC_M1B_HIGH} 參考線，資金相對吃緊{stale_note}"))
