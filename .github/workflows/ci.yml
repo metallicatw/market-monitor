@@ -65,6 +65,12 @@ jobs:
       - name: 設定檔與失敗傳遞
         run: python tests/test_config_and_failures.py
 
+      # 手機上的 💡 說明。量出來的是三十八顆按鈕**全部**小於 36px（最小 15×12）
+      # 以及四段說明比一整頁還長——兩者都不會報錯，只是按不準、讀完找不到路回去。
+      # 版面要真的瀏覽器才量得到，這裡守的是那些量測背後的 CSS 與 JS 規則。
+      - name: 手機版說明的可視範圍
+        run: python tests/test_info_tips.py
+
       # 報告產生器有 1,900 行 f-string。語法錯誤在排程上是「今天沒有報告」，
       # 在這裡是三秒鐘就看得到的紅字。
       - name: 語法檢查

@@ -204,8 +204,11 @@ CSS = """
   .chip.buy.solid { color:#22d3ee; }
   .chip.warn.solid { color:#ef4444; }
 
-  /* ---- 全部展開／收合 ---- */
-  .expand-all-bar { display:flex; justify-content:flex-end; gap:8px; margin-bottom:12px; }
+  /* ---- 全部展開／收合 ----
+     這兩顆和〔電腦版／手機版〕併在時間戳那一列（`.header-actions`），不再自己
+     佔一整條。它們原本那一列是空的，只有右端兩顆小鈕——而這份報告打開時是
+     全部收合的，所以第一眼的畫面上，那條空列擠在時間戳和第一張卡片中間。 */
+  .header-actions { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-left:auto; }
   .expand-btn { font-size:11.5px; font-weight:600; color:var(--text-muted); background:rgba(148,163,184,0.08);
                 border:1px solid var(--border-color); border-radius:7px; padding:5px 12px; cursor:pointer; }
   .expand-btn:hover { color:var(--text-main); border-color:#22d3ee; }
@@ -445,9 +448,16 @@ CSS = """
   .fin-box .fin-updated { font-size:9.5px; color:#64748b; margin-top:3px; }
   .fin-box.has-info { position:relative; }
   .fin-label-row { display:flex; align-items:center; justify-content:center; gap:4px; }
-  .fin-info-btn { background:none; border:none; color:#facc15; font-size:12px; cursor:pointer; padding:0; line-height:1; }
+  /* 那顆 💡 以前是 15×12 px。那不是「有點小」，那是按不到——手指的接觸面
+     大約 45px 寬，而它旁邊就是標籤文字。min-width/min-height 撐出可以按的
+     範圍，字還是 12px（畫面上看起來一樣，變大的是**可以按的地方**）。 */
+  .fin-info-btn { background:none; border:none; color:#facc15; font-size:12px; cursor:pointer;
+                  padding:0; line-height:1; display:inline-flex; align-items:center;
+                  justify-content:center; min-width:32px; min-height:32px; margin:-8px 0; }
   .page-header { max-width:1280px; margin:0 auto 20px auto; }
-  .page-header-top { display:flex; justify-content:space-between; align-items:flex-start; gap:16px; flex-wrap:wrap; }
+  /* `center` 而不是 `flex-start`：右邊現在是三顆按鈕，時間戳那一行字要和它們
+     對齊在同一條中線上，不然字會貼著按鈕的上緣。 */
+  .page-header-top { display:flex; justify-content:space-between; align-items:center; gap:12px 16px; flex-wrap:wrap; }
   .page-title { font-size:30px; font-weight:800; color:#f8fafc; letter-spacing:0.3px; }
   .page-subtitle { font-size:13px; color:var(--text-muted); margin-top:6px; }
   /* 標題拿掉之後它變成第一行，上面不再需要留白。 */
@@ -480,6 +490,16 @@ CSS = """
   .info-popup { display:none; margin:10px 0; padding:14px 16px; background:rgba(250,204,21,0.06); border:1px solid rgba(250,204,21,0.35);
                 border-radius:8px; font-size:12px; line-height:1.8; color:#e2e8f0; white-space:pre-line; }
   .info-popup.open { display:block; }
+  /* 〔收起 ▲〕。由 toggleInfo() 在第一次展開時塞進去，所以三十八段說明一次到齊
+     ——它們散在六個不同的產生點上，手工加會漏。
+     sticky 在說明的底端：說明被 max-height 夾住之後是一塊可以捲的區域，而
+     「捲到哪裡都看得到出口」是這顆鈕唯一的意義。不然讀完要往回捲一整頁去找
+     原來那顆 💡。 */
+  .info-close { position:sticky; bottom:-14px; float:right; margin:6px -6px -6px 0;
+                background:rgba(250,204,21,0.14); border:1px solid rgba(250,204,21,0.4);
+                color:#facc15; font-family:inherit; font-size:11.5px; font-weight:600;
+                padding:6px 12px; min-height:34px; border-radius:14px; cursor:pointer; }
+  .info-close:hover { background:rgba(250,204,21,0.26); }
   .title-row { display:flex; align-items:center; flex-wrap:wrap; margin-bottom:14px; }
   /* 由 JS 依卡片實際寬度加上，收起次要資訊只留股價與警示標籤 */
   .card-summary.compact .chip:not(.price):not(.solid) { display:none; }
@@ -492,6 +512,24 @@ CSS = """
     .card-head-main { font-size:14.5px; }
     .section-card { padding:14px 14px; }
     .section-card.collapsed { padding:12px 14px; }
+    /* ── 💡說明在手機上的可視範圍 ────────────────────────────────
+       量 2026-09-20 那份報告，390×844：
+
+         三十八顆 💡 全部小於 36px，最小的是 15×12（那顆沒有文字的）
+         四段說明比一整頁還長，最長 1282px ＝ 1.52 個螢幕
+
+       小於 36px 的按鈕在觸控上不是「有點難按」，是**按不準**——手指的接觸面
+       大約 45px 寬，而它旁邊就是別的字。字級不動，撐大的是可以按的範圍。
+
+       說明用 max-height 夾住：1282px 的一段展開之後，它底下那一整頁內容會被
+       推到一個半螢幕以外，而讀完要往回捲一整頁才找得到原來那顆 💡。夾成 60%
+       螢幕之後它自己是一塊可以捲的區域，頁面的其他部分留在原地。
+       寫兩次，第二次用 dvh：vh 量的是網址列收起來之後那個比較大的高度。 */
+    .info-btn { min-height:36px; padding:7px 12px; font-size:11.5px; }
+    .fin-info-btn { min-width:36px; min-height:36px; }
+    .expand-btn { min-height:36px; padding:7px 14px; }
+    .info-popup { max-height:60vh; max-height:60dvh;
+                  overflow-y:auto; overscroll-behavior:contain; }
   }
 
   /* 版型切換只調基準字級，實際是否縮放、是否收起標籤交給 JS 依卡片寬度決定，
@@ -504,7 +542,7 @@ CSS = """
   html.force-mobile .wrap { max-width:480px; gap:14px; }
   html.force-mobile .section-card { padding:14px 14px; border-radius:12px; }
   html.force-mobile .page-header-top { flex-direction:column; align-items:stretch; }
-  html.force-mobile .mode-toggle-btn { align-self:flex-end; }
+  html.force-mobile .header-actions { justify-content:flex-end; margin-left:0; }
   html.force-mobile .page-title { font-size:22px; }
   html.force-mobile .stat-grid { grid-template-columns:1fr !important; }
   html.force-mobile .fin-grid { grid-template-columns:1fr 1fr !important; }
@@ -513,6 +551,14 @@ CSS = """
   html.force-mobile .chart-container { height:260px !important; }
   html.force-mobile .chart-container.short { height:220px !important; }
   html.force-mobile .tf-btn { padding:4px 10px; font-size:11px; }
+  /* 〔切換為手機版〕按下去的時候視窗可能是 1400px 寬，那個寬度 @media 不會命中。
+     所以這三條要跟上面 @media (max-width:768px) 裡那三條一字不差——
+     tests/test_info_tips.py 會在兩邊長得不一樣的時候紅。 */
+  html.force-mobile .info-btn { min-height:36px; padding:7px 12px; font-size:11.5px; }
+  html.force-mobile .fin-info-btn { min-width:36px; min-height:36px; }
+  html.force-mobile .expand-btn { min-height:36px; padding:7px 14px; }
+  html.force-mobile .info-popup { max-height:60vh; max-height:60dvh;
+                  overflow-y:auto; overscroll-behavior:contain; }
 
   html.force-desktop .wrap { max-width:1280px; }
   html.force-desktop .jp-stock-grid { grid-template-columns:1fr 1fr !important; }
@@ -601,9 +647,47 @@ SHARED_JS = """
       box.appendChild(item);
     });
   }
+  /* ---- 💡說明 ----
+     三件事：展開／收起、把說明捲進可視範圍、在說明底端放一顆〔收起 ▲〕。
+
+     那顆〔收起〕是 JS 塞的，不是每一段自己帶的。三十八段說明散在六個不同的
+     產生點上（總經四組、美股總覽、村田、每一檔日股的 PBR 與年報方法），
+     手工加會漏，而漏掉的那幾段不會有任何症狀——直到有人在手機上讀到底、
+     然後找不到路回去。 */
+  function infoBtnFor(id) {
+    /* 呼叫端一律是 onclick="toggleInfo('xxx')"，所以從那裡回推。
+       把按鈕當參數傳進來要改三十八個呼叫點，其中十五個在 f-string 裡。 */
+    const needle = "('" + id + "')";
+    for (const b of document.querySelectorAll('.info-btn, .fin-info-btn')) {
+      if ((b.getAttribute('onclick') || '').indexOf(needle) >= 0) return b;
+    }
+    return null;
+  }
   function toggleInfo(id) {
     const el = document.getElementById(id);
-    if (el) el.classList.toggle('open');
+    if (!el) return;
+    const open = el.classList.toggle('open');
+    const btn = infoBtnFor(id);
+    if (btn) btn.setAttribute('aria-expanded', open ? 'true' : 'false');
+    if (!open) {
+      /* 收起之後把焦點還給那顆 💡。用鍵盤的人不會掉回文件開頭，
+         用手機的人會看到頁面停在那顆鈕旁邊而不是跳走。 */
+      if (btn) btn.focus({preventScroll: true});
+      return;
+    }
+    if (!el.querySelector('.info-close')) {
+      const x = document.createElement('button');
+      x.type = 'button';
+      x.className = 'info-close';
+      x.textContent = '收起 ▲';
+      x.addEventListener('click', () => toggleInfo(id));
+      el.appendChild(x);
+    }
+    /* 'nearest'：說明就在按鈕正下方，多數時候只要往上挪一點點。用 'start'
+       會把按鈕整個推出畫面，讀者失去「我剛剛按的是哪一顆」的線索。
+       'instant'：這一頁有 scroll-behavior:smooth，而平滑捲動配上剛剛才變高的
+       版面會捲到一個中途的位置。 */
+    el.scrollIntoView({block: 'nearest', behavior: 'instant'});
   }
 
   /* ---- 折疊卡片 ----
@@ -3319,12 +3403,12 @@ def render_page_header(alerts, taiex):
          標題底下，這正是它該在的位置——「你正在看的這一份是什麼時候的」。 -->
       <div class="page-subtitle stamp-lead">報告生成時間：{now_disp}　｜　報告資料基準：{baseline_disp}</div>
     </div>
-    <button class="mode-toggle-btn" id="modeToggleBtn" onclick="toggleViewMode()">🖥️ 電腦版／📱 手機版</button>
+    <div class="header-actions">
+      <button class="expand-btn" onclick="setAllCards(false)">全部展開</button>
+      <button class="expand-btn" onclick="setInitialCardStates()">全部收合</button>
+      <button class="mode-toggle-btn" id="modeToggleBtn" onclick="toggleViewMode()">🖥️ 電腦版／📱 手機版</button>
+    </div>
   </div>
-</div>
-<div class="expand-all-bar">
-  <button class="expand-btn" onclick="setAllCards(false)">全部展開</button>
-  <button class="expand-btn" onclick="setInitialCardStates()">全部收合</button>
 </div>
 """
     return header, summary_html
