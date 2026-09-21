@@ -13,7 +13,8 @@
     "tw_marketcap_m1b_pct_high": 80,
     "tw_marketcap_m1b_pct_low": 20,
     "tw_marketcap_m1b_high": 2.6,
-    "tw_marketcap_m1b_low": 1.9
+    "tw_marketcap_m1b_low": 1.9,
+    "tw_marketcap_m1b_pct_window": 60
   },
   "jp_stocks": [
     {
