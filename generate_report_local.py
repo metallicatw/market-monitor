@@ -2278,32 +2278,56 @@ def _price_on_or_before(dates, closes, target_date):
     return result
 
 
-def _latest_ttm_per(stock, annual):
-    """算出最新一期的本益比（季度資料用近四季 EPS 加總的 TTM 口徑）。
+def ttm_eps_at(eps_list, labels, i):
+    """第 i 期的「近四季 EPS 加總」（年報就是那一年的 EPS）。回不出來就是 None。
 
-    刻意與個股卡片內的 PER 算法完全一致：同樣用財報期末當日（或之前最近交易日）
-    的真實收盤價，季度資料同樣要求近四季 EPS 齊全才計算，不滿四季寧可回傳 None，
-    避免摘要與卡片顯示不同的數字。
+    抽出來的理由：同一段邏輯原本有三份實作（快照方格、趨勢圖、摘要 chip），
+    靠註解維持一致——而「刻意一致」是註解維持的一致，不是程式碼維持的。
     """
-    if not annual or not annual.get("fiscal_year_end_dates"):
+    if not eps_list or not labels or i < 0 or i >= len(eps_list) or i >= len(labels):
+        return None
+    if "Q" in labels[i]:
+        if i >= 3 and all(e is not None for e in eps_list[i - 3:i + 1]):
+            return sum(eps_list[i - 3:i + 1])
+        return None
+    return eps_list[i]
+
+
+def _latest_ttm_per(stock, annual):
+    """最新一期的本益比——**分子是今天的收盤價**。
+
+    ## 為什麼不是財報期末那天的價格
+
+    原本這裡（以及個股卡片裡）用的是 `fiscal_year_end_dates[i]` 當天的收盤。
+    趨勢圖上每一點那樣算是對的：那是歷史本益比。但**快照方格與「PER 可布局」
+    的訊號不是歷史**，它們回答的是「現在貴不貴」，而那個分子最舊可達 175 天前。
+
+    用現有資料實算（TTM 口徑與程式相同，預設門檻 per_buy = 20）：
+
+        ibiden         季末 2026-03-31   價@季末  7372  今日 19555   32.3 → 85.7
+        advantest      季末 2026-03-31          20330      32050    39.5 → 62.2
+        tokyoelectron  季末 2026-03-31          37230      53110    29.7 → 42.3
+        yaskawa        季末 2026-05-31           7208       4383    55.4 → 33.7
+        kawasakiheavy  季末 2026-06-30           2922       2404    20.4 → 16.8
+
+    最後一檔是反向的：卡片顯示 20.4 不觸發，實際 16.8 已經低於門檻，
+    **該亮的訊號漏掉**。而 ibiden 差 165%。
+
+    原本的 docstring 寫著「刻意與卡片一致，避免摘要與卡片顯示不同的數字」——
+    那個目標是對的，代價卻是兩個都不是現值。現在兩邊都改用現價，一致性還在。
+    """
+    if not annual:
         return None
     eps_list = annual.get("eps_jpy") or []
     labels = annual.get("fiscal_years") or []
-    if not eps_list or not labels:
+    closes = stock.get("close") or []
+    if not closes:
         return None
-
-    i = len(eps_list) - 1
-    price = _price_on_or_before(stock["dates"], stock["close"], annual["fiscal_year_end_dates"][i])
-    if price is None:
+    ttm = ttm_eps_at(eps_list, labels, len(eps_list) - 1)
+    if not ttm:
         return None
-
-    if "Q" in labels[i]:
-        if i >= 3 and all(e is not None for e in eps_list[i - 3:i + 1]):
-            ttm_eps = sum(eps_list[i - 3:i + 1])
-            return round(price / ttm_eps, 2) if ttm_eps else None
-        return None
-    eps = eps_list[i]
-    return round(price / eps, 2) if eps else None
+    price = closes[-1]
+    return round(price / ttm, 2) if price is not None else None
 
 
 def render_jp_stock_section(stock, fin, key, quarterly=None, annual=None):
@@ -2385,7 +2409,10 @@ def render_jp_stock_section(stock, fin, key, quarterly=None, annual=None):
             latest_quarter_label = annual["fiscal_years"][-1]
             snap_eps = annual.get("eps_jpy", [None])[-1]
             snap_margin = annual.get("operating_margin_pct", [None])[-1]
-            snap_per = per_series[-1] if per_series else None
+            # **現價**，不是趨勢圖最後一點（那是財報期末那天的價格）。
+            # 見 `_latest_ttm_per` 的說明：ibiden 差 165%，
+            # kawasakiheavy 會漏掉一個該亮的布局訊號。
+            snap_per = _latest_ttm_per(stock, annual)
             snap_pbr = pbr_series[-1] if pbr_series else None
         else:
             latest_quarter_label = fin.get('fiscal_period', '')

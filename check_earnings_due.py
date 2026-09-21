@@ -191,17 +191,31 @@ def main():
     print("規則：各季結束後原則 45 日內公布四半期決算短信（2024/4 起 Q1・Q3 已一本化為短信）")
     print()
 
-    due, waiting = [], []
+    due, overdue, waiting = [], [], []
 
     for s in stocks:
         key, name = s["key"], s["name"]
         fy_end_month = FISCAL_YEAR_END_MONTH.get(key, DEFAULT_FY_END_MONTH)
         recorded_label, recorded_end = _latest_recorded_quarter(key)
 
+        # ⚠️ **這裡不可以 `break`。**
+        #
+        # 原本的寫法是「距季末超過 50 天就 break，更早的季別不用看了」。那句話
+        # 對「還沒進窗口」是對的，對「窗口已經過了而且沒人補」是致命的：
+        #
+        #     今天 2026-09-21，最新的季末是 2026-06-30，83 天前
+        #     → 第一圈 83 > 50 → break → 迴圈什麼都沒做 → 回報「一切正常」
+        #
+        # 實測就是這樣：7 檔（advantest / shinetsu / ibiden / tokyoelectron /
+        # fanuc / marubeni / stellachemifa）的資料庫停在 FY26Q4（季末
+        # 2026-03-31），整整缺一季，而這支程式說「✅ 目前沒有任何個股處於
+        # 『已公布但資料庫未更新』的狀態」。
+        #
+        # 也就是說這個守門員只在季末後的那 25 天上班，錯過就永遠乾淨。
+        # 改成 `continue`，並把「已經逾期」單獨列成一類——逾期比在窗口內更急，
+        # 不是更不急。
         for qe in _quarter_end_dates(fy_end_month, today):
             days_since = (today - qe).days
-            if days_since > WINDOW_END_DAYS:
-                break  # 更早的季別就不用看了
             if days_since < WINDOW_START_DAYS:
                 continue  # 還太早，公司通常還沒公布
 
@@ -213,6 +227,8 @@ def main():
             item = (name, key, label, qe, days_since, recorded_label)
             if days_since <= WINDOW_END_DAYS:
                 due.append(item)
+            else:
+                overdue.append(item)
             break  # 每檔只提醒最近一個待更新季別
 
         # 下一季窗口預告：找「今天之後最近的一個季末」，推算窗口何時開啟
@@ -229,7 +245,19 @@ def main():
             print(f"      目前資料庫最新：{recorded or '無'}　｜　{status}")
             print(f"      官方 IR：{IR_URLS.get(key, '（未登錄連結）')}")
             print()
-    else:
+    if overdue:
+        print(f"🚨 有 {len(overdue)} 檔**已經逾期**——窗口早就過了，資料庫還是舊的：\n")
+        for name, key, label, qe, days, recorded in overdue:
+            print(f"  ● {name}（{label}，季末 {qe.isoformat()}）")
+            print(f"      目前資料庫最新：{recorded or '無'}　｜　"
+                  f"距季末已 {days} 天（窗口上限 {WINDOW_END_DAYS} 天）")
+            print(f"      官方 IR：{IR_URLS.get(key, '（未登錄連結）')}")
+            print()
+        if os.environ.get("GITHUB_ACTIONS"):
+            names = "、".join(f"{n}({l})" for n, _k, l, _q, _d, _r in overdue)
+            print(f"::warning title=有個股的財報逾期未更新::{names}")
+
+    if not due and not overdue:
         print("✅ 目前沒有任何個股處於「已公布但資料庫未更新」的狀態。\n")
 
     if waiting:

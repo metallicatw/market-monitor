@@ -180,13 +180,68 @@ def _merge_series(existing, new_dates, new_fields):
 
     for i, d in enumerate(new_dates):
         for name in field_names:
-            combined.setdefault(d, {})[name] = new_fields[name][i]
+            val = new_fields[name][i]
+            # ⚠️ **新的 None 不可以蓋掉舊的值。**
+            #
+            # 上游把某一格暫時改成 `-`／`N/A` 是常態（`fetch_tw_pmi` 的 `_num()`
+            # 就是為此存在）。無條件覆寫的話，那一格會把已經累積好的歷史挖掉
+            # 一個洞，而且下次上游修回來之前都補不回來。實測：
+            #
+            #     before  2026-07-01 pmi = 61.5
+            #     after   {'2026-06-01': 60.7, '2026-07-01': None, ...}
+            #
+            # 走這條路的有 tw_pmi、tw_m1b(yoy)、tw_market_cap(listed_count)、
+            # stock_*(volume)。「新的覆蓋舊的」本來是為了接受官方校正——
+            # 而把一個值改成「沒有值」不是校正。
+            if val is None and d in combined and combined[d].get(name) is not None:
+                continue
+            combined.setdefault(d, {})[name] = val
 
     sorted_dates = sorted(combined.keys())
     merged = {"dates": sorted_dates}
     for name in field_names:
         merged[name] = [combined[d].get(name) for d in sorted_dates]
     return merged
+
+
+
+def _stalled(label, existing, merged):
+    """這一支是不是「抓了等於沒抓」——回 True 代表要當成失敗。
+
+    ## 為什麼四支都需要這一段
+
+    `fetch_taiex` 有一段守門（見它自己的註解：「程式說全部成功，資料停在兩週
+    前」），但那段只套在它自己身上。`fetch_vix` / `fetch_nikkei` /
+    `fetch_jp_stock` / `fetch_index` 一個都沒有。實測（Yahoo 回一份格式正確但
+    timestamp 為空的 chart，＝改代號或下市時的真實症狀）：
+
+        ✅ 道瓊工業指數 更新完成：本次新增 0 筆
+        returned None? False | last date: 2026-09-18 | fetched_at: 2026-09-21
+
+    而報告端印在 VIX、日經、每一張個股卡上的是 `fetched_at`（抓取日），不是
+    資料日——所以畫面會顯示「📌 Yahoo Finance ｜ 今天」，看起來剛更新過。
+    上層只看 `result is None`，於是結束碼 0、job 全綠。
+
+    ## 判斷的是「有沒有前進」，不是「有沒有抓到東西」
+
+    增量模式下「這幾天都抓過了、沒有新的交易日」是正常的（週末、假日）。
+    真正的故障是**合併之後最後一天還是和合併之前一樣，而且一筆新的都沒有**。
+    第一次跑（沒有既有快取）不適用——那時候沒有東西可以比。
+    """
+    if not (existing and existing.get("dates")):
+        return False
+    if not merged.get("dates"):
+        print(f"❌ {label}：合併之後一筆資料都沒有。既有快取原封不動保留，"
+              "但這一支這次不算成功。")
+        return True
+    if merged["dates"][-1] > existing["dates"][-1]:
+        return False
+    if len(merged["dates"]) > len(existing["dates"]):
+        return False        # 補了中間的洞，也算有前進
+    print(f"⚠️ {label}：資料最後一天還停在 {existing['dates'][-1]}，一筆都沒有前進。"
+          "多半是上游回了空的或格式變了——既有快取原封不動保留，"
+          "但這一支這次不算成功。")
+    return True
 
 
 def _yahoo_range_for_incremental(existing, years_back=5, buffer_days=3):
@@ -437,6 +492,9 @@ def fetch_vix(incremental=True):
     merged = _merge_series(existing, out_dates, {"close": out_close})
     new_count = len(merged["dates"]) - len(existing["dates"]) if existing and existing.get("dates") else len(merged["dates"])
 
+    if _stalled("VIX", existing, merged):
+        return None
+
     result = {
         "source": "CBOE 官方 VIX 歷史資料 (https://www.cboe.com/tradable_products/vix/vix_historical_data/)",
         "fetched_at": date.today().isoformat(),
@@ -487,6 +545,9 @@ def fetch_nikkei(years_back=5, incremental=True):
 
     merged = _merge_series(existing, out_dates, {"close": out_close})
     new_count = len(merged["dates"]) - len(existing["dates"]) if existing and existing.get("dates") else len(merged["dates"])
+
+    if _stalled("日經225", existing, merged):
+        return None
 
     result = {
         "source": "Yahoo Finance Chart API (^N225)",
@@ -598,6 +659,9 @@ def fetch_jp_stock(code, key, name="", years_back=5, incremental=True):
 
     merged = _merge_series(existing, out_dates, {"close": out_close, "volume": out_volume})
     new_count = len(merged["dates"]) - len(existing["dates"]) if existing and existing.get("dates") else len(merged["dates"])
+
+    if _stalled(f"{name or code}", existing, merged):
+        return None
 
     result = {
         "source": f"Yahoo Finance Chart API ({code})",
@@ -1370,6 +1434,9 @@ def fetch_index(symbol, key, name="", years_back=5, incremental=True):
 
     merged = _merge_series(existing, out_dates, {"close": out_close})
     new_count = len(merged["dates"]) - len(existing["dates"]) if existing and existing.get("dates") else len(merged["dates"])
+
+    if _stalled(f"{name or symbol}", existing, merged):
+        return None
 
     result = {
         "source": f"Yahoo Finance Chart API ({symbol})",

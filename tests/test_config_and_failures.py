@@ -374,6 +374,220 @@ def test_說明文字沒有再說_M1B_只落後一個月():
     assert "落後一到兩個月" in text, text[:200]
 
 
+
+# ---------------------------------------------------------------------------
+# 三種「抓了等於沒抓」，而程式說成功
+# ---------------------------------------------------------------------------
+
+
+def test_四支抓取器都要有空回應守門():
+    """TAIEX 有守門（那正是上面那段 docstring 記錄的 bug），其餘四支沒有。
+
+    實測（Yahoo 回一份格式正確但 timestamp 為空的 chart ＝ 改代號或下市時的
+    真實症狀；CBOE 改日期格式）：
+
+        ✅ 道瓊工業指數 更新完成：本次新增 0 筆
+        returned None? False | last: 2026-09-18 | fetched_at: 2026-09-21
+
+    而報告端印在 VIX、日經、每一張個股卡上的是 `fetched_at`（抓取日），
+    所以畫面會顯示「今天剛更新」。上層只看 `result is None`。
+    """
+    import inspect
+
+    import fetch_market_data as F
+
+    for fn in (F.fetch_vix, F.fetch_nikkei, F.fetch_jp_stock, F.fetch_index):
+        src = inspect.getsource(fn)
+        assert "_stalled(" in src, f"{fn.__name__} 沒有空回應守門"
+        assert "return None" in src.split("_stalled(")[1][:120], (
+            f"{fn.__name__} 有守門但沒有真的回 None"
+        )
+
+
+def test_Yahoo回空的時候真的回None():
+    """上面那一條只看「原始碼裡有沒有那個呼叫」。
+
+    把它改成 `if False and _stalled(...)`，那一條照樣是綠的——試過。
+    所以這一條**真的跑一次**：餵一份既有快取、讓 Yahoo 回一個格式正確但
+    timestamp 為空的 chart（改代號或下市時的真實症狀），結果必須是 None。
+    """
+    import fetch_market_data as F
+
+    cached = {"dates": ["2026-09-17", "2026-09-18"], "close": [1.0, 2.0],
+              "fetched_at": "2026-09-18"}
+    empty_chart = {"chart": {"result": [{
+        "timestamp": [],
+        "indicators": {"quote": [{"close": []}]},
+    }]}}
+
+    wrote = []
+    orig = (F._load_cache, F._fetch_json_with_retry, F._write_json)
+    F._load_cache = lambda *a, **k: cached
+    F._fetch_json_with_retry = lambda *a, **k: empty_chart
+    F._write_json = lambda path, obj: wrote.append(path)
+    try:
+        got = F.fetch_index("^DJI", "dji", name="道瓊工業指數")
+    finally:
+        F._load_cache, F._fetch_json_with_retry, F._write_json = orig
+
+    assert got is None, (
+        f"Yahoo 回了空的 chart，程式卻說成功：last={got and got['dates'][-1]}、"
+        f"fetched_at={got and got.get('fetched_at')}"
+    )
+    assert not wrote, f"什麼都沒抓到卻還是寫了檔案：{wrote}"
+
+
+def test_資料沒有前進就算失敗():
+    import fetch_market_data as F
+
+    old = {"dates": ["2026-09-17", "2026-09-18"], "close": [1.0, 2.0]}
+    same = {"dates": ["2026-09-17", "2026-09-18"], "close": [1.0, 2.0]}
+    assert F._stalled("測試", old, same), "資料一天都沒前進，卻不算失敗"
+
+    ahead = {"dates": ["2026-09-17", "2026-09-18", "2026-09-19"],
+             "close": [1.0, 2.0, 3.0]}
+    assert not F._stalled("測試", old, ahead)
+
+    # 補了中間的洞也算前進——最後一天沒變，但筆數多了。
+    filled = {"dates": ["2026-09-16", "2026-09-17", "2026-09-18"],
+              "close": [0.5, 1.0, 2.0]}
+    assert not F._stalled("測試", old, filled), "補了中間的洞卻被當成沒前進"
+
+
+def test_第一次跑沒有快照可以比():
+    """沒有既有快取的時候不適用——那時候沒有東西可以比。"""
+    import fetch_market_data as F
+
+    fresh = {"dates": ["2026-09-18"], "close": [1.0]}
+    assert not F._stalled("測試", None, fresh)
+    assert not F._stalled("測試", {"dates": []}, fresh)
+
+
+def test_新的None不可以蓋掉舊的值():
+    """上游把某一格暫時改成「-」是常態。
+
+    無條件覆寫會把已經累積好的歷史挖掉一個洞，而且下次上游修回來之前都補不回來。
+    走這條路的有 tw_pmi、tw_m1b(yoy)、tw_market_cap(listed_count)、stock_*(volume)。
+    """
+    import fetch_market_data as F
+
+    existing = {"dates": ["2026-06-01", "2026-07-01"], "pmi": [60.7, 61.5]}
+    merged = F._merge_series(existing, ["2026-07-01", "2026-08-01"],
+                             {"pmi": [None, 62.5]})
+    assert merged["pmi"][1] == 61.5, (
+        f"上游這次沒給 7 月的值，既有的 61.5 被挖成 {merged['pmi'][1]}"
+    )
+    assert merged["pmi"][2] == 62.5
+
+    # 真的校正（新的是一個數字）照樣覆蓋。
+    fixed = F._merge_series(existing, ["2026-07-01"], {"pmi": [61.9]})
+    assert fixed["pmi"][1] == 61.9, "官方校正被擋掉了"
+
+    # 新的一天就算是 None 也要寫進去（不然那一天整個不見）。
+    added = F._merge_series(existing, ["2026-08-01"], {"pmi": [None]})
+    assert added["dates"][-1] == "2026-08-01" and added["pmi"][-1] is None
+
+
+# ---------------------------------------------------------------------------
+# 財報逾期：窗口過了就永遠乾淨
+# ---------------------------------------------------------------------------
+
+
+def test_窗口過了的財報要算逾期而不是消失():
+    """原本是「距季末超過 50 天就 break」，於是第一圈就走人。
+
+    實測：7 檔個股停在 FY26Q4（季末 2026-03-31、83 天前），整整缺一季，
+    而程式回報「✅ 目前沒有任何個股處於『已公布但資料庫未更新』的狀態」。
+
+    這個守門員只在季末後的那 25 天上班，錯過就永遠乾淨。
+    """
+    import inspect
+
+    import check_earnings_due as C
+
+    src = inspect.getsource(C.main)
+    assert "overdue" in src, "沒有「逾期」這一類"
+    window = src[src.index("for qe in _quarter_end_dates"):]
+    window = window[:window.index("# 下一季窗口預告")]
+    assert "break  # 更早的季別就不用看了" not in window, (
+        "還在用 break——窗口一過就什麼都偵測不到"
+    )
+    assert "overdue.append(item)" in window
+
+
+def test_逾期要在Actions上留一個警告():
+    import inspect
+
+    import check_earnings_due as C
+
+    src = inspect.getsource(C.main)
+    assert "::warning title=有個股的財報逾期未更新" in src, (
+        "逾期只印在 log 裡，Actions 摘要上看不到"
+    )
+
+
+def test_排程會跑財報偵測():
+    wf = open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                           ".github/workflows/daily-update.yml"),
+              encoding="utf-8").read()
+    assert "check_earnings_due.py" in wf, (
+        "偵測器沒有掛進排程——它就只會在有人手動跑的時候上班"
+    )
+
+
+# ---------------------------------------------------------------------------
+# 本益比：現價，不是財報期末那天的價格
+# ---------------------------------------------------------------------------
+
+
+def test_快照的本益比用現價():
+    """分子最舊可達 175 天前。實測（門檻 20）：
+
+        ibiden         32.3 → 85.7      差 165%
+        kawasakiheavy  20.4 → 16.8      該亮的布局訊號原本漏掉
+
+    趨勢圖上每一點用期末價是對的（那是歷史本益比），快照與訊號不是。
+    """
+    import generate_report_local as G
+
+    stock = {
+        "dates": ["2026-03-31", "2026-06-30", "2026-09-18"],
+        "close": [1000.0, 1500.0, 2000.0],
+    }
+    annual = {
+        "fiscal_years": ["FY26Q1", "FY26Q2", "FY26Q3", "FY26Q4"],
+        "fiscal_year_end_dates": ["2025-06-30", "2025-09-30",
+                                  "2025-12-31", "2026-03-31"],
+        "eps_jpy": [25.0, 25.0, 25.0, 25.0],
+    }
+    got = G._latest_ttm_per(stock, annual)
+    assert got == 20.0, f"用的不是今天的收盤（2000/100 = 20），而是 {got}"
+
+
+def test_三份本益比實作合成一份():
+    """「刻意一致」原本是註解維持的一致，不是程式碼維持的。"""
+    import inspect
+
+    import generate_report_local as G
+
+    assert hasattr(G, "ttm_eps_at"), "近四季 EPS 沒有抽成共用函式"
+    src = inspect.getsource(G.render_jp_stock_section)
+    assert "snap_per = _latest_ttm_per(stock, annual)" in src, (
+        "卡片上的快照本益比沒有走共用的那一份"
+    )
+
+
+def test_近四季不齊就不算():
+    import generate_report_local as G
+
+    labels = ["FY26Q1", "FY26Q2", "FY26Q3", "FY26Q4"]
+    assert G.ttm_eps_at([1.0, 2.0, 3.0, 4.0], labels, 3) == 10.0
+    assert G.ttm_eps_at([1.0, None, 3.0, 4.0], labels, 3) is None
+    assert G.ttm_eps_at([1.0, 2.0], labels[:2], 1) is None, "只有兩季卻算得出來"
+    # 年報就是那一年的 EPS，不加總。
+    assert G.ttm_eps_at([7.0], ["FY26"], 0) == 7.0
+
+
 if __name__ == "__main__":
     tests = [v for k, v in sorted(globals().items()) if k.startswith("test_")]
     failed = 0
