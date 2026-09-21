@@ -97,6 +97,26 @@ jobs:
                 exit 1 ;;
             esac
           fi
+          # 這兩個和 CODE 一樣是使用者從手機填進來的自由文字，而下面是
+          # **未加引號**的 `$EXTRA` 展開。不是 RCE（沒有 eval，${{ }} 已經走
+          # env），但它能改寫後面所有的參數，實測：
+          #
+          #   price_buy='3200 --years 99'
+          #     → ['add','4063','--build','--years','2','--price-buy','3200',
+          #        '--years','99']          ← 後面的覆蓋前面的
+          #   price_buy='*'
+          #     → ['--price-buy','argv.py','checklist.html', ...]  ← glob 展開
+          #
+          # 上面那一關只套在 CODE 上，這兩個一路暢通。
+          for v in "$IN_PRICE_BUY" "$IN_PER_BUY"; do
+            if [ -n "$v" ]; then
+              case "$v" in
+                *[!0-9.]*|*.*.*)
+                  echo "::error::布局門檻只能是數字，收到的是：$v"
+                  exit 1 ;;
+              esac
+            fi
+          done
           EXTRA=""
           if [ -n "$IN_PRICE_BUY" ]; then EXTRA="$EXTRA --price-buy $IN_PRICE_BUY"; fi
           if [ -n "$IN_PER_BUY" ]; then EXTRA="$EXTRA --per-buy $IN_PER_BUY"; fi

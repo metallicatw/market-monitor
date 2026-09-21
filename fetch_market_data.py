@@ -97,6 +97,37 @@ def _fetch_json_with_retry(url, max_retries=3, backoff_sec=3):
     raise last_err
 
 
+
+#: 台北時區。抓取層以前一律用 `_today()`，而 runner 跑在 UTC——
+#: 排程是 `cron: "23 22 * * 0-5"`＝UTC 22:23＝台北**隔日** 06:23，所以同一趟
+#: 執行裡，寫進 data/*.json 的 `fetched_at` 會比報告頁首顯示的台北日期早一整天。
+#: 而 fetched_at 是 VIX、日經、每一張個股卡上唯一的時間資訊。
+#: `_months_behind()` 也一樣：在每個月最後一天的那一班會少算一個月。
+TAIPEI_TZ = timezone(timedelta(hours=8))
+
+
+def _today():
+    """今天（台北）。全檔一律用這個，不要用 `_today()`。"""
+    return datetime.now(TAIPEI_TZ).date()
+
+
+def _years_ago(n):
+    """n 年前的當月 1 號。
+
+    原本是 `date.today().replace(year=today.year - n)`——那一行在閏日會炸：
+
+        date(2028, 2, 29).replace(year=2023)
+        ValueError: day is out of range for month
+
+    2028-02-29 是星期二，排程當天會跑，而 VIX（-5y）、FRED（-25y → 2003）、
+    M1B（-11y → 2017）、密大信心（-5y）都是非閏年，會一起失敗。
+    例外會被 `_run` 接住，所以不致命，但那一天整個美股總經區不會更新。
+    `fetch_taiex` 早就有 `day=1`，是對的。
+    """
+    d = _today()
+    return date(d.year - n, d.month, 1)
+
+
 def _write_json(path, obj):
     """原子寫入：先寫同目錄的暫存檔，fsync，再 os.replace 換過去。
 
@@ -259,7 +290,7 @@ def _yahoo_range_for_incremental(existing, years_back=5, buffer_days=3):
     except ValueError:
         return f"{years_back}y", None
 
-    days_gap = (date.today() - last_date).days + buffer_days
+    days_gap = (_today() - last_date).days + buffer_days
     if days_gap <= 7:
         return "5d", last_date
     elif days_gap <= 30:
@@ -274,7 +305,7 @@ def _yahoo_range_for_incremental(existing, years_back=5, buffer_days=3):
 
 def _month_range(years_back=5):
     """回傳從 years_back 年前到今天，逐月的 (yyyymmdd) 起始日清單。"""
-    today = date.today()
+    today = _today()
     start = date(today.year - years_back, today.month, 1)
     months = []
     cur = date(start.year, start.month, 1)
@@ -316,15 +347,33 @@ def fetch_taiex(years_back=5, sleep_sec=1.5, incremental=True):
         print(f"📂 偵測到既有快取，最後資料到 {existing['dates'][-1]}，"
               f"本次只重抓 {start_month.strftime('%Y-%m')} 之後的月份（增量模式）")
     else:
-        start_month = date.today().replace(year=date.today().year - years_back, day=1)
+        start_month = _years_ago(years_back)
         print("📂 沒有偵測到既有快取，執行完整 5 年回補（第一次執行才會這麼慢）")
 
     months = []
     cur = start_month
-    today = date.today()
+    today = _today()
     while cur <= today:
         months.append(cur.strftime("%Y%m01"))
         cur = date(cur.year + 1, 1, 1) if cur.month == 12 else date(cur.year, cur.month + 1, 1)
+
+    # **上一次失敗的月份要補回來。**
+    #
+    # 增量模式只從「最後一筆的月份」起算，所以中間那個洞**不在請求清單裡**；
+    # 而 `failed_months` 每次整個覆寫，於是唯一的缺漏證據生命週期只有一天：
+    #
+    #     seeded: 2026-07 days = 0 | last date 2026-09-18
+    #     months requested this run: ['20260901']   ← 2026-07 根本沒被請求
+    #     2026-07 days after run: 0                  ← 洞還在
+    #     failed_months field now: []                ← 唯一的紀錄被清成空陣列
+    #
+    # TWSE 那支 API 對舊月份是完全可重抓的（歷史都在），所以這個洞不是資料源
+    # 造成的，純粹是增量邏輯不肯回頭看。
+    carried = [m for m in (existing or {}).get("failed_months", []) or []
+               if isinstance(m, str) and m not in months]
+    if carried:
+        print(f"↩️ 上一次有 {len(carried)} 個月份沒抓到，這次一起補：{carried}")
+        months = sorted(set(months) | set(carried))
 
     out_dates, out_close, out_vol, out_val = [], [], [], []
     failed_months = []
@@ -418,8 +467,10 @@ def fetch_taiex(years_back=5, sleep_sec=1.5, incremental=True):
 
     result = {
         "source": "TWSE FMTQIK (https://www.twse.com.tw/zh/trading/historical/fmtqik.html)",
-        "fetched_at": date.today().isoformat(),
-        "failed_months": failed_months,
+        "fetched_at": _today().isoformat(),
+        # 累積，不是覆寫：抓到才從清單移除（上面 `carried` 那一段會把它們
+        # 排回請求清單）。覆寫的話，這個欄位只反映最後一次執行。
+        "failed_months": sorted(set(failed_months)),
         "dates": merged["dates"],
         "close": merged["close"],
         "volume_shares": merged["volume_shares"],
@@ -465,7 +516,7 @@ def fetch_vix(incremental=True):
         return None
     raw = raw_bytes.decode("utf-8-sig")
 
-    cutoff = date.today().replace(year=date.today().year - 5)
+    cutoff = _years_ago(5)
     out_dates, out_close = [], []
     reader = csv.DictReader(io.StringIO(raw))
     for row in reader:
@@ -497,7 +548,7 @@ def fetch_vix(incremental=True):
 
     result = {
         "source": "CBOE 官方 VIX 歷史資料 (https://www.cboe.com/tradable_products/vix/vix_historical_data/)",
-        "fetched_at": date.today().isoformat(),
+        "fetched_at": _today().isoformat(),
         "dates": merged["dates"],
         "close": merged["close"],
     }
@@ -551,7 +602,7 @@ def fetch_nikkei(years_back=5, incremental=True):
 
     result = {
         "source": "Yahoo Finance Chart API (^N225)",
-        "fetched_at": date.today().isoformat(),
+        "fetched_at": _today().isoformat(),
         "dates": merged["dates"],
         "close": merged["close"],
     }
@@ -584,7 +635,7 @@ def fetch_michigan_sentiment(incremental=True):
         print(f"⚠️ 密大信心指數 抓取失敗，未寫入任何檔案（不補假資料）: {e}")
         return None
 
-    cutoff = date.today().replace(year=date.today().year - 5)
+    cutoff = _years_ago(5)
     out_dates, out_close = [], []
     reader = csv.DictReader(io.StringIO(raw))
     for row in reader:
@@ -607,7 +658,7 @@ def fetch_michigan_sentiment(incremental=True):
 
     result = {
         "source": "FRED / University of Michigan Surveys of Consumers (UMCSENT)",
-        "fetched_at": date.today().isoformat(),
+        "fetched_at": _today().isoformat(),
         "dates": merged["dates"],
         "close": merged["close"],
     }
@@ -667,7 +718,7 @@ def fetch_jp_stock(code, key, name="", years_back=5, incremental=True):
         "source": f"Yahoo Finance Chart API ({code})",
         "code": code,
         "name": name or code,
-        "fetched_at": date.today().isoformat(),
+        "fetched_at": _today().isoformat(),
         "dates": merged["dates"],
         "close": merged["close"],
         "volume": merged["volume"],
@@ -758,7 +809,7 @@ def fetch_fred_series(series_id, name="", years_back=5, incremental=True, cache_
         print(f"⚠️ {label} ({series_id}) 重試 3 次仍失敗，未寫入任何檔案（不補假資料）: {e}")
         return None
 
-    cutoff = date.today().replace(year=date.today().year - years_back)
+    cutoff = _years_ago(years_back)
     out_dates, out_values = _parse_fred_csv(raw, series_id, cutoff)
     if not out_dates:
         print(f"⚠️ {label} ({series_id}) 回應解析不到任何資料列，未寫入任何檔案。"
@@ -772,7 +823,7 @@ def fetch_fred_series(series_id, name="", years_back=5, incremental=True, cache_
         "source": f"FRED ({series_id}) https://fred.stlouisfed.org/series/{series_id}",
         "series_id": series_id,
         "name": label,
-        "fetched_at": date.today().isoformat(),
+        "fetched_at": _today().isoformat(),
         "dates": merged["dates"],
         "close": merged["close"],
     }
@@ -1023,7 +1074,7 @@ def fetch_tw_pmi(years_back=20, incremental=True):
         print(f"⚠️ 臺灣PMI 重試 3 次仍失敗，未寫入任何檔案（不補假資料）: {e}")
         return None
 
-    cutoff = date.today().replace(year=date.today().year - years_back).isoformat()
+    cutoff = _years_ago(years_back).isoformat()
     out_dates, out_pmi, out_nmi = [], [], []
     reader = csv.DictReader(io.StringIO(raw))
     for row in reader:
@@ -1057,7 +1108,7 @@ def fetch_tw_pmi(years_back=20, incremental=True):
         "source": "國家發展委員會 臺灣採購經理人指數 (data.gov.tw nid=6100)",
         "landing_page": "https://data.gov.tw/dataset/6100",
         "unit": "指數（50 為榮枯線）",
-        "fetched_at": date.today().isoformat(),
+        "fetched_at": _today().isoformat(),
         "dates": merged["dates"],
         "pmi": merged["pmi"],
         "nmi": merged["nmi"],
@@ -1130,7 +1181,7 @@ def fetch_tw_m1b(years_back=11, incremental=True):
               f"欄位清單：{header[:5]}...（共 {len(header)} 欄）")
         return None
 
-    cutoff = date.today().replace(year=date.today().year - years_back).isoformat()
+    cutoff = _years_ago(years_back).isoformat()
     out_dates, out_val, out_yoy = [], [], []
     for r in rows[1:]:
         if idx_val >= len(r):
@@ -1169,7 +1220,7 @@ def fetch_tw_m1b(years_back=11, incremental=True):
         "source": "中央銀行 貨幣總計數（日平均數，月資料）EF15M01",
         "landing_page": "https://data.gov.tw/dataset/6024",
         "unit": "新臺幣百萬元",
-        "fetched_at": date.today().isoformat(),
+        "fetched_at": _today().isoformat(),
         "dates": merged["dates"],
         "m1b": merged["m1b"],
         "yoy": merged["yoy"],
@@ -1274,6 +1325,27 @@ def fetch_tw_market_cap(incremental=True):
     out_dates = months
     out_cap = [listed[m] + otc[m] for m in months]
 
+    # **少掉的月份要留下紀錄。**
+    #
+    # 2025-01 就是這樣不見的：櫃買那份 ODS 的 114 年只有年度彙總列、沒有 1 月的
+    # 月列（其他每一年都是「年度列 ＋ 1 月列」成對出現）。`_roc_month_to_iso`
+    # 正確地拒收年度列——那一列的市值其實是 12 月的值，收了會寫出一個假的 1 月
+    # ——然後這一行的交集把整個 2025-01 拿掉，連央行那一半也一起丟。
+    #
+    # 丟掉是對的。**無聲**才是問題：沒有 log、沒有寫進檔案，報告上的折線圖直接
+    # 跳過那個月，看圖的人不會知道 2024-12 和 2025-02 之間少了一格，
+    # 而百分位的分母也因此少一個月。
+    if months:
+        lo, hi = months[0], months[-1]
+        skipped = sorted((set(listed) ^ set(otc)) & {
+            m for m in (set(listed) | set(otc)) if lo <= m <= hi})
+    else:
+        skipped = []
+    if skipped:
+        print(f"⚠️ 上市櫃總市值：{len(skipped)} 個月只有單邊有資料，不計入合計："
+              f"{skipped}（上市缺 {[m for m in skipped if m not in listed]}、"
+              f"上櫃缺 {[m for m in skipped if m not in otc]}）")
+
     # --- 對帳 ---------------------------------------------------------
     fsc = _fetch_fsc_market_cap()
     out_count = [None] * len(months)
@@ -1314,8 +1386,11 @@ def fetch_tw_market_cap(incremental=True):
         "scope": "上市＋上櫃合計",
         "note": "上市來自央行（1987M05 起，無滾動視窗）、上櫃來自櫃買（2016-01 起逐月），"
                 "兩者相加；金管會 t49 只作對帳用。兩邊都有資料的月份才寫入。",
-        "fetched_at": date.today().isoformat(),
+        "fetched_at": _today().isoformat(),
         "latest_source_month": out_dates[-1],
+        # 交集掉的那幾個月（見上面）。留著才看得出圖上為什麼有缺口
+        # ——2025-01 就是這樣不見的，而且完全無聲。
+        "skipped_months": skipped,
         "reconciled_months": checked,
         "reconcile_mismatches": mismatched,
         "dates": merged["dates"],
@@ -1334,7 +1409,7 @@ def _months_behind(iso_month):
     """算某個資料月份落後現在幾個月，用來在報告上誠實標示新鮮度。"""
     try:
         y, m, _ = iso_month.split("-")
-        today = date.today()
+        today = _today()
         return (today.year - int(y)) * 12 + (today.month - int(m))
     except (ValueError, AttributeError):
         return None
@@ -1375,8 +1450,8 @@ def compute_tw_marketcap_m1b_ratio():
         return None
 
     result = {
-        "source": "自行計算：上市櫃總市值(證期局t49) ÷ M1B(央行EF15M01)，兩者皆為新臺幣百萬元",
-        "fetched_at": date.today().isoformat(),
+        "source": "自行計算：上市櫃總市值（上市 央行EG27M01＋上櫃 櫃買中心，證期局 t49 僅供對帳）÷ M1B（央行EF15M01），兩者皆為新臺幣百萬元",
+        "fetched_at": _today().isoformat(),
         "latest_month": out_dates[-1],
         "months_behind": _months_behind(out_dates[-1]),
         "dates": out_dates,
@@ -1442,7 +1517,7 @@ def fetch_index(symbol, key, name="", years_back=5, incremental=True):
         "source": f"Yahoo Finance Chart API ({symbol})",
         "symbol": symbol,
         "name": label,
-        "fetched_at": date.today().isoformat(),
+        "fetched_at": _today().isoformat(),
         "dates": merged["dates"],
         "close": merged["close"],
     }

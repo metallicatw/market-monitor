@@ -588,6 +588,133 @@ def test_近四季不齊就不算():
     assert G.ttm_eps_at([7.0], ["FY26"], 0) == 7.0
 
 
+
+# ---------------------------------------------------------------------------
+# 時區、閏日、缺口
+# ---------------------------------------------------------------------------
+
+
+def test_抓取層一律用台北時間():
+    """排程是 UTC 22:23 ＝ 台北**隔日** 06:23。
+
+    所以同一趟執行裡，寫進 data/*.json 的 `fetched_at` 會比報告頁首顯示的
+    台北日期早一整天——而 fetched_at 是 VIX、日經、每一張個股卡上唯一的
+    時間資訊。`_months_behind()` 在每個月最後一天的那一班也會少算一個月。
+    """
+    src = open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                            "fetch_market_data.py"), encoding="utf-8").read()
+    body = "\n".join(ln for ln in src.splitlines()
+                     if not ln.lstrip().startswith("#") and "原本是" not in ln)
+    assert "date.today()" not in body, "還有地方在用 UTC 的 date.today()"
+    assert "def _today():" in src
+
+
+def test_閏日不會讓半個報告掛掉():
+    """`date.today().replace(year=...)` 在 2028-02-29 會丟 ValueError。
+
+        date(2028, 2, 29).replace(year=2023)
+        ValueError: day is out of range for month
+
+    那天是星期二，排程會跑；VIX(-5y)、FRED(-25y→2003)、M1B(-11y→2017)、
+    密大信心(-5y) 都落在非閏年，會一起失敗。
+    """
+    import datetime as _dt
+
+    import fetch_market_data as F
+
+    real = F._today
+    try:
+        F._today = lambda: _dt.date(2028, 2, 29)
+        for n in (5, 11, 25):
+            got = F._years_ago(n)
+            assert got == _dt.date(2028 - n, 2, 1), got
+    finally:
+        F._today = real
+
+
+def test_上一次失敗的月份下一次要補回來():
+    """增量模式只從「最後一筆的月份」起算，所以中間那個洞不在請求清單裡；
+
+    而 `failed_months` 每次整個覆寫，唯一的缺漏證據生命週期只有一天。
+    TWSE 那支 API 對舊月份是完全可重抓的——這個洞不是資料源造成的。
+    """
+    import inspect
+
+    import fetch_market_data as F
+
+    src = inspect.getsource(F.fetch_taiex)
+    assert 'carried = [m for m in (existing or {}).get("failed_months"' in src, (
+        "沒有把上一次失敗的月份排回請求清單"
+    )
+    assert 'months = sorted(set(months) | set(carried))' in src
+    assert '"failed_months": sorted(set(failed_months))' in src, (
+        "failed_months 還是整個覆寫"
+    )
+
+
+def test_缺了資料來源要印在頁面上():
+    """和 ConfigBroken 親手記錄、刻意修掉的災難是同一個：
+
+    「六檔從報告上無聲消失，頁面上沒有任何一個字說少了東西」。
+    設定檔那條路補好了，資料檔這條一模一樣地開著。
+    """
+    import generate_report_local as G
+
+    _h, s = G.render_page_header([], {"dates": ["2026-09-18"]},
+                                 missing=["vix.json", "個股 towa"])
+    assert "本次報告缺少 2 個資料來源" in s, s[:300]
+    assert "vix.json" in s and "個股 towa" in s
+
+    _h2, s2 = G.render_page_header([], {"dates": ["2026-09-18"]})
+    assert "缺少" not in s2, "沒缺東西卻掛了一條警告"
+
+
+def test_市值只有單邊的月份要留下紀錄():
+    """2025-01 就是這樣不見的，而且完全無聲。
+
+    櫃買那份 ODS 的 114 年只有年度彙總列、沒有 1 月的月列，於是交集把整個
+    2025-01 拿掉，連央行那一半也一起丟。丟掉是對的，**無聲**才是問題。
+    """
+    import inspect
+
+    import fetch_market_data as F
+
+    src = inspect.getsource(F.fetch_tw_market_cap)
+    assert '"skipped_months": skipped' in src, "少掉的月份沒有寫進檔案"
+    assert "set(listed) ^ set(otc)" in src
+
+
+def test_百分位的視窗是滾動的():
+    """擴張視窗在一個結構性上升的數列上會犯同一個病，只是換一個方向。
+
+    實測 126 個月：擴張視窗 吃緊 57%／寬鬆 9%，現在連續 32 個月都是吃緊；
+    滾動 60 個月是 50%／10%，連續 15 個月。而頁首的紅色警報區每天都會放同一條。
+    """
+    import inspect
+
+    import generate_report_local as G
+
+    assert hasattr(G, "TW_MC_M1B_PCT_WINDOW")
+    assert G.TW_MC_M1B_PCT_WINDOW >= 24, "視窗短到算不出有意義的百分位"
+    src = inspect.getsource(G.render_tw_marketcap_m1b_section)
+    assert "window = ratios[-TW_MC_M1B_PCT_WINDOW:]" in src
+    assert "for r in window" in src, "百分位還是拿全部歷史算的"
+
+
+def test_布局門檻只能是數字():
+    """`price_buy`／`per_buy` 和 CODE 一樣是使用者填的自由文字，
+
+    而下面是未加引號的 `$EXTRA` 展開。實測 `'3200 --years 99'` 會改寫後面的
+    參數、`'*'` 會被 glob 展開成檔名清單。上面那一關只套在 CODE 上。
+    """
+    wf = open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                           ".github/workflows/manage.yml"), encoding="utf-8").read()
+    assert 'for v in "$IN_PRICE_BUY" "$IN_PER_BUY"' in wf, (
+        "兩個門檻參數沒有經過驗證"
+    )
+    assert "布局門檻只能是數字" in wf
+
+
 if __name__ == "__main__":
     tests = [v for k, v in sorted(globals().items()) if k.startswith("test_")]
     failed = 0

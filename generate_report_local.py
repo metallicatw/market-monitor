@@ -66,6 +66,9 @@ TW_MC_M1B_HIGH = _TH["tw_marketcap_m1b_high"]       # 備援：歷史不足時�
 TW_MC_M1B_LOW = _TH["tw_marketcap_m1b_low"]         # 備援：歷史不足時，< 此值 => 寬鬆
 TW_MC_M1B_PCT_HIGH = _TH["tw_marketcap_m1b_pct_high"]  # 主要判準：≥ 第 N 百分位 => 吃緊
 TW_MC_M1B_PCT_LOW = _TH["tw_marketcap_m1b_pct_low"]    # 主要判準：≤ 第 N 百分位 => 寬鬆
+#: 百分位的比較基準是**近 N 個月**，不是全部歷史。理由與實測見
+#: `render_tw_marketcap_m1b_section` 裡算 `window` 那一段。
+TW_MC_M1B_PCT_WINDOW = _TH.get("tw_marketcap_m1b_pct_window", 60)
 
 #: 市值貨幣比**正常**會落後幾個月。
 #:
@@ -2940,9 +2943,25 @@ def render_tw_marketcap_m1b_section(ratio_data):
     # 以前沒有歷史可以兌現。現在有了，就讓它真的照那句話判斷。
     #
     # 絕對值留著當備援：歷史不足 24 個月（例如從零重建資料）時百分位沒有意義。
+    # ⚠️ **視窗是滾動的，不是從第一個月算到今天。**
+    #
+    # 換成百分位的理由是「原本那組固定門檻讓 77% 的月份都叫寬鬆，一個指標如果
+    # 77% 的時間都給同一個標籤，它就沒有在區分任何東西」。但**擴張視窗**的百分位
+    # 在一個結構性上升的數列上會犯同一個病，只是換一個方向——實測 126 個月：
+    #
+    #     擴張視窗   吃緊 57% / 中段 34% / 寬鬆  9%   現在連續 32 個月都是吃緊
+    #     滾動 60    吃緊 50% / 中段 40% / 寬鬆 10%   現在連續 15 個月
+    #     滾動 36    吃緊 45% / 中段 45% / 寬鬆 11%   現在連續 13 個月
+    #
+    # 而頁首的紅色警報區每天都會放同一條。選 60 個月：五年是一個讀得懂的說法
+    # （「和過去五年比」），36 個月的分佈更平均但視窗短到會把一個完整的循環
+    # 切掉。若要再平衡，下一步是**去勢**（ratio 除以自己的 36 個月移動平均之後
+    # 再取百分位，實測 吃緊 41% / 中段 37% / 寬鬆 22%）——那會改變這個指標的
+    # 意思（變成「和自己的近期趨勢比」），所以不在這裡順手改。
     percentile = None
-    if len(ratios) >= 24:
-        percentile = round(sum(1 for r in ratios if r < last) / len(ratios) * 100)
+    window = ratios[-TW_MC_M1B_PCT_WINDOW:]
+    if len(window) >= 24:
+        percentile = round(sum(1 for r in window if r < last) / len(window) * 100)
         tight = percentile >= TW_MC_M1B_PCT_HIGH
         loose = percentile <= TW_MC_M1B_PCT_LOW
     else:
@@ -2958,7 +2977,7 @@ def render_tw_marketcap_m1b_section(ratio_data):
     # 把「這個標籤是怎麼判的」寫在旁邊。門檻換算成當下的絕對值一起印出來，
     # 是因為「第 80 百分位」對讀的人來說不是一個可以拿去比對的數字。
     if percentile is not None:
-        ordered = sorted(ratios)
+        ordered = sorted(window)
 
         def at(p: int) -> float:
             i = (len(ordered) - 1) * p / 100
@@ -2967,7 +2986,7 @@ def render_tw_marketcap_m1b_section(ratio_data):
 
         low = round(at(TW_MC_M1B_PCT_LOW), 2)
         high = round(at(TW_MC_M1B_PCT_HIGH), 2)
-        zone_basis = (f"分區依歷史百分位："
+        zone_basis = (f"分區依近 {len(window)} 個月的百分位："
                       f"≤P{TW_MC_M1B_PCT_LOW}（約 {low:.2f}）寬鬆、"
                       f"≥P{TW_MC_M1B_PCT_HIGH}（約 {high:.2f}）吃緊")
     else:
@@ -3428,7 +3447,7 @@ def collect_alerts(taiex, vix, nikkei, michigan, murata, jp_stocks,
     return alerts
 
 
-def render_page_header(alerts, taiex):
+def render_page_header(alerts, taiex, missing=None):
     now_disp = datetime.now(TAIPEI_TZ).strftime("%Y-%m-%d %H:%M")
     baseline_disp = taiex["dates"][-1].replace("-", "/") if taiex else "N/A"
 
@@ -3447,6 +3466,20 @@ def render_page_header(alerts, taiex):
   <div class="summary-box">
     <div class="summary-title ok">✅ 目前所有指標皆在正常區間，未觸發任何預警或布局參考線</div>
   </div>"""
+
+    # **少了資料來源要在頁面上說。**
+    #
+    # 這和 `config_loader.ConfigBroken` 親手記錄、刻意修掉的災難是同一個：
+    # 「六檔從報告上無聲消失，頁面上沒有任何一個字說少了東西，結束碼 0、
+    # job 全綠」。設定檔那條路補好了，資料檔這條一模一樣地開著——而且更容易
+    # 觸發，因為 data/ 由排程每天覆寫。
+    if missing:
+        names = "、".join(missing)
+        summary_html += f'''
+  <div class="summary-box has-alerts">
+    <div class="summary-title alert">⚠️ 本次報告缺少 {len(missing)} 個資料來源，對應的區塊沒有畫出來</div>
+    <div class="summary-list"><div>{names}</div></div>
+  </div>'''
 
     header = f"""
 <div class="page-header">
@@ -3473,7 +3506,8 @@ def render_page_header(alerts, taiex):
 
 
 def build_html(taiex, vix, nikkei, michigan, murata, jp_stocks,
-               tw_pmi=None, tw_mc_m1b=None, us_indices=None, us_fred=None):
+               tw_pmi=None, tw_mc_m1b=None, us_indices=None, us_fred=None,
+               missing=None):
     """五個大區塊，每一塊是一張可收合的卡片，各有自己的色系。
 
     兩層都預設收合：外層是五條橫幅，展開後裡面的卡片也還是收著的，
@@ -3486,7 +3520,7 @@ def build_html(taiex, vix, nikkei, michigan, murata, jp_stocks,
 
     alerts = collect_alerts(taiex, vix, nikkei, michigan, murata, jp_stocks,
                             tw_pmi=tw_pmi, tw_mc_m1b=tw_mc_m1b)
-    header_html, summary_html = render_page_header(alerts, taiex)
+    header_html, summary_html = render_page_header(alerts, taiex, missing)
 
     # ── 一、重點摘要 ───────────────────────────────────────────────
     n_warn = sum(1 for kind, _ in alerts if kind == "warn")
@@ -3721,6 +3755,8 @@ def main():
     if not JP_STOCK_KEYS:
         print("⚠️ config.json 裡沒有任何啟用中的個股，本次報告不含個股區塊。")
     jp_stocks = []
+    #: 這一趟少掉的資料來源。收集起來是為了印在頁面上，不是只印在 console。
+    missing = []
     for key in JP_STOCK_KEYS:
         stock = load_json(f"stock_{key}.json")
         fin = load_json(f"stock_{key}_financials.json")
@@ -3728,6 +3764,7 @@ def main():
         annual = load_json(f"stock_{key}_quarterly_financials.json") or load_json(f"stock_{key}_annual_financials.json")
         if stock is None:
             print(f"⚠️ 找不到 data/stock_{key}.json，本次輸出會跳過這檔個股。")
+            missing.append(f"個股 {key}")
         jp_stocks.append((key, stock, fin, quarterly, annual))
 
     for name, val in [("vix.json", vix), ("nikkei.json", nikkei), ("michigan.json", michigan),
@@ -3735,15 +3772,24 @@ def main():
                        ("tw_marketcap_m1b.json", tw_mc_m1b)]:
         if val is None:
             print(f"⚠️ 找不到 data/{name}，本次輸出會跳過對應區塊。")
+            missing.append(name)
 
     missing_idx = [k for k, v in us_indices if v is None]
     if missing_idx:
         print(f"⚠️ 找不到美股指數快取：{', '.join(missing_idx)}，本次報告會跳過這幾條線。")
+        missing.extend(f"美股指數 {k}" for k in missing_idx)
     missing_fred = [m["id"] for m in US_FRED_CONFIG if m["id"] not in us_fred]
     if missing_fred:
         print(f"⚠️ 找不到 FRED 指標快取：{', '.join(missing_fred)}，本次報告不顯示這幾格。")
+        missing.extend(f"FRED {m}" for m in missing_fred)
+
+    # 缺檔不只印在 console，也要印在**頁面上**——console 只有排程看得到，
+    # 而讀報告的人看到的是頁面。
+    if missing and os.environ.get("GITHUB_ACTIONS"):
+        print(f"::warning title=報告缺少資料來源::{'、'.join(missing)}")
 
     html = build_html(taiex, vix, nikkei, michigan, murata, jp_stocks,
+                      missing=missing,
                       tw_pmi=tw_pmi, tw_mc_m1b=tw_mc_m1b,
                       us_indices=us_indices, us_fred=us_fred)
 
