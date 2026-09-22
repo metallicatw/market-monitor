@@ -715,6 +715,94 @@ def test_布局門檻只能是數字():
     assert "布局門檻只能是數字" in wf
 
 
+# ── workflow 檔本身的語法 ──────────────────────────────────────────────
+#
+# GitHub 會解析 YAML 裡**所有**字串值中的 `${{ … }}`——包括 `run: |` 區塊裡
+# shell 的 `#` 註解，因為對 YAML 來說那只是字串的一部分。一個空的 `${{ }}`
+# 寫在註解裡，整份 workflow 就「Invalid workflow file」，按鈕按了直接紅字，
+# 而同一個 commit 的 CI 仍然是綠的（CI 不讀那份檔）。這裡用純文字掃，不引 yaml。
+
+_WF_DIR = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                       ".github", "workflows")
+
+
+def _workflow_texts():
+    for name in sorted(os.listdir(_WF_DIR)):
+        if name.endswith((".yml", ".yaml")):
+            with open(os.path.join(_WF_DIR, name), encoding="utf-8") as fh:
+                yield name, fh.read()
+
+
+def _expression_problems(text):
+    """回傳 [(行號, 說明)]：空的、沒收尾的、開頭不像表達式的 `${{ }}`。"""
+    import re
+    starts_ok = re.compile(r"[A-Za-z_(!'\-0-9]")
+    bad = []
+    for no, line in enumerate(text.splitlines(), 1):
+        # YAML 的整行註解（不在 block scalar 裡）GitHub 不看；但判斷「在不在
+        # block scalar 裡」要靠縮排，這裡不賭——註解裡也一律要寫成合法的樣子。
+        i = 0
+        while True:
+            i = line.find("${{", i)
+            if i < 0:
+                break
+            j = line.find("}}", i + 3)
+            if j < 0:
+                bad.append((no, "沒有收尾的 }}"))
+                break
+            inner = line[i + 3:j].strip()
+            if not inner:
+                bad.append((no, "空的 ${{ }}"))
+            elif not starts_ok.match(inner):
+                bad.append((no, f"不像表達式：{inner!r}"))
+            i = j + 2
+    return bad
+
+
+def test_workflow_裡沒有空的表達式():
+    problems = {name: p for name, t in _workflow_texts() if (p := _expression_problems(t))}
+    assert not problems, f"GitHub 會拒收這些 workflow：{problems}"
+
+
+def test_掃描器真的抓得到上次那個錯():
+    """上一版 manage.yml 就是死在這一行：`run: |` 裡的註解寫了 `${{ }}`。"""
+    sample = (
+        "        run: |\n"
+        "          # 不是 RCE（沒有 eval，${{ }} 已經走\n"
+        "          echo ok\n"
+    )
+    assert _expression_problems(sample) == [(2, "空的 ${{ }}")]
+    assert _expression_problems("x: ${{ inputs.code") == [(1, "沒有收尾的 }}")]
+    assert _expression_problems("x: ${{ … }}") == [(1, "不像表達式：'…'")]
+    assert _expression_problems("x: ${{ inputs.code }} ${{ secrets.K }}") == []
+
+
+def test_使用者輸入不直接內插進_run():
+    """`${{ inputs.* }}` 出現在 `run:` 區塊裡 = 使用者打的字直接變成 shell 程式碼。"""
+    import re
+    offenders = []
+    for name, text in _workflow_texts():
+        run_indent = None
+        for no, line in enumerate(text.splitlines(), 1):
+            stripped = line.lstrip()
+            indent = len(line) - len(stripped)
+            if run_indent is not None:
+                if stripped and indent <= run_indent:
+                    run_indent = None
+                elif "${{ inputs." in line or "${{ github.event.inputs." in line:
+                    offenders.append(f"{name}:{no}")
+                    continue
+                else:
+                    continue
+            m = re.match(r"(\s*)(?:- )?run:\s*(.*)$", line)
+            if m:
+                if m.group(2).startswith(("|", ">")):
+                    run_indent = len(m.group(1))
+                elif "${{ inputs." in m.group(2):
+                    offenders.append(f"{name}:{no}")
+    assert not offenders, f"這些 run: 直接內插了使用者輸入，改走 env：{offenders}"
+
+
 if __name__ == "__main__":
     tests = [v for k, v in sorted(globals().items()) if k.startswith("test_")]
     failed = 0

