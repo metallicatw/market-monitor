@@ -71,6 +71,12 @@ jobs:
       - name: 手機版說明的可視範圍
         run: python tests/test_info_tips.py
 
+      # 分頁排版：五個分頁、子分頁、趨勢圖收在摺疊裡、頁面上沒有重複的 id、
+      # 分頁的 JS 跟圖表分開放、送出去的每一段 JS 語法都對。用 repo 裡的 data/
+      # 產生一份報告來檢查（--local，不寄信、不動正式的 index.html）。
+      - name: 分頁排版
+        run: python tests/test_tabs_layout.py
+
       # 報告產生器有 1,900 行 f-string。語法錯誤在排程上是「今天沒有報告」，
       # 在這裡是三秒鐘就看得到的紅字。
       - name: 語法檢查
