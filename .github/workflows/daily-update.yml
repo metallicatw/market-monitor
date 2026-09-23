@@ -25,9 +25,21 @@ name: 每日更新報告
 # 提前七分鐘也不是隨便挑的：下游 tw-six-metrics 的 pages 排程要等這一班產完才
 # 去抓它的頁面，早七分鐘就是多七分鐘緩衝。冬令時美股 21:00 UTC 收盤，22:23
 # 仍然留了 83 分鐘。
+#
+# ## 2026-09-23：週一那一班拿掉，加一班保險
+#
+# 台北**週一** 06:23 那一班抓到的是週五的美股、週五的台股與日股——和週六早上那
+# 一班一模一樣（週末沒有任何市場開盤），所以改成台北週二～週六。
+#
+# 保險那一班在台北 07:03：GitHub 負載高的時候會延遲甚至直接丟掉排程，而丟掉就
+# 是一整天沒有報告。它開頭先看 Pages 上的報告是不是今天產的（「報告生成時間：
+# 今天」），是就直接結束——06:23 那班成功的日子，它什麼都不做。整條 workflow 共用
+# 一把鎖（concurrency），所以 06:23 那班被延遲到 07:03 之後的話，保險那一班會
+# 等它做完再檢查，不會兩班一起跑。下游 tw-six-metrics 的 pages 在 07:37 來拿。
 on:
   schedule:
-    - cron: "23 22 * * 0-5"   # 週日～週五 22:23 UTC = 台北週一～週六 06:23
+    - cron: "23 22 * * 1-5"   # 週一～週五 22:23 UTC = 台北週二～週六 06:23
+    - cron: "3 23 * * 1-5"    # 保險：台北週二～週六 07:03，今天已經有報告就不跑
   workflow_dispatch:           # 也可以在 Actions 頁面手動按按鈕執行
 
 permissions:
@@ -42,7 +54,32 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
+  # 只有保險那一班會真的檢查；主班與手動觸發一律照跑。
+  gate:
+    runs-on: ubuntu-latest
+    outputs:
+      skip: ${{ steps.check.outputs.skip }}
+    steps:
+      - id: check
+        env:
+          SCHED: ${{ github.event.schedule }}
+        run: |
+          if [ "$GITHUB_EVENT_NAME" != "schedule" ] || [ "$SCHED" != "3 23 * * 1-5" ]; then
+            exit 0
+          fi
+          today="$(TZ=Asia/Taipei date +%Y-%m-%d)"
+          # 查詢字串是為了繞過 Pages 前面那層 CDN 的快取（最多十分鐘）。
+          if curl -fsSL --max-time 60 "https://metallicatw.github.io/market-monitor/?t=$(date +%s)" \
+               | grep -q "報告生成時間：$today"; then
+            echo "::notice::今天（$today）的報告已經發布了，保險這一班不必跑"
+            echo "skip=yes" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::06:23 那一班今天沒有產出報告（被 GitHub 延遲或丟掉），保險這一班補跑"
+          fi
+
   update:
+    needs: gate
+    if: needs.gate.outputs.skip != 'yes'
     runs-on: ubuntu-latest
     environment:
       name: github-pages

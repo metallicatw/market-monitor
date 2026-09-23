@@ -803,6 +803,31 @@ def test_使用者輸入不直接內插進_run():
     assert not offenders, f"這些 run: 直接內插了使用者輸入，改走 env：{offenders}"
 
 
+# ── 排程：週一那一班拿掉、加一班保險（2026-09-23） ──────────────────────
+
+def _daily_wf():
+    return open(os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                             ".github/workflows/daily-update.yml"), encoding="utf-8").read()
+
+
+def test_台北週一早上不跑():
+    """台北週一 06:23 抓到的是週五收盤——週六早上那一班已經抓過一模一樣的。"""
+    import re
+    crons = re.findall(r'cron:\s*"([^"]+)"', _daily_wf())
+    assert crons, "daily-update.yml 沒有排程了？"
+    for c in crons:
+        assert c.split()[4] == "1-5", f"{c}：星期欄應該是 1-5（UTC 週一～週五 ＝ 台北週二～週六）"
+
+
+def test_保險那一班先確認今天有沒有報告():
+    wf = _daily_wf()
+    assert '"3 23 * * 1-5"' in wf, "保險那一班不見了"
+    assert 'SCHED" != "3 23 * * 1-5"' in wf, "gate 比對的 cron 和排程對不上——保險那一班永遠不會跳過"
+    assert "報告生成時間：$today" in wf
+    assert "needs: gate" in wf and "needs.gate.outputs.skip != 'yes'" in wf
+    assert "concurrency:" in wf, "沒有共用的鎖，主班延遲的時候兩班會一起跑"
+
+
 if __name__ == "__main__":
     tests = [v for k, v in sorted(globals().items()) if k.startswith("test_")]
     failed = 0
