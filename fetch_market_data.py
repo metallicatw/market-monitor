@@ -827,10 +827,196 @@ def fetch_fred_series(series_id, name="", years_back=5, incremental=True, cache_
         "dates": merged["dates"],
         "close": merged["close"],
     }
+    # 密大那一份（michigan.json）之後還會被 `fetch_michigan_official` 用官網的
+    # 資料疊一次，並記下「哪一個月是初值」「下次什麼時候發布」。這裡每天先跑，
+    # 如果把那幾個欄位丟掉，官網那一步那天剛好失敗的話，初值就會被當成終值
+    # 顯示——所以原封不動帶過去。FRED 已經有的月份一定是終值，從初值清單拿掉。
+    if existing:
+        for key in MICHIGAN_OFFICIAL_KEYS:
+            if key in existing:
+                result[key] = existing[key]
+        if result.get("prelim"):
+            have = set(out_dates)
+            result["prelim"] = [d for d in result["prelim"] if d not in have]
     out_path = os.path.join(DATA_DIR, cache_file)
     _write_json(out_path, result)
     print(f"✅ {label} ({series_id}) 更新完成：本次新增 {max(new_count,0)} 筆，"
           f"快取總計 {len(merged['dates'])} 筆，最新 {merged['dates'][-1]} = {merged['close'][-1]}")
+    return result
+
+
+# ---------------------------------------------------------------------------
+# 美股：密大消費者信心——官網（比 FRED 早一到兩個月）
+# ---------------------------------------------------------------------------
+# FRED 的 UMCSENT 是密大**授權**轉載的，條件是延遲一個月，而且只放終值。
+# 2026-09-23 實測：
+#
+#     FRED     最新 2026-07 = 55.2
+#     官網表格  2026-08 = 51.7（終值）
+#     官網首頁  2026-09 = 47.8（初值，9/12 公布；終值 9/25）
+#
+# 報告上寫的是 55.2、「景氣衰退」——而官方當下的數字是 47.8、「系統危機」。
+# 差兩個月、差一個區間。所以 FRED 照抓（它是很乾淨的長歷史），官網再疊上去：
+#
+#   1. files/tbmics.csv —— 官網 Tables 頁的月資料（終值），格式
+#      `Month,YYYY,ICS_ALL`，月份是英文全名。見 reference/samples/michigan_tbmics。
+#   2. 首頁 —— 「Preliminary Results for September 2026」底下那張表，
+#      Index of Consumer Sentiment 那一列的第一個數字是當月；另有
+#      「Next data release: Friday, September 25, 2026 for Final September data」。
+#      見 reference/samples/michigan_home。
+#
+# 初值每個月第二個週五公布、終值在月底（最後一個週五左右）。初值會被修正，
+# 所以存的時候記下它是初值（`prelim`），終值出來就自動換掉。
+MICHIGAN_TABLE_URL = "https://www.sca.isr.umich.edu/files/tbmics.csv"
+MICHIGAN_HOME_URL = "https://www.sca.isr.umich.edu/"
+#: 官網那一步加在 michigan.json 上的欄位。FRED 那一步要原樣帶過去（見上面）。
+MICHIGAN_OFFICIAL_KEYS = ("prelim", "next_release", "official_source")
+
+_EN_MONTHS = {m: i for i, m in enumerate(
+    ("january", "february", "march", "april", "may", "june", "july",
+     "august", "september", "october", "november", "december"), start=1)}
+
+
+def parse_michigan_table(raw):
+    """tbmics.csv → (dates, values)。日期一律是該月 1 號（和 FRED 同一個慣例）。
+
+    認不得的列跳過，不猜：這個檔 1952～1977 是季資料（有缺月），之後才是逐月。
+    """
+    import csv
+    import io
+
+    text = raw.decode("utf-8-sig", "replace") if isinstance(raw, bytes) else raw
+    dates, values = [], []
+    for row in csv.DictReader(io.StringIO(text)):
+        month = _EN_MONTHS.get((row.get("Month") or "").strip().lower())
+        year = (row.get("YYYY") or "").strip()
+        val = (row.get("ICS_ALL") or "").strip()
+        if not month or not year.isdigit():
+            continue
+        try:
+            v = float(val)
+        except ValueError:
+            continue
+        dates.append(f"{int(year):04d}-{month:02d}-01")
+        values.append(v)
+    return dates, values
+
+
+def parse_michigan_home(raw):
+    """首頁 → {"month", "value", "status", "next_release"}；認不出來回 None。
+
+    `status` 是 "preliminary" 或 "final"。`next_release` 是
+    {"date": "2026-09-25", "what": "final", "month": 9}（認不出來就是 None）。
+    """
+    import html as _html
+    import re
+
+    text = raw.decode("utf-8", "replace") if isinstance(raw, bytes) else raw
+    text = re.sub(r"<script.*?</script>|<style.*?</style>", " ", text, flags=re.S | re.I)
+    text = _html.unescape(re.sub(r"<[^>]+>", " ", text))
+    text = re.sub(r"\s+", " ", text)
+
+    head = re.search(r"(Preliminary|Final)\s+Results\s+for\s+([A-Za-z]+)\s+(\d{4})", text)
+    if not head:
+        return None
+    month = _EN_MONTHS.get(head.group(2).lower())
+    if not month:
+        return None
+    row = re.search(r"Index of Consumer Sentiment\s+(-?\d+(?:\.\d+)?)", text[head.end():])
+    if not row:
+        return None
+    out = {
+        "month": f"{int(head.group(3)):04d}-{month:02d}-01",
+        "value": float(row.group(1)),
+        "status": "preliminary" if head.group(1).lower() == "preliminary" else "final",
+        "next_release": None,
+    }
+    nxt = re.search(r"Next data release:\s*[A-Za-z]+,\s*([A-Za-z]+)\s+(\d{1,2}),\s*(\d{4})"
+                    r"\s+for\s+(Preliminary|Final)\s+([A-Za-z]+)", text)
+    if nxt and _EN_MONTHS.get(nxt.group(1).lower()) and _EN_MONTHS.get(nxt.group(5).lower()):
+        out["next_release"] = {
+            "date": f"{int(nxt.group(3)):04d}-{_EN_MONTHS[nxt.group(1).lower()]:02d}-{int(nxt.group(2)):02d}",
+            "what": nxt.group(4).lower(),
+            "month": _EN_MONTHS[nxt.group(5).lower()],
+        }
+    return out
+
+
+def merge_michigan_official(existing, table, home):
+    """把官網的兩份資料疊到既有的 michigan.json 上。純函式，方便離線測試。
+
+    * 表格（終值）蓋過既有的同月數字——官網是源頭，FRED 是轉載。
+    * 首頁那個月如果表格裡還沒有，就加上去；是初值的話記進 `prelim`。
+    * 表格裡已經有的月份一律從 `prelim` 拿掉（終值出來了）。
+    * 首頁這次沒抓到的話，既有的 `prelim` 與 `next_release` 保留——不然那個
+      初值會在沒有任何標記的情況下被當成終值顯示。
+    """
+    base = dict(existing or {})
+    t_dates, t_vals = table if table else ([], [])
+    # 表格從 1952 年開始；只疊到既有序列的範圍（FRED 那一步決定的 25 年視窗），
+    # 沒有既有序列的時候才整份拿。
+    if base.get("dates") and t_dates:
+        first = base["dates"][0]
+        keep = [i for i, d in enumerate(t_dates) if d >= first]
+        t_dates = [t_dates[i] for i in keep]
+        t_vals = [t_vals[i] for i in keep]
+    merged = _merge_series(base if base.get("dates") else None, t_dates, {"close": t_vals})
+
+    finals = set(t_dates)
+    prelim = [d for d in (base.get("prelim") or []) if d not in finals]
+    next_release = base.get("next_release")
+    if home:
+        next_release = home.get("next_release") or next_release
+        if home["month"] not in finals:
+            merged = _merge_series(merged, [home["month"]], {"close": [home["value"]]})
+            if home["status"] == "preliminary":
+                prelim = sorted(set(prelim) | {home["month"]})
+            else:
+                prelim = [d for d in prelim if d != home["month"]]
+    have = set(merged["dates"])
+    prelim = [d for d in prelim if d in have]
+
+    base.update({
+        "dates": merged["dates"],
+        "close": merged["close"],
+        "prelim": prelim,
+        "next_release": next_release,
+        "official_source": MICHIGAN_HOME_URL,
+    })
+    base.setdefault("series_id", "UMCSENT")
+    base.setdefault("name", "密大消費者信心")
+    return base
+
+
+def fetch_michigan_official(cache_name="michigan.json"):
+    """用密大官網把 michigan.json 補到最新（見上面那一段說明）。
+
+    表格抓不到就整個不動（回 None，記成這次的失敗）；首頁抓不到只少了當月初值，
+    表格那一份照樣寫進去。
+    """
+    existing = _load_cache(cache_name)
+    try:
+        table = parse_michigan_table(_http_get_with_retry(MICHIGAN_TABLE_URL, label="密大官網表格"))
+    except Exception as e:  # noqa: BLE001
+        print(f"⚠️ 密大官網表格抓不到，michigan.json 維持 FRED 那一份：{e}")
+        return None
+    if not table[0]:
+        print("⚠️ 密大官網表格解析不到任何資料列（格式變了？），michigan.json 維持原狀")
+        return None
+    try:
+        home = parse_michigan_home(_http_get_with_retry(MICHIGAN_HOME_URL, label="密大官網首頁"))
+    except Exception as e:  # noqa: BLE001
+        print(f"⚠️ 密大官網首頁抓不到，這次只有終值：{e}")
+        home = None
+    if home is None:
+        print("⚠️ 密大官網首頁認不出當月數字，這次只有終值")
+
+    result = merge_michigan_official(existing, table, home)
+    result["fetched_at"] = _today().isoformat()
+    _write_json(os.path.join(DATA_DIR, cache_name), result)
+    tag = "（初值）" if result["dates"][-1] in result["prelim"] else ""
+    print(f"✅ 密大消費者信心（官網）：最新 {result['dates'][-1][:7]} = "
+          f"{result['close'][-1]}{tag}")
     return result
 
 
@@ -1629,6 +1815,9 @@ if __name__ == "__main__":
              series["id"], name=series["name"],
              years_back=series.get("years_back", 25),
              cache_name=series.get("cache"))
+    # FRED 的密大信心延遲一個月、而且沒有初值；用官網補到最新。**排在 FRED
+    # 後面**：同一個 michigan.json，後寫的贏。
+    _run("密大消費者信心（官網）", fetch_michigan_official)
 
     print("=" * 60)
     print("【日股】")

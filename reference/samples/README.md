@@ -17,6 +17,8 @@ gzip 用 `mtime=0` 壓，所以同樣的回應重壓會產生位元組相同的�
 | `cbc_ef15m01_money_aggregates` | ✅ M1B 餘額（日平均數） |
 | `fsc_t49_11138_market_overview` | ✅ 上市櫃總市值（新臺幣十億元） |
 | `datagov_dropdown_*` | ✅ data.gov.tw 唯一能過濾的搜尋端點 |
+| `michigan_tbmics` | ✅ 密大消費者信心月資料（終值），比 FRED 早一個月 |
+| `michigan_home` | ✅ 密大官網首頁：當月初值／終值與下次發布日 |
 | `cbc_ef19m01_m1b_factors` | ❌ 欄名幾乎一樣但值是「變動額」不是餘額 |
 | `fsc_t32_103955_global_marketcap` | ❌ 單位是美元、且不含上櫃 |
 | `twse_mi_index_tables_20260831` | ❌ 9 張表沒有任何一張有市值 |

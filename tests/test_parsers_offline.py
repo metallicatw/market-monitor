@@ -761,6 +761,132 @@ def test_every_action_either_shows_up_at_once_or_refreshes_when_it_is_done():
     print(f"  {len(local)} 個立即反映、{len(rebuild)} 個跑完自動重整，沒有漏的")
 
 
+# ---------------------------------------------------------------------------
+# 密大消費者信心：官網（比 FRED 早一到兩個月）
+# ---------------------------------------------------------------------------
+
+def test_密大官網表格讀得出終值():
+    """tbmics.csv：`Month,YYYY,ICS_ALL`，月份是英文全名。
+
+    2026-09-23 那一份：FRED 只到 2026-07（55.2），這一份已經有 2026-08（51.7）。
+    """
+    dates, vals = fmd.parse_michigan_table(sample("michigan_tbmics"))
+    got = dict(zip(dates, vals))
+    assert got["2026-07-01"] == 55.2 and got["2026-08-01"] == 51.7, (dates[-3:], vals[-3:])
+    assert dates == sorted(dates), "月份沒有照順序"
+    assert all(d.endswith("-01") for d in dates), "日期要和 FRED 一樣是該月 1 號"
+    assert 40 < min(vals[-120:]) and max(vals[-120:]) < 120, "量級不對（是不是讀到別的欄？）"
+    print(f"  表格 ok：{len(dates)} 個月，最新 {dates[-1][:7]} = {vals[-1]}")
+
+
+def test_密大官網首頁讀得出當月初值與下次發布日():
+    home = fmd.parse_michigan_home(sample("michigan_home"))
+    assert home == {
+        "month": "2026-09-01", "value": 47.8, "status": "preliminary",
+        "next_release": {"date": "2026-09-25", "what": "final", "month": 9},
+    }, home
+    print("  首頁 ok：2026-09 初值 47.8，9/25 終值")
+
+
+def test_密大首頁改成終值也認得():
+    html = (b"<h3>Final Results for September 2026</h3><table><tr><td>Index of Consumer "
+            b"Sentiment</td><td>48.1</td><td>51.7</td></tr></table>"
+            b"Next data release: Friday, October 9, 2026 for Preliminary October data at 10am ET")
+    home = fmd.parse_michigan_home(html)
+    assert home["status"] == "final" and home["value"] == 48.1, home
+    assert home["next_release"] == {"date": "2026-10-09", "what": "preliminary", "month": 10}
+
+
+def test_密大首頁認不出來就回_None_不猜():
+    assert fmd.parse_michigan_home(b"<html>maintenance</html>") is None
+
+
+def test_密大官網疊上去之後最新值是官方的():
+    """使用者看到的錯：報告寫 55.2（2026-07），官網當下是 47.8（2026-09 初值）。"""
+    fred = {"series_id": "UMCSENT", "name": "密大消費者信心",
+            "dates": ["2026-05-01", "2026-06-01", "2026-07-01"], "close": [44.8, 49.5, 55.2]}
+    table = fmd.parse_michigan_table(sample("michigan_tbmics"))
+    home = fmd.parse_michigan_home(sample("michigan_home"))
+    out = fmd.merge_michigan_official(fred, table, home)
+    assert out["dates"][-3:] == ["2026-07-01", "2026-08-01", "2026-09-01"], out["dates"][-3:]
+    assert out["close"][-3:] == [55.2, 51.7, 47.8], out["close"][-3:]
+    assert out["prelim"] == ["2026-09-01"]
+    assert out["dates"][0] == "2026-05-01", "表格從 1952 年開始，不該把既有序列的視窗撐大"
+
+
+def test_密大終值出來之後初值標記會拿掉():
+    prev = {"dates": ["2026-08-01", "2026-09-01"], "close": [51.7, 47.8],
+            "prelim": ["2026-09-01"], "next_release": {"date": "2026-09-25"}}
+    table = (["2026-08-01", "2026-09-01"], [51.7, 48.1])
+    out = fmd.merge_michigan_official(prev, table, None)
+    assert out["close"][-1] == 48.1, "終值沒有蓋過初值"
+    assert out["prelim"] == [], "終值出來了，初值標記還在"
+
+
+def test_密大首頁那天沒抓到_初值標記要留著():
+    """不然那個初值會在沒有任何標記的情況下被當成終值顯示。"""
+    prev = {"dates": ["2026-08-01", "2026-09-01"], "close": [51.7, 47.8],
+            "prelim": ["2026-09-01"], "next_release": {"date": "2026-09-25"}}
+    out = fmd.merge_michigan_official(prev, (["2026-08-01"], [51.7]), None)
+    assert out["prelim"] == ["2026-09-01"] and out["close"][-1] == 47.8
+    assert out["next_release"] == {"date": "2026-09-25"}
+
+
+def test_FRED那一步不會把初值標記洗掉():
+    """每天先跑 FRED、再跑官網。FRED 那一步重寫 michigan.json 的時候，
+    `prelim`／`next_release` 要原樣帶過去——官網那一步那天失敗的話才不會出錯。"""
+    import json as _json
+    tmp = tempfile.mkdtemp()
+    old_dir, old_get = fmd.DATA_DIR, fmd._http_get
+    try:
+        fmd.DATA_DIR = tmp
+        with open(os.path.join(tmp, "michigan.json"), "w", encoding="utf-8") as f:
+            _json.dump({"dates": ["2026-07-01", "2026-09-01"], "close": [55.2, 47.8],
+                        "prelim": ["2026-09-01"], "next_release": {"date": "2026-09-25"},
+                        "official_source": fmd.MICHIGAN_HOME_URL}, f)
+        fmd._http_get = _StubHTTP(b"observation_date,UMCSENT\n2026-07-01,55.2\n")
+        out = fmd.fetch_fred_series("UMCSENT", cache_name="michigan.json", years_back=25)
+    finally:
+        fmd.DATA_DIR, fmd._http_get = old_dir, old_get
+    assert out["prelim"] == ["2026-09-01"], out
+    assert out["next_release"] == {"date": "2026-09-25"}
+    assert out["dates"][-1] == "2026-09-01", "FRED 那一步把初值那個月弄丟了"
+
+
+def test_密大官網每天真的有被叫到():
+    src = open(os.path.join(BASE_DIR, "fetch_market_data.py"), encoding="utf-8").read()
+    main = src[src.index('if __name__ == "__main__":'):]
+    fred_at = main.index("fetch_fred_series,")
+    official_at = main.index("fetch_michigan_official")
+    assert official_at > fred_at, "官網那一步要排在 FRED 後面（同一個檔，後寫的贏）"
+
+
+def test_報告上標出初值與官網的下次發布日():
+    import generate_report_local as grl
+    from datetime import date, timedelta
+    soon = (date.today() + timedelta(days=2)).isoformat()
+    mi = {"dates": ["2026-08-01", "2026-09-01"], "close": [51.7, 47.8],
+          "prelim": ["2026-09-01"], "official_source": fmd.MICHIGAN_HOME_URL,
+          "next_release": {"date": soon, "what": "final", "month": 9}}
+    txt = grl.michigan_vintage(mi)
+    assert "2026-09" in txt and "初值" in txt and "9月終值" in txt, txt
+    assert "延遲一個月" not in txt, "有官網資料的時候不該再說 FRED 延遲一個月"
+    html, _ = grl.render_michigan_section(mi)
+    assert "2026/09 初值" in html, "數值卡沒有標初值"
+    assert "sca.isr.umich.edu" in html, "來源沒有指到官網"
+    # 終值
+    mi2 = dict(mi, prelim=[])
+    assert "終值" in grl.michigan_vintage(mi2) and "初值" not in grl.michigan_vintage(mi2).split("｜")[0]
+
+
+def test_摘要徽章和數值卡用同一個區間名稱():
+    """47.8 在數值卡上是「系統危機」，摘要列以前寫死「衰退警戒」。"""
+    import generate_report_local as grl
+    src = open(os.path.join(BASE_DIR, "generate_report_local.py"), encoding="utf-8").read()
+    assert '<span class="chip warn solid">衰退警戒</span>' not in src
+    assert grl.michigan_zone(47.8)[0] == "系統危機"
+
+
 if __name__ == "__main__":
     tests = [v for k, v in sorted(globals().items()) if k.startswith("test_")]
     failed = 0

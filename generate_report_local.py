@@ -1424,6 +1424,42 @@ def michigan_next_release(last_date_str):
     return (ny, nm), _last_friday(ry, rm)
 
 
+def michigan_is_prelim(data):
+    """最新那一個月是不是初值（官網那一步記在 `prelim` 裡）。"""
+    dates = (data or {}).get("dates") or []
+    return bool(dates) and dates[-1] in set((data or {}).get("prelim") or [])
+
+
+def michigan_vintage(michigan):
+    """來源列上那一句：資料涵蓋到哪個月、是初值還是終值、下一次什麼時候。
+
+    有官網的 `next_release` 就照官網講（「9/25 公布 9 月終值」）；沒有的話退回
+    FRED 那一套推算（延遲一個月、每月最後一個週五）——那是官網那一步失敗、
+    只剩 FRED 資料時的說法。
+    """
+    dates = michigan["dates"]
+    ym = dates[-1][:7]
+    prelim = michigan_is_prelim(michigan)
+    nxt = michigan.get("next_release") or None
+    if nxt and nxt.get("date"):
+        try:
+            when = date.fromisoformat(nxt["date"])
+        except ValueError:
+            when = None
+        if when and when >= date.today() - timedelta(days=1):
+            kind = "終值" if nxt.get("what") == "final" else "初值"
+            return (f"資料截至 {ym}{'（初值，公布後仍會修正）' if prelim else '（終值）'}"
+                    f"｜{nxt.get('month')}月{kind}將於 {when.strftime('%m/%d')} 公布")
+    if michigan.get("official_source"):
+        return f"資料截至 {ym}{'（初值，公布後仍會修正）' if prelim else '（終值）'}"
+    next_month, release_date = michigan_next_release(dates[-1])
+    txt = f"資料截至 {ym}"
+    if next_month and release_date:
+        return txt + (f"（FRED 延遲一個月，{next_month[1]}月數據將於 "
+                      f"{release_date.strftime('%m/%d')} 出現）")
+    return txt + "（FRED 延遲一個月）"
+
+
 def render_michigan_section(michigan):
     dates_json = json.dumps(michigan["dates"], ensure_ascii=False)
     close_json = json.dumps(michigan["close"], ensure_ascii=False)
@@ -1433,22 +1469,17 @@ def render_michigan_section(michigan):
     last_val = close[-1]
     prev_val = close[-2] if len(close) > 1 else last_val
     diff = round(last_val - prev_val, 2)
-    last_date_disp = dates[-1].replace("-", "/")
+    # 月資料：顯示到月份就好（以前印成 2026/07/01，那個「01」是 FRED 的慣例，
+    # 不是發布日）。初值要標出來——它公布兩週後還會被修正。
+    last_date_disp = dates[-1][:7].replace("-", "/") + (" 初值" if michigan_is_prelim(michigan) else "")
     pct = round(diff / prev_val * 100, 2) if prev_val else None
     diff_txt, chg_color = fmt_diff(diff, 1, pct)
     warn = last_val < MICHIGAN_WARN_THRESHOLD
     zone_label, zone_color = michigan_zone(last_val)
 
-    # 這個指標的「新舊」不能看抓取日期：密大授權 FRED 延遲一個月，
-    # 就算今天剛抓過，最新值仍會落後一到兩個月。所以標出資料本身涵蓋到哪個月，
-    # 以及下一筆何時才會出現，才不會讓人誤以為資料沒更新或程式壞掉。
-    next_month, release_date = michigan_next_release(dates[-1])
-    vintage_txt = f"資料截至 {dates[-1][:7]}"
-    if next_month and release_date:
-        vintage_txt += (f"（官方延遲一個月，{next_month[1]}月數據將於 "
-                        f"{release_date.strftime('%m/%d')} 發布）")
-    else:
-        vintage_txt += "（官方延遲一個月）"
+    # 這個指標的「新舊」不能看抓取日期：要標出資料本身涵蓋到哪個月、是不是
+    # 初值、下一筆何時出現。見 `michigan_vintage`。
+    vintage_txt = michigan_vintage(michigan)
 
     html = f"""
   <div class="sub-title">密西根大學消費者信心指數</div>
@@ -1480,7 +1511,8 @@ def render_michigan_section(michigan):
   <div class="chart-container short"><canvas id="michiganChart"></canvas></div>
 {FOLD_CLOSE}
   <div class="chart-source-box" title="資料來源與更新時間">
-    📌 <a href="https://fred.stlouisfed.org/series/UMCSENT" target="_blank">FRED</a>　｜　{vintage_txt}
+    📌 <a href="https://www.sca.isr.umich.edu/" target="_blank">密西根大學 Surveys of Consumers</a>
+    <span class="src-extra">　｜　<a href="https://fred.stlouisfed.org/series/UMCSENT" target="_blank">FRED</a></span>　｜　{vintage_txt}
   </div>
 """
 
@@ -3490,7 +3522,7 @@ def render_us_indicator_group(group, series_with_data):
       <div class="fin-label">{meta['name']}</div>
       <div class="fin-value" style="color:{chg_color};">{fmt_indicator_value(last, unit)}</div>
       <div class="fin-sub" style="color:{chg_color};">{diff_txt}</div>
-      <div class="fin-sub" style="font-size:10px;opacity:.75;">{fmt_period(dates[-1], meta.get('freq', ''))}
+      <div class="fin-sub" style="font-size:10px;opacity:.75;">{fmt_period(dates[-1], meta.get('freq', ''))}{' 初值' if michigan_is_prelim(data) else ''}
         {('｜' + unit) if unit else ''}</div>
     </div>""")
 
@@ -3675,7 +3707,8 @@ def collect_alerts(taiex, vix, nikkei, michigan, murata, jp_stocks,
         last_mi = michigan["close"][-1]
         if last_mi < MICHIGAN_WARN_THRESHOLD:
             zone_label, _ = michigan_zone(last_mi)
-            alerts.append(("warn", f"密大消費者信心指數 {last_mi:.1f}，落在「{zone_label}」區間（&lt;{MICHIGAN_WARN_THRESHOLD}）"))
+            tag = f"（{michigan['dates'][-1][:7].replace('-', '/')} 初值）" if michigan_is_prelim(michigan) else ""
+            alerts.append(("warn", f"密大消費者信心指數 {last_mi:.1f}{tag}，落在「{zone_label}」區間（&lt;{MICHIGAN_WARN_THRESHOLD}）"))
     if murata:
         last_bb = murata["bb_ratio"][-1]
         if last_bb > MURATA_BB_WARN_THRESHOLD:
@@ -3875,7 +3908,9 @@ def build_html(taiex, vix, nikkei, michigan, murata, jp_stocks,
             m_warn = m_last < MICHIGAN_WARN_THRESHOLD
             us_chips.append(chip("密大信心", f"{m_last:.1f}", "warn" if m_warn else ""))
             if m_warn:
-                us_chips.append('<span class="chip warn solid">衰退警戒</span>')
+                # 區間名稱跟數值卡上那個徽章用同一個來源（michigan_zone）。以前寫死
+                # 「衰退警戒」，而 47.8 在數值卡上是「系統危機」——同一個數字兩個名字。
+                us_chips.append(f'<span class="chip warn solid">{michigan_zone(m_last)[0]}</span>')
         us_subs.append(("macro", "VIX ＆ 密大消費者信心", "".join(inner_html)))
         scripts.append("".join(inner_scripts))
 
