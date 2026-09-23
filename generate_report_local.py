@@ -352,21 +352,93 @@ CSS = """
   .hidden-code { font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
         font-size:10.5px; opacity:.7; }
 
-  /* 五大區塊。每一塊一個色系 —— 一打開報告看到的是五條收合的橫幅，
-     顏色是用來「認位置」的：捲到一半也知道自己在哪一塊。
-     色相由 --blk 帶進來，其餘規則共用，不要為每一塊各寫一份。 */
-  .block-card { border-left:4px solid var(--blk); background:
-                linear-gradient(90deg, color-mix(in srgb, var(--blk) 10%, transparent) 0%,
-                                       var(--bg-card) 42%); }
-  .block-card > .card-head .card-title { font-size:1.06em; color:#f8fafc; letter-spacing:0.4px; }
-  .block-card > .card-head .card-title::before { content:''; display:inline-block; width:8px; height:8px;
-                border-radius:50%; background:var(--blk); margin-right:9px; vertical-align:middle; }
-  .block-card > .card-head:hover .card-chev { color:var(--blk); }
-  .block-card:not(.collapsed) { box-shadow:0 0 0 1px color-mix(in srgb, var(--blk) 28%, transparent) inset; }
-  /* 內層卡片跟外層拉開層次，否則兩層邊框疊在一起會很吵。 */
-  .block-card > .card-body > .section-card { background:rgba(11,15,25,0.45); margin-bottom:14px; }
-  .block-card > .card-body > .section-card:last-child { margin-bottom:0; }
-  .block-card > .card-body > .jp-stock-grid { margin-top:2px; }
+  /* ---- 分頁（2026-09-23） ----
+     五個分頁各一個色系，色相由 --blk 帶進來（BLOCK_TONES），其餘規則共用。
+     選中的那一顆實心，其餘是同色的淡底加框——跟 tw-six-metrics 外層那一排的
+     規則一樣：一排同色系按鈕裡，填滿是唯一不必比較就看得出來的差別。
+     一律一列、放不下就橫向捲（手機上五顆放不下），捲軸不藏，只調細。 */
+  .mm-tabs { display:flex; gap:8px; flex-wrap:nowrap; overflow-x:auto; overscroll-behavior-x:contain;
+             -webkit-overflow-scrolling:touch; scrollbar-width:thin; padding:2px 2px 8px; }
+  .mm-tabs::-webkit-scrollbar { height:5px; }
+  .mm-tabs::-webkit-scrollbar-thumb { background:var(--border-color); border-radius:3px; }
+  .mm-tab { flex:0 0 auto; display:inline-flex; align-items:center; gap:7px; white-space:nowrap;
+            font:inherit; font-size:14px; font-weight:700; letter-spacing:0.3px; cursor:pointer;
+            padding:9px 16px; border-radius:10px; color:var(--blk);
+            background:color-mix(in srgb, var(--blk) 10%, transparent);
+            border:1.5px solid color-mix(in srgb, var(--blk) 45%, transparent);
+            transition:background .12s, color .12s, box-shadow .12s; }
+  .mm-tab:hover { background:color-mix(in srgb, var(--blk) 20%, transparent); }
+  .mm-tab[aria-selected=true] { background:var(--blk); border-color:var(--blk); color:#0b0f19;
+            box-shadow:0 3px 12px color-mix(in srgb, var(--blk) 35%, transparent); }
+  .mm-tab:focus-visible, .mm-subtab:focus-visible { outline:2px solid var(--blk, #22d3ee); outline-offset:2px; }
+  .tab-badge { display:inline-block; min-width:19px; padding:1px 6px; border-radius:9px; font-size:11px;
+               line-height:1.45; text-align:center; font-weight:800; color:#fff; }
+  .tab-badge.warn { background:#ef4444; }
+  .tab-badge.buy { background:#0891b2; }
+  .mm-tab[aria-selected=true] .tab-badge { box-shadow:0 0 0 1.5px rgba(11,15,25,0.55); }
+
+  .mm-pane { background:linear-gradient(180deg, color-mix(in srgb, var(--blk) 8%, transparent) 0%, var(--bg-card) 160px);
+             border:1px solid var(--border-color); border-top:3px solid var(--blk); border-radius:14px;
+             padding:18px 20px; box-shadow:0 4px 18px rgba(0,0,0,0.22); width:100%; min-width:0; }
+  .mm-pane[hidden], .mm-subpane[hidden] { display:none; }
+  .mm-pane > .summary-box:first-child { margin-top:0; }
+  /* 這一頁的數字速覽：原本收合的橫幅標題旁邊那一排。 */
+  .pane-chips { display:flex; flex-wrap:wrap; gap:6px; margin:0 0 14px; font-size:15px; }
+  /* 〔衰退警戒〕那種實心徽章在標題列裡是放大一號的；這裡跟旁邊的數字一樣大就好。 */
+  .pane-chips .chip.solid, .glance-chips .chip.solid { font-size:0.75em; }
+
+  /* 子分頁：比上一層小一號、膠囊形，選中的那一顆吃這一頁的色。 */
+  .mm-subtabs { display:flex; gap:6px; flex-wrap:nowrap; overflow-x:auto; scrollbar-width:thin;
+                margin:0 0 16px; padding:0 0 10px; border-bottom:1px solid var(--border-color); }
+  .mm-subtabs::-webkit-scrollbar { height:4px; }
+  .mm-subtabs::-webkit-scrollbar-thumb { background:var(--border-color); border-radius:3px; }
+  .mm-subtab { flex:0 0 auto; white-space:nowrap; font:inherit; font-size:13px; font-weight:600; cursor:pointer;
+               padding:6px 14px; border-radius:999px; color:var(--text-muted);
+               background:rgba(148,163,184,0.08); border:1px solid var(--border-color); }
+  .mm-subtab:hover { color:var(--text-main); border-color:color-mix(in srgb, var(--blk) 60%, transparent); }
+  .mm-subtab[aria-selected=true] { color:var(--blk); font-weight:700; border-color:var(--blk);
+               background:color-mix(in srgb, var(--blk) 16%, transparent); }
+  .mm-subpane > .sub-title:first-child { margin-top:2px; }
+  /* 同一個子分頁裡有兩個指標（PMI 與市值貨幣比、VIX 與密大）：上一個的來源列和
+     下一個的標題之間要看得出是換了一個指標。 */
+  .mm-subpane .chart-source-box + .title-row, .mm-subpane .chart-source-box + .sub-title { margin-top:28px; }
+
+  /* 〔重點摘要〕底下那幾列各市場速覽：一列一個分頁，點了就跳過去。 */
+  .sub-hint { margin-left:6px; font-size:11px; font-weight:500; color:var(--text-muted); }
+  .glance { display:grid; gap:8px; }
+  .glance-row { display:flex; align-items:center; gap:12px; width:100%; text-align:left; cursor:pointer;
+                font:inherit; color:inherit; background:rgba(11,15,25,0.45); border:1px solid var(--border-color);
+                border-left:3px solid var(--blk); border-radius:9px; padding:10px 12px; }
+  .glance-row:hover { background:color-mix(in srgb, var(--blk) 10%, rgba(11,15,25,0.45)); }
+  .glance-name { flex:none; min-width:9em; font-size:13px; font-weight:700; color:var(--blk); }
+  .glance-chips { flex:1; min-width:0; display:flex; flex-wrap:wrap; gap:6px; font-size:15px; }
+  .glance-go { flex:none; font-size:20px; line-height:1; color:var(--text-muted); }
+  @media (max-width:640px) {
+    .glance-row { flex-wrap:wrap; gap:6px 10px; }
+    .glance-name { min-width:0; flex:1 0 auto; }
+    .glance-chips { flex:1 0 100%; order:3; }
+  }
+
+  /* 趨勢圖外面那一層（fold_open）：數字攤開、圖收著。 */
+  details.fold > summary .fold-hint { margin-left:auto; font-size:11px; font-weight:500; color:var(--text-muted); }
+  details.chart-fold[open] > summary .fold-hint { display:none; }
+  details.chart-fold { margin-top:14px; }
+  details.chart-fold > .fold-body { padding-top:4px; }
+  /* 〔⚙️ 管理追蹤名單〕：預設收著的表單。裡面那張 .manage-bar 自己有框，這一層
+     只是一條可以點的列，所以不要兩層框。 */
+  details.manage-fold { margin:0 0 12px; border-color:rgba(16,185,129,0.35); }
+  details.manage-fold > summary { color:#6ee7b7; }
+  details.manage-fold > .fold-body { padding:0 12px 12px; }
+  details.manage-fold .manage-bar { margin:0; }
+  #mmStatus:not(:empty) { margin:0 0 12px; }
+  @media (max-width:640px) { details.manage-fold > summary .fold-hint { display:none; } }
+  /* 兩欄的個股卡：展開的那一張佔滿整列。不然圖只有半個螢幕寬，旁邊還空著一格。 */
+  .jp-stock-grid > .section-card:not(.collapsed) { grid-column:1 / -1; }
+  /* dense：展開的那一張跳到下一列之後，它原本旁邊空出來的那一格由後面的卡片補上，
+     不留一個洞。代價是那一張後面的第一張會往前挪一格——展開時才會發生，收回去就復原。 */
+  .jp-stock-grid { grid-auto-flow:row dense; }
+  html.force-mobile .mm-tab { font-size:13px; padding:8px 12px; }
+  html.force-mobile .mm-pane { padding:14px 14px; }
   /* 速覽表：預設收合。用 <details> 不寫 JS —— 少一個會壞的東西。 */
   details.fold { margin-top:18px; border:1px solid var(--border-color); border-radius:10px;
                  background:rgba(11,15,25,0.5); overflow:hidden; }
@@ -527,6 +599,8 @@ CSS = """
     .stat-value { font-size:21px; }
     .chart-container { height:280px; }
     .card-head-main { font-size:14.5px; }
+    .mm-tab { font-size:13px; padding:8px 12px; }
+    .mm-pane { padding:14px 14px; }
     .section-card { padding:14px 14px; }
     .section-card.collapsed { padding:12px 14px; }
     /* ── 💡說明在手機上的可視範圍 ────────────────────────────────
@@ -824,6 +898,11 @@ SHARED_JS = """
       const head = card.querySelector('.card-head');
       if (head) head.setAttribute('aria-expanded', String(!collapsed));
     });
+    /* 趨勢圖、歷史趨勢、速覽表都是 <details class="fold">。〔管理追蹤名單〕不算：
+       它是表單，不是內容，〔全部展開〕把一張表單攤開不是任何人要的。 */
+    document.querySelectorAll('details.fold:not(.manage-fold)').forEach((d) => {
+      d.open = !collapsed;
+    });
     if (!collapsed) setTimeout(() => resizeChartsIn(document.body), 40);
   }
 
@@ -924,6 +1003,87 @@ SHARED_JS = """
 """
 
 
+#: 分頁與子分頁。放在**獨立的** <script> 區塊裡（見 build_html），跟折疊、版型切換
+#: 同一塊：上面任何一張圖出錯，都不該讓讀者連分頁都切不了。
+TABS_JS = """
+  function mmSetSelected(bar, attr, id) {
+    let hit = false;
+    bar.querySelectorAll('[role=tab]').forEach((b) => {
+      const on = b.dataset[attr] === id;
+      if (on) hit = true;
+      b.setAttribute('aria-selected', on ? 'true' : 'false');
+      b.tabIndex = on ? 0 : -1;
+    });
+    return hit;
+  }
+  function mmActiveTab() {
+    const b = document.querySelector('.mm-tabs [aria-selected=true]');
+    return b ? b.dataset.tab : '';
+  }
+  function mmActiveSub(tab) {
+    const b = document.querySelector('#pane-' + tab + ' .mm-subtabs [aria-selected=true]');
+    return b ? b.dataset.sub : '';
+  }
+  /* 記在網址的 # 後面（#tw/twmacro）。兩個用處：重新整理之後回到同一頁，以及
+     〔新增個股〕跑完之後 mmWatch 會 location.replace 帶著 hash 回來——沒有這個，
+     讀者會被丟回〔重點摘要〕，要自己再點回〔日股觀察〕看剛加的那一檔。 */
+  function mmRemember() {
+    const t = mmActiveTab(), s = mmActiveSub(t);
+    try { history.replaceState(null, '', '#' + t + (s ? '/' + s : '')); } catch (e) {}
+  }
+  function mmShown(el) {
+    if (!el) return;
+    try {
+      resizeChartsIn(el);
+      requestAnimationFrame(fitAllCardHeads);   // 隱藏時量到的標題列寬度是 0
+    } catch (e) { /* 上面那個 script 區塊壞掉的時候，分頁照樣要切得過去 */ }
+  }
+  function mmShowTab(id, sub, quiet) {
+    const bar = document.querySelector('.mm-tabs');
+    if (!bar || !mmSetSelected(bar, 'tab', id)) return false;
+    document.querySelectorAll('.mm-pane').forEach((p) => { p.hidden = p.dataset.pane !== id; });
+    if (sub) mmShowSub(id, sub, true);
+    mmShown(document.getElementById('pane-' + id));
+    if (!quiet) {
+      mmRemember();
+      /* 從〔重點摘要〕下面那幾列點過來的時候，分頁列可能已經捲出畫面上緣了。 */
+      if (bar.getBoundingClientRect().top < 0) bar.scrollIntoView({block: 'start', behavior: 'instant'});
+    }
+    return true;
+  }
+  function mmShowSub(group, id, quiet) {
+    const pane = document.getElementById('pane-' + group);
+    const bar = pane && pane.querySelector('.mm-subtabs');
+    if (!bar || !mmSetSelected(bar, 'sub', id)) return false;
+    pane.querySelectorAll('.mm-subpane').forEach((p) => { p.hidden = p.dataset.subpane !== id; });
+    mmShown(document.getElementById('subpane-' + id));
+    if (!quiet) mmRemember();
+    return true;
+  }
+  function mmRestoreTab() {
+    let h = '';
+    try { h = decodeURIComponent((location.hash || '').slice(1)); } catch (e) { return; }
+    if (!h) return;
+    const parts = h.split('/');
+    mmShowTab(parts[0], parts[1], true);
+  }
+  /* 方向鍵在一排分頁裡移動（WAI-ARIA tabs 的慣例）。 */
+  document.addEventListener('keydown', (ev) => {
+    const t = ev.target;
+    if (!t || t.getAttribute('role') !== 'tab') return;
+    if (ev.key !== 'ArrowRight' && ev.key !== 'ArrowLeft') return;
+    const all = Array.from(t.parentNode.querySelectorAll('[role=tab]'));
+    const i = all.indexOf(t) + (ev.key === 'ArrowRight' ? 1 : -1);
+    const next = all[(i + all.length) % all.length];
+    if (next) { next.focus(); next.click(); ev.preventDefault(); }
+  });
+  /* 趨勢圖收在 <details> 裡：打開的那一刻圖的容器才有寬度，量一次。 */
+  document.addEventListener('toggle', (ev) => {
+    if (ev.target && ev.target.open) setTimeout(() => resizeChartsIn(ev.target), 20);
+  }, true);
+"""
+
+
 # ---------------------------------------------------------------------------
 # TAIEX
 # ---------------------------------------------------------------------------
@@ -997,6 +1157,7 @@ def render_taiex_section(taiex):
     </div>
   </div>
 
+{fold_open("加權指數走勢圖")}
   <div class="tf-bar" id="tf-taiex">
     <span style="font-size:11px;color:#64748b;margin-right:2px;">週期切換:</span>
     <button class="tf-btn disabled" title="需要盤中即時逐筆資料，目前資料源（TWSE 每日收盤 API）只有日頻資料，暫不支援" onclick="return false;">1D</button>
@@ -1012,6 +1173,7 @@ def render_taiex_section(taiex):
 
   <div class="custom-legend" id="taiexLegend"></div>
   <div class="chart-container"><canvas id="taiexChart"></canvas></div>
+{FOLD_CLOSE}
 
   <div class="chart-source-box" title="資料來源與更新時間">
     📌 <a href="https://www.google.com/finance/beta/quote/IX0001:TPE?type=area" target="_blank">Google</a>　｜　<a href="https://www.twse.com.tw/zh/trading/historical/fmtqik.html" target="_blank">TWSE</a>　｜　{vintage_note}
@@ -1019,8 +1181,11 @@ def render_taiex_section(taiex):
 """
     if stale:
         taiex_summary += '<span class="chip warn">資料尚未更新到今天</span>'
-    section_html = collapsible("taiex", "台股加權指數", taiex_summary, taiex_body,
-                               alert=bool(idx_buy or vol_buy))
+    # 以前這裡包成一張可收合的卡片。現在它是〔台股重要經濟指標〕底下的一個子分頁，
+    # 點進來就是它自己——再收一層只是多按一下。摘要列那幾顆 chip 的資訊，上面兩格
+    # 數字方塊都有（布局徽章、成交量），資料是否過期寫在最底下的來源列。
+    del taiex_summary
+    section_html = taiex_body
 
     script = f"""
   const taiexDates = {dates_json};
@@ -1149,6 +1314,7 @@ def render_vix_section(vix):
     <div class="stat-sub">&lt;20 平穩｜&gt;20 不穩定・避險情緒上升｜&gt;30 高度恐慌</div>
   </div>
 
+{fold_open("VIX 走勢圖")}
   <div class="tf-bar" id="tf-vix">
     <span style="font-size:11px;color:#64748b;margin-right:2px;">週期切換:</span>
     <button class="tf-btn" onclick="simpleSetRange('vix','5D',this)">5D</button>
@@ -1162,6 +1328,7 @@ def render_vix_section(vix):
   </div>
   <div class="custom-legend" id="vixLegend"></div>
   <div class="chart-container short"><canvas id="vixChart"></canvas></div>
+{FOLD_CLOSE}
   <div class="chart-source-box" title="資料來源與更新時間">
     📌 <a href="https://www.cboe.com/tradable_products/vix/vix_historical_data/" target="_blank">CBOE</a>　｜　{fetched_at}
   </div>
@@ -1289,6 +1456,7 @@ def render_michigan_section(michigan):
     <div class="stat-sub">警戒水位：&gt;95 過熱｜75-95 安全常態｜60-75 觀望停滯｜&lt;60 衰退警戒｜&lt;50 系統危機</div>
   </div>
 
+{fold_open("消費者信心走勢圖")}
   <div class="tf-bar" id="tf-michigan">
     <span style="font-size:11px;color:#64748b;margin-right:2px;">週期切換:</span>
     <button class="tf-btn" onclick="simpleSetRange('michigan','1M',this)">1M</button>
@@ -1303,6 +1471,7 @@ def render_michigan_section(michigan):
   </div>
   <div class="custom-legend" id="michiganLegend"></div>
   <div class="chart-container short"><canvas id="michiganChart"></canvas></div>
+{FOLD_CLOSE}
   <div class="chart-source-box" title="資料來源與更新時間">
     📌 <a href="https://fred.stlouisfed.org/series/UMCSENT" target="_blank">FRED</a>　｜　{vintage_txt}
   </div>
@@ -1408,6 +1577,7 @@ def render_nikkei_section(nikkei):
     <div class="stat-sub">布局參考：&lt; {NIKKEI_BUY_THRESHOLD:,}</div>
   </div>
 
+{fold_open("日經225走勢圖")}
   <div class="tf-bar" id="tf-nikkei">
     <span style="font-size:11px;color:#64748b;margin-right:2px;">週期切換:</span>
     <button class="tf-btn" onclick="simpleSetRange('nikkei','5D',this)">5D</button>
@@ -1421,11 +1591,13 @@ def render_nikkei_section(nikkei):
   </div>
   <div class="custom-legend" id="nikkeiLegend"></div>
   <div class="chart-container"><canvas id="nikkeiChart"></canvas></div>
+{FOLD_CLOSE}
   <div class="chart-source-box" title="資料來源與更新時間">
     📌 <a href="https://finance.yahoo.com/quote/%5EN225/" target="_blank">Yahoo Finance</a>　｜　{fetched_at}
   </div>
 """
-    section_html = collapsible("nikkei", "日經225指數", nikkei_summary, nikkei_body, alert=bool(buy))
+    del nikkei_summary                      # 見 render_taiex_section 同一段
+    section_html = nikkei_body
 
     script = f"""
   const nikkeiDates = {dates_json};
@@ -1518,8 +1690,10 @@ def render_murata_bb_section(murata):
   </div>
   {mlcc_html}
 
-  <div class="custom-legend" id="murataLegend" style="margin-top:14px;"></div>
+{fold_open("B/B Ratio 走勢圖")}
+  <div class="custom-legend" id="murataLegend"></div>
   <div class="chart-container" style="height:320px;"><canvas id="murataChart"></canvas></div>
+{FOLD_CLOSE}
 
   <div class="chart-source-box" title="資料來源與更新時間">
     📌 <a href="{source_url}" target="_blank">村田法說會</a>　｜　人工登錄　｜　資料截至 {last_q}　｜　每季法說會後更新（約 4月底・7月底・10月底・2月初）
@@ -1528,8 +1702,8 @@ def render_murata_bb_section(murata):
     murata_summary = (chip("B/B", f"{last_bb:.2f}")
                       + (chip("MLCC", f"{last_mlcc:.2f}") if last_mlcc is not None else "")
                       + ('<span class="chip warn solid">反指標警示</span>' if (warn or mlcc_warn) else ""))
-    section_html = collapsible("murata", "村田製作所 (6981.T) B/B Ratio",
-                               murata_summary, murata_body, alert=bool(warn or mlcc_warn))
+    del murata_summary                      # 見 render_taiex_section 同一段
+    section_html = murata_body
 
     script = f"""
   const murataQuarters = {quarters_json};
@@ -1608,6 +1782,20 @@ def source_links(urls, limit=2):
     if len(urls) > limit:
         html += f'<span class="src-extra" style="opacity:.7"> +{len(urls) - limit}</span>'
     return html
+
+
+def fold_open(label):
+    """趨勢圖外面那一層：預設收合，點一下展開。
+
+    指標的**數字**永遠攤開（那是讀者點進分頁要看的東西），**圖**收著——一張圖
+    380px 高，一個分頁裡兩三張就是一整個螢幕，而多數時候只是要確認最新值。
+    用 `<details>`，跟〔歷史趨勢〕〔核心指標速覽表〕是同一種東西，長相也一樣。
+    """
+    return (f'<details class="fold chart-fold"><summary>📈 {label}'
+            '<span class="fold-hint">點擊展開</span></summary><div class="fold-body">')
+
+
+FOLD_CLOSE = "</div></details>"
 
 
 def collapsible(card_id, title, summary_html, body_html, open_by_default=False,
@@ -1787,7 +1975,7 @@ def manage_url():
     return f"{server}/{repo}/actions/workflows/{MANAGE_WORKFLOW}"
 
 
-def render_manage_bar():
+def render_manage_bar(with_status=True):
     """〔日股觀察〕上面那一塊：**直接在這一頁**改追蹤名單。
 
     ## 為什麼是表單，不是一顆連到 Actions 的按鈕
@@ -1852,7 +2040,7 @@ def render_manage_bar():
         <input id="mmYears" type="text" inputmode="numeric" value="2"></label>
       <div class="mm-field"><button type="submit" id="mmGo">送出</button></div>
     </form>
-    <div class="manage-status" id="mmStatus" role="status"></div>
+    {render_manage_status() if with_status else ""}
     <details class="manage-token">
       <summary>輸入權杖</summary>
       <div class="manage-token-body">
@@ -1942,7 +2130,12 @@ def render_manage_bar():
     const el = document.getElementById('mm-watch-count');
     if (!el) return;
     const n = parseInt(el.textContent, 10);
-    if (!isNaN(n)) el.textContent = (n + delta) + ' 檔';
+    if (isNaN(n)) return;
+    el.textContent = (n + delta) + ' 檔';
+    // 〔重點摘要〕的速覽列上有同一個數字的副本（id 不能重複，所以它掛的是
+    // data-mirror）。只改一邊的話，兩頁會各說各話。
+    const mirrors = document.querySelectorAll ? document.querySelectorAll('[data-mirror="mm-watch-count"]') : [];
+    for (const m of mirrors) m.textContent = el.textContent;
   }}
 
   function mmHiddenRow() {{ return document.getElementById('mm-hidden-row'); }}
@@ -2138,6 +2331,16 @@ def render_manage_bar():
   </script>"""
 
 
+def render_manage_status():
+    """〔日股觀察〕的狀態列：表單與卡片上那幾顆按鈕共用的「講話的地方」。
+
+    它可以不跟著表單走（``render_manage_bar(with_status=False)``）：表單收進
+    〔⚙️ 管理追蹤名單〕之後，狀態列留在外面——按卡片上的垃圾桶時，「再按一次」
+    那句話要看得到。
+    """
+    return '<div class="manage-status" id="mmStatus" role="status"></div>'
+
+
 def render_hidden_row(hidden):
     """卡片底下那一列「隱藏中」。
 
@@ -2177,27 +2380,66 @@ def render_hidden_row(hidden):
     )
 
 
-def block_card(card_id, title, summary_html, body_html):
-    """一個大區塊。兩層都預設收合。
+def render_tabs(panes):
+    """最上面那一排分頁，與它們各自的內容。
 
-    打開報告看到的是五條橫幅，顏色是用來認位置的——捲到一半也知道自己在哪一塊。
-    展開哪一塊、那一塊裡面再看哪一張，都由讀者自己決定；一次只攤開真正要看的東西。
+    ## 為什麼從「五條可收合的橫幅」改成分頁（2026-09-23）
+
+    橫幅的版本一打開是五條收著的列，要看哪一塊就展開哪一塊——但展開之後它就把
+    下面四條推到一兩個螢幕以外，要看下一塊得先收回去或往下捲。分頁一次只放一塊，
+    切換不必捲、也不會把別的推走；〔重點摘要〕是預設打開的那一頁，所以第一眼就是
+    預警清單與各市場速覽，不必先按任何東西。
+
+    ## 為什麼每一頁的內容都在 HTML 裡、只是掛著 hidden
+
+    Chart.js 的圖在載入時就要畫好（simpleSetRange 那一類的呼叫在頁面載入時就跑），
+    它們的 canvas 必須在 DOM 裡。所以分頁只是切換 `hidden`，不是延遲產生內容；
+    切到一頁之後叫 `resizeChartsIn` 把那一頁的圖量一次（隱藏時量到的是 0 寬）。
     """
-    tone = BLOCK_TONES.get(card_id, "#64748b")
-    return f"""
-<div class="section-card block-card collapsed" id="card-{card_id}" data-card="{card_id}" style="--blk:{tone};">
-  <button class="card-head" type="button" onclick="toggleCard('{card_id}')" aria-expanded="false">
-    <span class="card-head-main">
-      <span class="card-title">{title}</span>
-      <span class="card-summary">{summary_html}</span>
-    </span>
-    <span class="card-chev" aria-hidden="true">⌄</span>
-  </button>
-  <div class="card-body">
-{body_html}
-  </div>
-</div>
-"""
+    buttons, bodies = [], []
+    for i, (pid, title, badge, body) in enumerate(panes):
+        tone = BLOCK_TONES.get(pid, "#64748b")
+        sel = "true" if i == 0 else "false"
+        tab_index = "" if i == 0 else ' tabindex="-1"'
+        buttons.append(
+            f'<button type="button" role="tab" class="mm-tab" id="tab-{pid}" data-tab="{pid}" '
+            f'aria-controls="pane-{pid}" aria-selected="{sel}"{tab_index} style="--blk:{tone};" '
+            f'onclick="mmShowTab(\'{pid}\')">{title}{badge}</button>')
+        hidden = "" if i == 0 else " hidden"
+        bodies.append(
+            f'<section class="mm-pane" id="pane-{pid}" data-pane="{pid}" role="tabpanel" '
+            f'aria-labelledby="tab-{pid}" style="--blk:{tone};"{hidden}>\n{body}\n</section>')
+    return (f'<div class="mm-tabs" role="tablist" aria-label="報告分頁">{"".join(buttons)}</div>\n'
+            + "\n".join(bodies))
+
+
+def sub_tabs(group, items):
+    """分頁裡面的子分頁。`items` 是 ``[(子分頁 id, 標題, 內容), ...]``，第一個預設打開。
+
+    只有一個子項目的時候也照樣畫出那一排：每一頁長得一樣，讀者不必猜「這一頁
+    為什麼沒有那一排」。
+    """
+    if not items:
+        return ""
+    buttons, bodies = [], []
+    for i, (sid, title, body) in enumerate(items):
+        sel = "true" if i == 0 else "false"
+        tab_index = "" if i == 0 else ' tabindex="-1"'
+        buttons.append(
+            f'<button type="button" role="tab" class="mm-subtab" id="sub-{sid}" data-sub="{sid}" '
+            f'aria-controls="subpane-{sid}" aria-selected="{sel}"{tab_index} '
+            f'onclick="mmShowSub(\'{group}\', \'{sid}\')">{title}</button>')
+        hidden = "" if i == 0 else " hidden"
+        bodies.append(
+            f'<div class="mm-subpane" id="subpane-{sid}" data-subpane="{sid}" role="tabpanel" '
+            f'aria-labelledby="sub-{sid}"{hidden}>\n{body}\n</div>')
+    return (f'<div class="mm-subtabs" role="tablist">{"".join(buttons)}</div>\n'
+            + "\n".join(bodies))
+
+
+def pane_chips(chips):
+    """分頁最上面那一列數字：原本橫幅收合時標題旁邊那一排，現在是這一頁的開場。"""
+    return f'<div class="pane-chips">{"".join(chips)}</div>' if chips else ""
 
 
 #: 卡片上那三顆按鈕的圖示。內嵌 SVG，不是 emoji。
@@ -2852,6 +3094,7 @@ def render_tw_pmi_section(pmi):
     </div>
   </div>
 
+{fold_open("PMI／NMI 走勢圖")}
   <div class="tf-bar" id="tf-twpmi">
     <span style="font-size:11px;color:#64748b;margin-right:2px;">週期切換:</span>
     <button class="tf-btn" onclick="simpleSetRange('twpmi','1Y',this)">1Y</button>
@@ -2862,6 +3105,7 @@ def render_tw_pmi_section(pmi):
   </div>
   <div class="custom-legend" id="twPmiLegend"></div>
   <div class="chart-container short"><canvas id="twPmiChart"></canvas></div>
+{FOLD_CLOSE}
   <div class="chart-source-box" title="資料來源與更新時間">
     📌 <a href="https://data.gov.tw/dataset/6100" target="_blank">國發會／中華經濟研究院（政府資料開放平臺）</a>　｜　每月發布
   </div>
@@ -3023,8 +3267,10 @@ def render_tw_marketcap_m1b_section(ratio_data):
     </div>
   </div>
 
+{fold_open("市值貨幣比走勢圖")}
   <div class="custom-legend" id="twMcM1bLegend"></div>
   <div class="chart-container short"><canvas id="twMcM1bChart"></canvas></div>
+{FOLD_CLOSE}
   <div class="chart-source-box" title="資料來源與更新時間">
     📌 <a href="https://www.cbc.gov.tw/tw/lp-1114-1.html" target="_blank">中央銀行 上市股票統計</a>
     ｜<a href="https://www.tpex.org.tw/zh-tw/statistics" target="_blank">櫃買中心 歷年上櫃股票統計</a>
@@ -3136,8 +3382,10 @@ def render_us_indices_section(indices):
     <div class="stat-sub">三個指數的點數量級差很多，直接疊圖看不出相對強弱，
       所以統一重訂基期。滑過圖表可同時看到重訂基期後的值與真實收盤點數。</div>
   </div>
+{fold_open("三大指數相對走勢圖")}
   <div class="custom-legend" id="usIdxLegend"></div>
   <div class="chart-container"><canvas id="usIdxChart"></canvas></div>
+{FOLD_CLOSE}
   <div class="chart-source-box" title="資料來源與更新時間">
     📌 Yahoo Finance Chart API　｜　^DJI、^GSPC、^IXIC　｜　每日收盤
   </div>
@@ -3514,7 +3762,6 @@ def build_html(taiex, vix, nikkei, michigan, murata, jp_stocks,
     要看哪一張再點哪一張。一次只攤開真正要看的東西。
     """
     scripts = []
-    blocks = []
     us_indices = us_indices or []
     us_fred = us_fred or {}
 
@@ -3525,20 +3772,14 @@ def build_html(taiex, vix, nikkei, michigan, murata, jp_stocks,
     # ── 一、重點摘要 ───────────────────────────────────────────────
     n_warn = sum(1 for kind, _ in alerts if kind == "warn")
     n_buy = len(alerts) - n_warn
-    sum_chips = []
-    if n_warn:
-        sum_chips.append(chip("風險預警", f"{n_warn} 項", "warn"))
-    if n_buy:
-        sum_chips.append(chip("布局參考", f"{n_buy} 項", "buy"))
-    if not alerts:
-        sum_chips.append('<span class="chip">全部在正常區間</span>')
-    blocks.append(block_card("summary", "重點摘要", "".join(sum_chips), summary_html))
+    panes = []          # (id, 標題, 分頁上的小徽章, 內容)
+    glance = []         # 〔重點摘要〕底下那幾列各市場速覽：(id, 標題, chips)
 
     # ── 二、台股重要經濟指標 ──────────────────────────────────────
-    tw_inner, tw_chips = [], []
+    tw_subs, tw_chips = [], []
     if taiex:
         t_html, t_script = render_taiex_section(taiex)
-        tw_inner.append(t_html)
+        tw_subs.append(("taiex", "台股加權指數", t_html))
         scripts.append(t_script)
         tw_chips.append(chip("加權指數", f"{taiex['close'][-1]:,.0f}"))
 
@@ -3561,21 +3802,21 @@ def build_html(taiex, vix, nikkei, michigan, murata, jp_stocks,
             tw_chips.append(chip("市值/M1B", f"{r:.2f}",
                                  "warn" if r >= TW_MC_M1B_HIGH else ""))
     if macro_tw_html:
-        tw_inner.append(collapsible(
-            "twmacro", "台股資金面與景氣領先指標", "", "".join(macro_tw_html)))
+        tw_subs.append(("twmacro", "台股資金面與景氣領先指標", "".join(macro_tw_html)))
         scripts.append("".join(macro_tw_scripts))
 
-    if tw_inner:
-        blocks.append(block_card("tw", "台股重要經濟指標",
-                                 "".join(tw_chips), "".join(tw_inner)))
+    if tw_subs:
+        panes.append(("tw", "台股重要經濟指標", "",
+                      pane_chips(tw_chips) + sub_tabs("tw", tw_subs)))
+        glance.append(("tw", "台股重要經濟指標", tw_chips))
 
     # ── 三、美股重要經濟指標 ──────────────────────────────────────
-    us_inner, us_chips = [], []
+    us_subs, us_chips = [], []
     idx_result = render_us_indices_section(us_indices) if us_indices else None
     if idx_result:
         i_html, i_script, i_chips = idx_result
         if i_html:
-            us_inner.append(collapsible("usidx", "美股三大指數", "".join(i_chips), i_html))
+            us_subs.append(("usidx", "美股三大指數", pane_chips(i_chips) + i_html))
             scripts.append(i_script)
 
     # 四組指標。VIX 不走 FRED（用 CBOE 那份逐日的），所以在這裡手動併進
@@ -3607,68 +3848,83 @@ def build_html(taiex, vix, nikkei, michigan, murata, jp_stocks,
         if cpi and len(cpi.get("close", [])) > 12:
             yoy = (cpi["close"][-1] / cpi["close"][-13] - 1) * 100
             us_chips.append(chip("CPI年增", f"{yoy:.1f}%"))
-        us_inner.append(collapsible("usmacro", "美股經濟指標", "", "".join(group_html)))
+        us_subs.append(("usmacro", "美股經濟指標", "".join(group_html)))
 
     # VIX 與密大信心的細部圖表沿用既有區塊
     if vix or michigan:
-        inner_html, inner_scripts, macro_chips = [], [], []
+        inner_html, inner_scripts = [], []
         if vix:
             h, s = render_vix_section(vix)
             inner_html.append(h); inner_scripts.append(s)
             v_last = vix["close"][-1]
-            macro_chips.append(chip("VIX", f"{v_last:.1f}",
-                                    "warn" if v_last > VIX_WARN_THRESHOLD else ""))
             us_chips.append(chip("VIX", f"{v_last:.1f}",
                                  "warn" if v_last > VIX_WARN_THRESHOLD else ""))
             if v_last > VIX_PANIC_THRESHOLD:
-                macro_chips.append('<span class="chip warn solid">高度恐慌</span>')
+                us_chips.append('<span class="chip warn solid">高度恐慌</span>')
             elif v_last > VIX_WARN_THRESHOLD:
-                macro_chips.append('<span class="chip warn solid">波動升溫</span>')
+                us_chips.append('<span class="chip warn solid">波動升溫</span>')
         if michigan:
             h, s = render_michigan_section(michigan)
             inner_html.append(h); inner_scripts.append(s)
             m_last = michigan["close"][-1]
             m_warn = m_last < MICHIGAN_WARN_THRESHOLD
-            macro_chips.append(chip("密大信心", f"{m_last:.1f}", "warn" if m_warn else ""))
+            us_chips.append(chip("密大信心", f"{m_last:.1f}", "warn" if m_warn else ""))
             if m_warn:
-                macro_chips.append('<span class="chip warn solid">衰退警戒</span>')
-
-        us_inner.append(collapsible(
-            "macro", "VIX 恐慌指數 ＆ 密大消費者信心",
-            "".join(macro_chips), "".join(inner_html)))
+                us_chips.append('<span class="chip warn solid">衰退警戒</span>')
+        us_subs.append(("macro", "VIX ＆ 密大消費者信心", "".join(inner_html)))
         scripts.append("".join(inner_scripts))
 
-    if us_inner:
-        blocks.append(block_card("us", "美股重要經濟指標",
-                                 "".join(us_chips), "".join(us_inner)))
+    if us_subs:
+        panes.append(("us", "美股重要經濟指標", "",
+                      pane_chips(us_chips) + sub_tabs("us", us_subs)))
+        glance.append(("us", "美股重要經濟指標", us_chips))
 
     # ── 四、日股重要經濟指標 ──────────────────────────────────────
-    jp_inner, jp_chips = [], []
+    jp_subs, jp_chips = [], []
     if nikkei:
         n_html, n_script = render_nikkei_section(nikkei)
-        jp_inner.append(n_html)
+        jp_subs.append(("nikkei", "日經225指數", n_html))
         scripts.append(n_script)
-        jp_chips.append(chip("日經225", f"{nikkei['close'][-1]:,.0f}"))
+        n_last = nikkei["close"][-1]
+        jp_chips.append(chip("日經225", f"{n_last:,.0f}"))
+        if n_last < NIKKEI_BUY_THRESHOLD:
+            jp_chips.append('<span class="chip buy solid">日經可布局</span>')
     if murata:
         mu_html, mu_script = render_murata_bb_section(murata)
-        jp_inner.append(mu_html)
+        jp_subs.append(("murata", "村田 B/B Ratio", mu_html))
         scripts.append(mu_script)
         last_bb = murata["bb_ratio"][-1]
         jp_chips.append(chip("村田 B/B", f"{last_bb:.2f}",
                              "warn" if last_bb > MURATA_BB_WARN_THRESHOLD else ""))
-    if jp_inner:
-        blocks.append(block_card("jp", "日股重要經濟指標",
-                                 "".join(jp_chips), "".join(jp_inner)))
+    if jp_subs:
+        panes.append(("jp", "日股重要經濟指標", "",
+                      pane_chips(jp_chips) + sub_tabs("jp", jp_subs)))
+        glance.append(("jp", "日股重要經濟指標", jp_chips))
 
     # ── 五、日股觀察（個股） ──────────────────────────────────────
+    #
+    # 這一塊**不**拆子分頁。它的單位是「一檔股票」，而收合的個股卡標題列本身就是
+    # 總覽（股價、漲跌、PER、布局徽章一列一檔）——拆成一檔一個子分頁，就再也
+    # 沒有一個地方可以一眼比十幾檔。改的是另外三件事：
+    #
+    #   1. 管理表單收進一個預設收合的〔⚙️ 管理追蹤名單〕。它是偶爾用一次的東西，
+    #      以前每次打開這一塊都先看到一整張五格表單。狀態列留在外面——卡片上的
+    #      閉眼／垃圾桶也在那裡講話（「再按一次垃圾桶…」），收起來就看不到了。
+    #   2. 展開的那一張卡片佔滿整列（見 CSS `.jp-stock-grid .section-card:not(.collapsed)`）。
+    #      兩欄版面裡展開一張，圖只有半個螢幕寬，旁邊還空著一格。
+    #   3. 可布局的排前面，讓觸發布局線的那幾檔不必往下捲才看得到。
     jp_html_list = []
     for key, stock, fin, quarterly, annual in jp_stocks:
         if not stock:
             continue
         a_html, a_script = render_jp_stock_section(stock, fin, key, quarterly, annual)
-        jp_html_list.append(a_html)
+        jp_html_list.append((1 if 'class="chip buy solid"' in a_html.split('class="card-body"', 1)[0] else 0,
+                             a_html))
         scripts.append(a_script)
+    stock_chips = []
     if jp_html_list:
+        # sorted 是穩定排序：同一類裡維持設定檔的順序。
+        jp_html_list = [h for _, h in sorted(jp_html_list, key=lambda t: -t[0])]
         buy_hits = sum(1 for kind, text in alerts
                        if kind == "buy" and "布局參考線" in text)
         stock_chips = [chip("追蹤中", f"{len(jp_html_list)} 檔", vid="mm-watch-count")]
@@ -3680,11 +3936,44 @@ def build_html(taiex, vix, nikkei, michigan, murata, jp_stocks,
         shown_keys = {s["key"] for s in JP_STOCK_CONFIG}
         hidden = [s for s in load_jp_stocks(include_disabled=True)
                   if s["key"] not in shown_keys]
-        blocks.append(block_card(
-            "jpstock", "日股觀察", "".join(stock_chips),
-            render_manage_bar()
-            + f'<div class="jp-stock-grid">{"".join(jp_html_list)}</div>'
-            + render_hidden_row(hidden)))
+        manage = render_manage_bar(with_status=False)
+        manage_html = (
+            '<details class="fold manage-fold"><summary>⚙️ 管理追蹤名單'
+            '<span class="fold-hint">新增個股、重建季報、輸入權杖</span></summary>'
+            f'<div class="fold-body">{manage}</div></details>' if manage else "")
+        panes.append(("jpstock", "日股觀察", "",
+                      pane_chips(stock_chips)
+                      + manage_html
+                      + (render_manage_status() if manage else "")
+                      + f'<div class="jp-stock-grid">{"".join(jp_html_list)}</div>'
+                      + render_hidden_row(hidden)))
+        glance.append(("jpstock", "日股觀察", stock_chips))
+
+    # 〔重點摘要〕：預設打開的那一頁，不收合。上面是預警清單，下面是每一個分頁的
+    # 一列速覽——點那一列就跳過去。打開報告第一眼就是「今天有什麼事」＋「各市場
+    # 現在在哪」，不必逐頁點開才知道要不要看。
+    glance_rows = []
+    for gid, title, chips in glance:
+        # id 不能在頁面上出現兩次；速覽列上那一份掛 data-mirror（見 mmBumpCount）。
+        chips_html = "".join(chips).replace(
+            ' id="mm-watch-count"', ' data-mirror="mm-watch-count"')
+        tone = BLOCK_TONES.get(gid, "#64748b")
+        glance_rows.append(
+            f'<button type="button" class="glance-row" style="--blk:{tone};" '
+            f'onclick="mmShowTab(\'{gid}\')"><span class="glance-name">{title}</span>'
+            f'<span class="glance-chips">{chips_html}</span>'
+            '<span class="glance-go" aria-hidden="true">›</span></button>')
+    glance_html = "".join(glance_rows)
+    summary_body = summary_html + (
+        '<div class="sub-title">各市場速覽<span class="sub-hint">點一列直接看那一頁</span></div>'
+        f'<div class="glance">{glance_html}</div>' if glance else "")
+    badge = ""
+    if n_warn:
+        badge += f'<span class="tab-badge warn" title="風險預警 {n_warn} 項">{n_warn}</span>'
+    if n_buy:
+        badge += f'<span class="tab-badge buy" title="布局參考 {n_buy} 項">{n_buy}</span>'
+    panes.insert(0, ("summary", "重點摘要", badge, summary_body))
+    tabs_html = render_tabs(panes)
 
     html = f"""<!DOCTYPE html>
 <html lang="zh-TW">
@@ -3698,7 +3987,7 @@ def build_html(taiex, vix, nikkei, michigan, murata, jp_stocks,
 <body>
 {header_html}
 <div class="wrap">
-{''.join(blocks)}
+{tabs_html}
 </div>
 
 <script>
@@ -3706,12 +3995,14 @@ def build_html(taiex, vix, nikkei, michigan, murata, jp_stocks,
 {''.join(scripts)}
 </script>
 <script>
+{TABS_JS}
   // 刻意放在獨立的 script 區塊：上面任何一張圖表若出錯（例如 CDN 沒載入），
-  // 也不會連帶讓折疊、縮字、版型切換這些基本功能失效。
+  // 也不會連帶讓折疊、縮字、版型切換、分頁這些基本功能失效。
   applyViewMode('auto');   // 載入時不強制，交給響應式 CSS
   hideToggleWhenEmbedded();  // 嵌在 tw-six-metrics 裡的時候外面那一層已經有了
   clearSavedCardStates();
-  setInitialCardStates();  // 兩層全部收合
+  setInitialCardStates();  // 卡片與趨勢圖全部收合
+  mmRestoreTab();          // 網址帶著 #tw/twmacro 的話回到那一頁
   requestAnimationFrame(function () {{ requestAnimationFrame(fitAllCardHeads); }});
   watchCardHeads();
   if (document.fonts && document.fonts.ready) {{
