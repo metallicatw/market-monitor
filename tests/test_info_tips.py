@@ -25,7 +25,7 @@
 規則存在而且兩份（@media 與 force-mobile）一字不差、那顆沒有文字的 💡 有撐出
 可以按的範圍、`toggleInfo()` 會塞〔收起〕並把說明捲進可視範圍。
 
-另外守〔全部展開／收合〕併進時間戳那一列之後，舊的那條空列真的消失了。
+另外守時間戳那一列只剩〔電腦版／手機版〕（〔全部展開／收合〕搬到〔日股觀察〕）。
 """
 import inspect
 import re
@@ -192,22 +192,23 @@ def test_toggleInfo_會補一顆收起鈕():
     assert m and int(m.group(1)) >= 34, f"收起鈕太小：{d}"
 
 
-def test_展開收合併進時間戳那一列():
-    """那兩顆原本自己佔一整條，而條上只有右端兩顆小鈕。
+def test_展開收合只留在日股觀察():
+    """時間戳那一列只剩〔電腦版／手機版〕。
 
-    這份報告打開時是全部收合的，所以第一眼的畫面上，那條空列就擠在時間戳和
-    第一張卡片中間。
+    〔全部展開〕〔全部收合〕以前在這一列、對整份報告作用。改成分頁之後它們沒有
+    對象了（一次只看得到一頁），使用者要求拿掉（2026-09-23），改放在〔日股觀察〕
+    的〔追蹤中 N 檔〕旁邊，只對個股卡作用。舊的那條獨立空列（expand-all-bar）
+    也不能回來。
     """
-    # 不帶點：HTML 裡是 class="expand-all-bar"，CSS 裡才是 .expand-all-bar。
-    # 只檢查帶點的那一種，等於只檢查樣式有沒有刪掉，而把標籤放回去照樣綠。
     assert "expand-all-bar" not in SRC, "舊的那條空列還在"
     assert 'class="header-actions"' in SRC
     top = SRC[SRC.index('<div class="page-header-top">'):]
     top = top[:top.index("</div>\n</div>")]
-    for txt in ("報告生成時間", "全部展開", "全部收合", "modeToggleBtn"):
-        assert txt in top, f"〔{txt}〕沒有和時間戳在同一列裡"
+    assert "報告生成時間" in top and "modeToggleBtn" in top
+    for txt in ("全部展開", "全部收合"):
+        assert txt not in top, f"〔{txt}〕還在時間戳那一列"
     assert "align-items:center" in _decl(_base(), ".page-header-top"), (
-        "右邊變成三顆按鈕之後，時間戳那一行字要和它們對齊在同一條中線上"
+        "時間戳那一行字要和右邊的按鈕對齊在同一條中線上"
     )
 
 

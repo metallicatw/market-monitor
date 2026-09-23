@@ -222,9 +222,10 @@ CSS = """
   .chip.warn.solid { color:#ef4444; }
 
   /* ---- 全部展開／收合 ----
-     這兩顆和〔電腦版／手機版〕併在時間戳那一列（`.header-actions`），不再自己
-     佔一整條。它們原本那一列是空的，只有右端兩顆小鈕——而這份報告打開時是
-     全部收合的，所以第一眼的畫面上，那條空列擠在時間戳和第一張卡片中間。 */
+     原本在時間戳那一列，對整份報告作用。改成分頁之後（2026-09-23）那兩顆就沒有
+     對象了：一次只看得到一頁，而其他幾頁的趨勢圖是一張一張點開的。現在只剩
+     〔日股觀察〕需要它們——十幾張個股卡要一起攤開或收起——所以搬到那一頁的
+     〔追蹤中 N 檔〕旁邊，只對個股卡作用。時間戳那一列只留〔電腦版／手機版〕。 */
   .header-actions { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-left:auto; }
   .expand-btn { font-size:11.5px; font-weight:600; color:var(--text-muted); background:rgba(148,163,184,0.08);
                 border:1px solid var(--border-color); border-radius:7px; padding:5px 12px; cursor:pointer; }
@@ -432,11 +433,8 @@ CSS = """
   details.manage-fold .manage-bar { margin:0; }
   #mmStatus:not(:empty) { margin:0 0 12px; }
   @media (max-width:640px) { details.manage-fold > summary .fold-hint { display:none; } }
-  /* 兩欄的個股卡：展開的那一張佔滿整列。不然圖只有半個螢幕寬，旁邊還空著一格。 */
-  .jp-stock-grid > .section-card:not(.collapsed) { grid-column:1 / -1; }
-  /* dense：展開的那一張跳到下一列之後，它原本旁邊空出來的那一格由後面的卡片補上，
-     不留一個洞。代價是那一張後面的第一張會往前挪一格——展開時才會發生，收回去就復原。 */
-  .jp-stock-grid { grid-auto-flow:row dense; }
+  /* 〔追蹤中 N 檔〕那一列右邊的〔全部展開〕〔全部收合〕。 */
+  .pane-acts { display:inline-flex; gap:6px; margin-left:6px; align-items:center; }
   html.force-mobile .mm-tab { font-size:13px; padding:8px 12px; }
   html.force-mobile .mm-pane { padding:14px 14px; }
   /* 速覽表：預設收合。用 <details> 不寫 JS —— 少一個會壞的東西。 */
@@ -1077,6 +1075,15 @@ TABS_JS = """
     const next = all[(i + all.length) % all.length];
     if (next) { next.focus(); next.click(); ev.preventDefault(); }
   });
+  /* 〔日股觀察〕的〔全部展開〕〔全部收合〕：只動個股卡，不動別頁的趨勢圖。 */
+  function mmStockCards(collapsed) {
+    document.querySelectorAll('.jp-stock-grid > .section-card[data-card]').forEach((card) => {
+      card.classList.toggle('collapsed', collapsed);
+      const head = card.querySelector('.card-head');
+      if (head) head.setAttribute('aria-expanded', String(!collapsed));
+    });
+    if (!collapsed) setTimeout(() => mmShown(document.getElementById('pane-jpstock')), 40);
+  }
   /* 趨勢圖收在 <details> 裡：打開的那一刻圖的容器才有寬度，量一次。 */
   document.addEventListener('toggle', (ev) => {
     if (ev.target && ev.target.open) setTimeout(() => resizeChartsIn(ev.target), 20);
@@ -3743,8 +3750,6 @@ def render_page_header(alerts, taiex, missing=None):
       <div class="page-subtitle stamp-lead">報告生成時間：{now_disp}　｜　報告資料基準：{baseline_disp}</div>
     </div>
     <div class="header-actions">
-      <button class="expand-btn" onclick="setAllCards(false)">全部展開</button>
-      <button class="expand-btn" onclick="setInitialCardStates()">全部收合</button>
       <button class="mode-toggle-btn" id="modeToggleBtn" onclick="toggleViewMode()">🖥️ 電腦版／📱 手機版</button>
     </div>
   </div>
@@ -3910,8 +3915,8 @@ def build_html(taiex, vix, nikkei, michigan, murata, jp_stocks,
     #   1. 管理表單收進一個預設收合的〔⚙️ 管理追蹤名單〕。它是偶爾用一次的東西，
     #      以前每次打開這一塊都先看到一整張五格表單。狀態列留在外面——卡片上的
     #      閉眼／垃圾桶也在那裡講話（「再按一次垃圾桶…」），收起來就看不到了。
-    #   2. 展開的那一張卡片佔滿整列（見 CSS `.jp-stock-grid .section-card:not(.collapsed)`）。
-    #      兩欄版面裡展開一張，圖只有半個螢幕寬，旁邊還空著一格。
+    #   2. 〔全部展開〕〔全部收合〕放在〔追蹤中 N 檔〕旁邊，只對個股卡作用。
+    #      電腦版維持一列兩檔，展開之後也是一列兩張（使用者指定，2026-09-23）。
     #   3. 可布局的排前面，讓觸發布局線的那幾檔不必往下捲才看得到。
     jp_html_list = []
     for key, stock, fin, quarterly, annual in jp_stocks:
@@ -3941,8 +3946,12 @@ def build_html(taiex, vix, nikkei, michigan, murata, jp_stocks,
             '<details class="fold manage-fold"><summary>⚙️ 管理追蹤名單'
             '<span class="fold-hint">新增個股、重建季報、輸入權杖</span></summary>'
             f'<div class="fold-body">{manage}</div></details>' if manage else "")
+        acts = ('<span class="pane-acts">'
+                '<button type="button" class="expand-btn" onclick="mmStockCards(false)">全部展開</button>'
+                '<button type="button" class="expand-btn" onclick="mmStockCards(true)">全部收合</button>'
+                '</span>')
         panes.append(("jpstock", "日股觀察", "",
-                      pane_chips(stock_chips)
+                      pane_chips(stock_chips + [acts])
                       + manage_html
                       + (render_manage_status() if manage else "")
                       + f'<div class="jp-stock-grid">{"".join(jp_html_list)}</div>'

@@ -12,7 +12,8 @@
 * 指標的**數字**攤開，**趨勢圖**收在 `<details class="fold chart-fold">` 裡，
   點一下才展開。
 * 〔日股觀察〕不拆子分頁（收合的個股卡標題列本身就是總覽），管理表單收進
-  〔⚙️ 管理追蹤名單〕，狀態列留在外面，展開的卡片佔滿整列。
+  〔⚙️ 管理追蹤名單〕，狀態列留在外面；〔全部展開〕〔全部收合〕在〔追蹤中 N 檔〕
+  旁邊，只對個股卡作用；電腦版展開之後仍是一列兩張。
 
 ## 這裡守什麼
 
@@ -155,6 +156,28 @@ def test_全部展開也打開趨勢圖但不打開管理表單():
     src = grl.SHARED_JS
     body = src[src.index("function setAllCards"):src.index("function setInitialCardStates")]
     assert "details.fold:not(.manage-fold)" in body, body
+
+
+def test_日股觀察的全部展開收合在追蹤中旁邊():
+    html = _report()
+    pane = html[html.index('id="pane-jpstock"'):]
+    chips = pane[pane.index('<div class="pane-chips">'):]
+    chips = chips[:chips.index('<details class="fold manage-fold">')]
+    assert "追蹤中" in chips
+    assert "mmStockCards(false)" in chips and "全部展開" in chips, "〔全部展開〕不在〔追蹤中〕旁邊"
+    assert "mmStockCards(true)" in chips and "全部收合" in chips
+    assert chips.index("追蹤中") < chips.index("全部展開")
+    js = grl.TABS_JS
+    fn = js[js.index("function mmStockCards"):]
+    fn = fn[:fn.index("\n  }\n") + 4]
+    assert ".jp-stock-grid > .section-card[data-card]" in fn, "只該動個股卡：" + fn
+
+
+def test_電腦版展開之後仍是一列兩張():
+    """使用者指定（2026-09-23）：展開的個股卡不要佔滿整列。"""
+    css = re.sub(r"/\*.*?\*/", "", grl.CSS, flags=re.S)
+    assert "grid-column:1 / -1" not in css, "展開的個股卡又被拉成整列了"
+    assert "grid-template-columns:1fr 1fr" in css
 
 
 def test_分頁的_JS_跟圖表分開放():
