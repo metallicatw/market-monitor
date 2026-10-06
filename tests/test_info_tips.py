@@ -22,10 +22,10 @@
 ## 這裡守什麼
 
 版面要真的瀏覽器才量得到，CI 上沒有。所以守的是那些量測背後的規則：三條手機
-規則存在而且兩份（@media 與 force-mobile）一字不差、那顆沒有文字的 💡 有撐出
+規則存在、那顆沒有文字的 💡 有撐出
 可以按的範圍、`toggleInfo()` 會塞〔收起〕並把說明捲進可視範圍。
 
-另外守時間戳那一列只剩〔電腦版／手機版〕（〔全部展開／收合〕搬到〔日股觀察〕）。
+另外守時間戳那一列只剩時間戳（〔全部展開／收合〕搬到〔日股觀察〕，〔電腦版／手機版〕已刪除）。
 """
 import inspect
 import re
@@ -41,8 +41,7 @@ import generate_report_local as grl  # noqa: E402
 CSS = re.sub(r"/\*.*?\*/", "", grl.CSS, flags=re.DOTALL)
 SRC = inspect.getsource(grl)
 
-#: 手機上那幾條。@media 與 html.force-mobile 兩份必須一字不差——
-#: 〔切換為手機版〕按下去的時候視窗可能是 1400px 寬，@media 不會命中。
+#: 手機上那幾條（@media 768px 裡）。
 MOBILE_TIP_RULES = (
     (".info-btn", "min-height:36px; padding:7px 12px; font-size:11.5px;"),
     (".fin-info-btn", "min-width:36px; min-height:36px;"),
@@ -95,9 +94,8 @@ def _base():
 def _decl(css, selector):
     """挑出某一條規則的宣告。
 
-    選擇器要從**行首**開始配。不然 `.fin-info-btn` 會連
-    `html.force-mobile .fin-info-btn` 一起撈到——而那正是這份樣式表裡最容易
-    搞混的兩條（一條是基準、一條是切換手機版時才生效的覆寫）。
+    選擇器要從**行首**開始配，不然 `.fin-info-btn` 會連帶撈到前面還有別的
+    選擇器的同名規則。
     """
     found = re.findall(r"(?m)^\s*" + re.escape(selector) + r"\s*\{([^}]*)\}", css)
     assert found, f"找不到規則 {selector}"
@@ -140,18 +138,10 @@ def test_手機上一段說明不會超過六成螢幕():
     assert "overscroll-behavior:contain" in d, d
 
 
-def test_兩份手機規則一字不差():
-    """`@media (max-width:768px)` 和 `html.force-mobile` 各有一份。
-
-    〔切換為手機版〕按下去的時候視窗可能是 1400px 寬——那個寬度 @media 不會
-    命中，所以那一份非有不可。而兩份長得不一樣的症狀是「手機上好好的，按了
-    切換手機版反而壞掉」，沒有人會去那裡找。
-    """
+def test_手機規則都在():
     media = _block("@media (max-width:768px)")
-    for sel, _ in MOBILE_TIP_RULES:
-        a = _decl(media, sel)
-        b = _decl(_base(), "html.force-mobile " + sel)
-        assert a == b, f"{sel} 兩份不一樣：\n  @media       {a}\n  force-mobile {b}"
+    for sel, decl in MOBILE_TIP_RULES:
+        assert _decl(media, sel) == " ".join(decl.split()), sel
 
 
 def test_toggleInfo_會把說明捲進可視範圍():
@@ -193,7 +183,7 @@ def test_toggleInfo_會補一顆收起鈕():
 
 
 def test_展開收合只留在日股觀察():
-    """時間戳那一列只剩〔電腦版／手機版〕。
+    """時間戳那一列只剩時間戳。
 
     〔全部展開〕〔全部收合〕以前在這一列、對整份報告作用。改成分頁之後它們沒有
     對象了（一次只看得到一頁），使用者要求拿掉（2026-09-23），改放在〔日股觀察〕
@@ -201,15 +191,11 @@ def test_展開收合只留在日股觀察():
     也不能回來。
     """
     assert "expand-all-bar" not in SRC, "舊的那條空列還在"
-    assert 'class="header-actions"' in SRC
     top = SRC[SRC.index('<div class="page-header-top">'):]
     top = top[:top.index("</div>\n</div>")]
-    assert "報告生成時間" in top and "modeToggleBtn" in top
+    assert "報告生成時間" in top and "modeToggleBtn" not in top
     for txt in ("全部展開", "全部收合"):
         assert txt not in top, f"〔{txt}〕還在時間戳那一列"
-    assert "align-items:center" in _decl(_base(), ".page-header-top"), (
-        "時間戳那一行字要和右邊的按鈕對齊在同一條中線上"
-    )
 
 
 def test_說明鈕會說自己是開是關():

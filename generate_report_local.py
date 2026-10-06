@@ -225,8 +225,7 @@ CSS = """
      原本在時間戳那一列，對整份報告作用。改成分頁之後（2026-09-23）那兩顆就沒有
      對象了：一次只看得到一頁，而其他幾頁的趨勢圖是一張一張點開的。現在只剩
      〔日股觀察〕需要它們——十幾張個股卡要一起攤開或收起——所以搬到那一頁的
-     〔追蹤中 N 檔〕旁邊，只對個股卡作用。時間戳那一列只留〔電腦版／手機版〕。 */
-  .header-actions { display:flex; align-items:center; gap:8px; flex-wrap:wrap; margin-left:auto; }
+     〔追蹤中 N 檔〕旁邊，只對個股卡作用。時間戳那一列現在只有時間戳。 */
   .expand-btn { font-size:11.5px; font-weight:600; color:var(--text-muted); background:rgba(148,163,184,0.08);
                 border:1px solid var(--border-color); border-radius:7px; padding:5px 12px; cursor:pointer; }
   .expand-btn:hover { color:var(--text-main); border-color:#22d3ee; }
@@ -435,8 +434,6 @@ CSS = """
   @media (max-width:640px) { details.manage-fold > summary .fold-hint { display:none; } }
   /* 〔追蹤中 N 檔〕那一列右邊的〔全部展開〕〔全部收合〕。 */
   .pane-acts { display:inline-flex; gap:6px; margin-left:6px; align-items:center; }
-  html.force-mobile .mm-tab { font-size:13px; padding:8px 12px; }
-  html.force-mobile .mm-pane { padding:14px 14px; }
   /* 速覽表：預設收合。用 <details> 不寫 JS —— 少一個會壞的東西。 */
   details.fold { margin-top:18px; border:1px solid var(--border-color); border-radius:10px;
                  background:rgba(11,15,25,0.5); overflow:hidden; }
@@ -549,15 +546,6 @@ CSS = """
   .page-subtitle { font-size:13px; color:var(--text-muted); margin-top:6px; }
   /* 標題拿掉之後它變成第一行，上面不再需要留白。 */
   .page-subtitle.stamp-lead { margin-top:0; }
-  .mode-toggle-btn { flex-shrink:0; display:inline-flex; align-items:center; gap:6px; background:rgba(59,130,246,0.14);
-                      border:1px solid rgba(59,130,246,0.5); color:#93c5fd; font-size:12.5px; font-weight:700;
-                      padding:8px 16px; border-radius:22px; cursor:pointer; white-space:nowrap; transition:background .2s,transform .15s; }
-  /* `hidden` 要打得贏上面那一行的 `display:inline-flex`——屬性選擇器的權重
-     和 class 一樣，寫在後面才會贏。少了這一條，`btn.hidden = true` 設下去
-     完全沒有作用，而 DOM 上那個屬性看起來是對的。 */
-  .mode-toggle-btn[hidden] { display:none; }
-  .mode-toggle-btn:hover { background:rgba(59,130,246,0.28); transform:translateY(-1px); }
-  .mode-toggle-btn:active { transform:translateY(0); }
   .summary-box { margin-top:16px; padding:16px 18px; border-radius:12px; border:1px solid var(--border-color); background:var(--bg-card); }
   .summary-box.has-alerts { border-color:#ef4444; background:rgba(239,68,68,0.08); }
   .summary-title { font-size:14px; font-weight:700; margin-bottom:10px; }
@@ -621,42 +609,6 @@ CSS = """
                   overflow-y:auto; overscroll-behavior:contain; }
   }
 
-  /* 版型切換只調基準字級，實際是否縮放、是否收起標籤交給 JS 依卡片寬度決定，
-     這裡不用 !important，否則會蓋掉那些調整。 */
-  html.force-mobile .card-head-main { font-size:14.5px; }
-  html.force-desktop .card-head-main { font-size:16px; }
-
-  /* ---- 手動切換「電腦版／手機版」：不論實際螢幕寬度，強制套用指定版型 ---- */
-  html.force-mobile body { padding:12px; }
-  html.force-mobile .wrap { max-width:480px; gap:14px; }
-  html.force-mobile .section-card { padding:14px 14px; border-radius:12px; }
-  html.force-mobile .page-header-top { flex-direction:column; align-items:stretch; }
-  html.force-mobile .header-actions { justify-content:flex-end; margin-left:0; }
-  html.force-mobile .page-title { font-size:22px; }
-  html.force-mobile .stat-grid { grid-template-columns:1fr !important; }
-  html.force-mobile .fin-grid { grid-template-columns:1fr 1fr !important; }
-  html.force-mobile .jp-stock-grid { grid-template-columns:1fr !important; }
-  html.force-mobile .stat-value { font-size:21px !important; }
-  html.force-mobile .chart-container { height:260px !important; }
-  html.force-mobile .chart-container.short { height:220px !important; }
-  html.force-mobile .tf-btn { padding:4px 10px; font-size:11px; }
-  /* 〔切換為手機版〕按下去的時候視窗可能是 1400px 寬，那個寬度 @media 不會命中。
-     所以這三條要跟上面 @media (max-width:768px) 裡那三條一字不差——
-     tests/test_info_tips.py 會在兩邊長得不一樣的時候紅。 */
-  html.force-mobile .info-btn { min-height:36px; padding:7px 12px; font-size:11.5px; }
-  html.force-mobile .fin-info-btn { min-width:36px; min-height:36px; }
-  html.force-mobile .expand-btn { min-height:36px; padding:7px 14px; }
-  html.force-mobile .info-popup { max-height:60vh; max-height:60dvh;
-                  overflow-y:auto; overscroll-behavior:contain; }
-
-  html.force-desktop .wrap { max-width:1280px; }
-  html.force-desktop .jp-stock-grid { grid-template-columns:1fr 1fr !important; }
-  html.force-desktop .stat-grid { grid-template-columns:1fr 1fr !important; }
-  html.force-desktop .fin-grid { grid-template-columns:repeat(4,1fr) !important; }
-  html.force-desktop .stat-value { font-size:26px !important; }
-  html.force-desktop .chart-container { height:380px !important; }
-  html.force-desktop .chart-container.short { height:260px !important; }
-  html.force-desktop body { overflow-x:auto; }
 """
 
 SHARED_JS = """
@@ -833,7 +785,7 @@ SHARED_JS = """
     // 同樣的螢幕寬度下，單欄與雙欄的卡片可用寬度差很多。
     const shrink = (floor) => {
       let scale = 100;
-      // 用 important 寫入，否則會被版型切換那組 !important 規則蓋掉
+      // 用 important 寫入，否則會被樣式表裡的 !important 規則蓋掉
       while (overflowing() && scale > floor) {
         scale -= 2;
         main.style.setProperty('font-size', scale + '%', 'important');
@@ -916,59 +868,6 @@ SHARED_JS = """
   function clearSavedCardStates() {
     try { localStorage.removeItem('mm_open_cards'); } catch (e) { /* 不支援就算了 */ }
   }
-  function applyViewMode(mode) {
-    const html = document.documentElement;
-    html.classList.remove('force-desktop', 'force-mobile');
-    // 'auto' 表示不強制，交給 CSS 的響應式規則依實際寬度決定，
-    // 這樣視窗多寬就用多寬的版型，不會在 768px 這種尷尬寬度被硬塞成兩欄。
-    if (mode === 'mobile' || mode === 'desktop') {
-      html.classList.add(mode === 'mobile' ? 'force-mobile' : 'force-desktop');
-    }
-    const btn = document.getElementById('modeToggleBtn');
-    if (btn) {
-      btn.dataset.mode = mode;
-      const wide = window.innerWidth >= 768;
-      btn.innerHTML = (mode === 'mobile' || (mode === 'auto' && !wide))
-        ? '🖥️ 切換為電腦版' : '📱 切換為手機版';
-    }
-    setTimeout(() => {
-      Object.values(chartRegistry).forEach((entry) => {
-        if (entry && entry.chart) entry.chart.resize();
-      });
-      fitAllCardHeads();
-    }, 60);
-  }
-  /* 嵌在別人頁面裡的時候，這顆鈕要收起來。
-   *
-   * 這份報告平常是嵌在 tw-six-metrics 的〔全球市場監控＋日股觀察〕分頁裡，
-   * 而**那一頁自己就有一顆**「切換手機版」。兩顆並存不只是重複：
-   *
-   *   外面那顆做的是把版面寬度釘成 430px（`:root[data-view=mobile] .wrap`），
-   *   而 iframe 跟著變窄之後，這份報告裡本來就有的響應式 CSS 會自己切成手機
-   *   版面——也就是說**外面那顆已經把這件事做完了**。
-   *
-   *   裡面這顆做的是 `force-desktop` / `force-mobile`，它會蓋掉那個響應式判斷。
-   *   在一個 430px 寬的 iframe 裡按下「切換為電腦版」，得到的是一份被硬塞成
-   *   兩欄的版面——那不是任何人想要的結果。
-   *
-   * 所以：嵌起來就收掉，單獨開啟（metallicatw.github.io/market-monitor/）照常
-   * 顯示——那時候它是唯一的切換方式。用 `window.self !== window.top` 判斷，
-   * 跨站的 iframe 讀 `top` 會丟例外，所以包在 try 裡，讀不到就當作沒有嵌。 */
-  function isEmbedded() {
-    try { return window.self !== window.top; } catch (e) { return true; }
-  }
-  function hideToggleWhenEmbedded() {
-    if (!isEmbedded()) return;
-    const btn = document.getElementById('modeToggleBtn');
-    if (btn) btn.hidden = true;
-  }
-  function toggleViewMode() {
-    const btn = document.getElementById('modeToggleBtn');
-    const cur = btn ? btn.dataset.mode : 'auto';
-    if (cur === 'mobile') applyViewMode('desktop');
-    else if (cur === 'desktop') applyViewMode('mobile');
-    else applyViewMode(window.innerWidth >= 768 ? 'mobile' : 'desktop');
-  }
   function simpleSetRange(key, tf, btn) {
     document.querySelectorAll('#tf-' + key + ' .tf-btn').forEach(b => b.classList.remove('active'));
     btn.classList.add('active');
@@ -1001,7 +900,7 @@ SHARED_JS = """
 """
 
 
-#: 分頁與子分頁。放在**獨立的** <script> 區塊裡（見 build_html），跟折疊、版型切換
+#: 分頁與子分頁。放在**獨立的** <script> 區塊裡（見 build_html），跟折疊
 #: 同一塊：上面任何一張圖出錯，都不該讓讀者連分頁都切不了。
 TABS_JS = """
   function mmSetSelected(bar, attr, id) {
@@ -3782,9 +3681,6 @@ def render_page_header(alerts, taiex, missing=None):
          標題底下，這正是它該在的位置——「你正在看的這一份是什麼時候的」。 -->
       <div class="page-subtitle stamp-lead">報告生成時間：{now_disp}　｜　報告資料基準：{baseline_disp}</div>
     </div>
-    <div class="header-actions">
-      <button class="mode-toggle-btn" id="modeToggleBtn" onclick="toggleViewMode()">🖥️ 電腦版／📱 手機版</button>
-    </div>
   </div>
 </div>
 """
@@ -4041,9 +3937,7 @@ def build_html(taiex, vix, nikkei, michigan, murata, jp_stocks,
 <script>
 {TABS_JS}
   // 刻意放在獨立的 script 區塊：上面任何一張圖表若出錯（例如 CDN 沒載入），
-  // 也不會連帶讓折疊、縮字、版型切換、分頁這些基本功能失效。
-  applyViewMode('auto');   // 載入時不強制，交給響應式 CSS
-  hideToggleWhenEmbedded();  // 嵌在 tw-six-metrics 裡的時候外面那一層已經有了
+  // 也不會連帶讓折疊、縮字、分頁這些基本功能失效。
   clearSavedCardStates();
   setInitialCardStates();  // 卡片與趨勢圖全部收合
   mmRestoreTab();          // 網址帶著 #tw/twmacro 的話回到那一頁
