@@ -5,12 +5,12 @@
 以前一打開是五條收合的橫幅（重點摘要／台股／美股／日股總經／日股觀察），展開
 哪一條，哪一條就把其他四條推到一兩個螢幕以外。現在：
 
-* 最上面一排**分頁**，〔重點摘要〕預設打開、不收合——第一眼就是預警清單＋各市場
-  速覽（點一列直接跳到那一頁）。
+* 最上面一排**分頁**，〔重點摘要〕預設打開、不收合——第一眼就是預警清單（底下的
+  〔各市場速覽〕2026-10-07 拿掉了）。
 * 台股／美股／日股三頁裡再一排**子分頁**（台股加權指數｜台股資金面與景氣領先
   指標……）。
-* 指標的**數字**攤開，**趨勢圖**收在 `<details class="fold chart-fold">` 裡，
-  點一下才展開。
+* 指標的數字與趨勢圖都直接攤開（2026-10-07 起；以前圖收在 `<details>` 裡），
+  圖緊接在自己那個指標的數字底下；一個子分頁裡有好幾個指標時，每個一塊 ind-block。
 * 〔日股觀察〕不拆子分頁（收合的個股卡標題列本身就是總覽），管理表單收進
   〔⚙️ 管理追蹤名單〕，狀態列留在外面；〔全部展開〕〔全部收合〕在〔追蹤中 N 檔〕
   旁邊，只對個股卡作用；電腦版展開之後仍是一列兩張。
@@ -72,11 +72,11 @@ def test_子分頁接得上():
     assert grl.sub_tabs("tw", []) == ""
 
 
-def test_趨勢圖外面那一層是收合的():
+def test_趨勢圖直接展開():
+    """2026-10-07 使用者要求：趨勢圖取消收合、直接展開。"""
     s = grl.fold_open("加權指數走勢圖") + "X" + grl.FOLD_CLOSE
-    assert s.startswith('<details class="fold chart-fold">'), s
-    assert " open" not in s.split(">", 1)[0], "趨勢圖要預設收合"
-    assert s.endswith("</details>")
+    assert s.startswith('<div class="chart-block">') and "<details" not in s, s
+    assert s.endswith("</div>")
 
 
 # ── 整份報告 ──────────────────────────────────────────────────────────
@@ -88,14 +88,22 @@ def test_五個分頁照順序():
     assert "block-card" not in html.split("<body>", 1)[1], "舊的橫幅還在"
 
 
-def test_重點摘要直接展開而且有各市場速覽():
+def test_重點摘要直接展開而且只有預警清單():
     html = _report()
     pane = html[html.index('id="pane-summary"'):html.index('id="pane-tw"')]
     head = pane.split(">", 1)[0]
     assert "hidden" not in head, "〔重點摘要〕被收起來了"
     assert "summary-box" in pane, "預警清單不在〔重點摘要〕裡"
-    for gid in ("tw", "us", "jp", "jpstock"):
-        assert f"mmShowTab('{gid}')" in pane, f"速覽少了 {gid} 那一列"
+    assert "各市場速覽" not in pane and "glance" not in pane, "〔各市場速覽〕2026-10-07 拿掉了"
+
+
+def test_總經三頁最上面沒有那一排摘要數字():
+    """2026-10-07「畫面太雜亂」：台股／美股／日股總經分頁最上面那一排 chips 拿掉。"""
+    html = _report()
+    for tab in ("tw", "us", "jp"):
+        start = html.index(f'id="pane-{tab}"')
+        head = html[start:html.index('class="mm-subtabs"', start)]
+        assert "pane-chips" not in head, tab
 
 
 def test_子分頁照使用者要的切法():
@@ -105,28 +113,39 @@ def test_子分頁照使用者要的切法():
     for tab, subs in want.items():
         start = html.index(f'id="pane-{tab}"')
         end = html.index("</section>", start)
-        got = re.findall(r'class="mm-subtab" id="sub-(\w+)"', html[start:end])
+        got = re.findall(r'class="mm-subtab" style="--tc:[^"]+;" id="sub-(\w+)"', html[start:end])
         assert got == subs, f"{tab}：{got}"
     pane = html[html.index('id="pane-jpstock"'):]
     assert "mm-subtab" not in pane.split("</section>", 1)[0], "〔日股觀察〕不拆子分頁"
 
 
-def test_每一張指標圖都收在摺疊裡():
-    """使用者要的是「預設收合，點擊後展開趨勢圖」——數字攤開、圖收著。"""
+def test_每一張指標圖都直接展開而且接在自己的指標底下():
     html = _report()
     for cid in ("taiexChart", "twPmiChart", "twMcM1bChart", "usIdxChart",
                 "vixChart", "michiganChart", "nikkeiChart", "murataChart"):
         i = html.index(f'<canvas id="{cid}"')
-        opened = html.rfind('<details class="fold chart-fold">', 0, i)
-        closed = html.rfind("</details>", 0, i)
-        assert opened > closed, f"{cid} 沒有收在趨勢圖的摺疊裡"
+        assert html.rfind('<details', 0, i) < html.rfind('<div class="chart-block">', 0, i), f"{cid} 還收在摺疊裡"
+    # 美股經濟指標：每一張圖和它的數字卡在同一個 ind-block 裡（不再整組收在〔歷史趨勢〕）。
+    assert "歷史趨勢（" not in html
+    for sid in ("UNRATE", "CPIAUCSL"):
+        i = html.index(f'<canvas id="usfr{sid}Chart"')
+        block = html.rfind('<div class="ind-block"', 0, i)
+        assert "fin-value" in html[block:i], f"{sid} 的圖沒有接在自己的數字卡底下"
 
 
-def test_數字不在摺疊裡():
-    """反過來：摺疊只包圖。數字方塊被包進去的話，點進分頁會什麼都看不到。"""
+def test_同一頁好幾個指標時各自一塊():
     html = _report()
-    for fold in re.findall(r'<details class="fold chart-fold">(.*?)</details>', html, re.S):
-        assert "stat-value" not in fold and "fin-value" not in fold, fold[:200]
+    for sub in ("twmacro", "macro"):
+        start = html.index(f'id="subpane-{sub}"')
+        end = html.index('class="mm-subpane"', start + 10) if 'class="mm-subpane"' in html[start + 10:] else len(html)
+        assert html[start:end].count('class="ind-block"') >= 2, sub
+
+
+def test_燈泡只有圖示():
+    """2026-10-07：「所有燈泡註解只留燈泡放在標題右邊即可，不需要燈泡文字」。"""
+    html = _report()
+    labels = re.findall(r'<button class="info-btn"[^>]*>(.*?)</button>', html)
+    assert labels and all(t.strip() == "💡" for t in labels), set(labels)
 
 
 def test_頁面上沒有重複的_id():
@@ -134,9 +153,6 @@ def test_頁面上沒有重複的_id():
     ids = re.findall(r'\sid="([^"]+)"', html)
     dup = sorted({i for i in ids if ids.count(i) > 1})
     assert not dup, f"重複的 id：{dup[:10]}"
-    assert 'data-mirror="mm-watch-count"' in html, "速覽列上的「追蹤中 N 檔」沒有掛副本"
-    assert '[data-mirror="mm-watch-count"]' in grl.render_manage_bar(), (
-        "隱藏一檔之後只改了〔日股觀察〕那一頁的數字，速覽列上那個不會跟著變")
 
 
 def test_管理表單收起來但狀態列在外面():

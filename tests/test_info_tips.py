@@ -43,7 +43,7 @@ SRC = inspect.getsource(grl)
 
 #: 手機上那幾條（@media 768px 裡）。
 MOBILE_TIP_RULES = (
-    (".info-btn", "min-height:36px; padding:7px 12px; font-size:11.5px;"),
+    (".info-btn", "min-width:36px; min-height:36px;"),
     (".fin-info-btn", "min-width:36px; min-height:36px;"),
     (".expand-btn", "min-height:36px; padding:7px 14px;"),
     (".info-popup", "max-height:60vh; max-height:60dvh;\n"
