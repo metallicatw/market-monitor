@@ -212,6 +212,8 @@ CSS = """
   .chip-v { font-weight:700; color:var(--text-main); font-variant-numeric:tabular-nums; }
   .chip.price .chip-v { font-size:1.25em; }
   .chip.price.up .chip-v, .chip.price.up .chip-k { color:#ef4444; }
+  /* 美股三大指數那一列：名稱在前、灰字，只有點數與漲跌上色。 */
+  .chip-n { color:var(--text-muted); font-size:0.92em; }
   .chip.price.down .chip-v, .chip.price.down .chip-k { color:#10b981; }
   .chip.buy { border-color:rgba(34,211,238,0.45); background:rgba(34,211,238,0.10); }
   .chip.buy .chip-v { color:#22d3ee; }
@@ -3206,6 +3208,13 @@ def render_tw_marketcap_m1b_section(ratio_data):
   </div>
 
 {fold_open("市值貨幣比走勢圖")}
+  <div class="tf-bar" id="tf-twmcm1b">
+    <span style="font-size:11px;color:#64748b;margin-right:2px;">週期切換:</span>
+    <button class="tf-btn" onclick="simpleSetRange('twmcm1b','1Y',this)">1Y</button>
+    <button class="tf-btn" onclick="simpleSetRange('twmcm1b','3Y',this)">3Y</button>
+    <button class="tf-btn" onclick="simpleSetRange('twmcm1b','5Y',this)">5Y</button>
+    <button class="tf-btn active" onclick="simpleSetRange('twmcm1b','ALL',this)">全部</button>
+  </div>
   <div class="custom-legend" id="twMcM1bLegend"></div>
   <div class="chart-container short"><canvas id="twMcM1bChart"></canvas></div>
 {FOLD_CLOSE}
@@ -3233,7 +3242,8 @@ def render_tw_marketcap_m1b_section(ratio_data):
         {{ label: '市值貨幣比', data: mcRatio, borderColor: 'rgb(250,204,21)',
            backgroundColor: (c) => gradientFill(c, '250,204,21'),
            fill: true, tension: 0,
-           pointRadius: mcDates.length > 90 ? 0 : (mcDates.length > 36 ? 1.5 : 3),
+           // 跟著**目前畫出來的**點數走：切到 1Y 只剩 12 個點，要看得到點。
+           pointRadius: (c) => {{ const n = c.chart.data.labels.length; return n > 90 ? 0 : (n > 36 ? 1.5 : 3); }},
            pointHoverRadius: 6, borderWidth: 2, order: 1 }},
         {{ label: '{high} 資金吃緊', data: mcDates.map(() => {high}), borderColor: '#ef4444',
            borderDash: [5,4], borderWidth: 1.1, pointRadius: 0, fill: false, order: 2 }},
@@ -3253,7 +3263,9 @@ def render_tw_marketcap_m1b_section(ratio_data):
           callbacks: {{
             title: tooltipFullDateTitle('twmcm1b'),
             afterLabel: (item) => {{
-              const i = item.dataIndex;
+              // 切了週期之後 dataIndex 是從區間起點數的，要加回位移才對得到原始陣列。
+              const cur = chartRegistry['twmcm1b'] ? chartRegistry['twmcm1b'].currentDates : mcDates;
+              const i = item.dataIndex + mcDates.length - cur.length;
               return ['總市值 ' + mcCap[i] + ' 兆元', 'M1B ' + mcM1b[i] + ' 兆元'];
             }}
           }}
@@ -3307,20 +3319,40 @@ def render_us_indices_section(indices):
            pointRadius: 0, pointHoverRadius: 4, borderWidth: 2, order: {i + 1} }},""")
         legend_bits.append(f"rawSeries[{i}] = {json.dumps(raw)};")
 
-        last, prev = raw[-1], raw[-2]
-        pct = round((last - prev) / prev * 100, 2) if prev else 0
-        _, tone_color = updown(last - prev)
-        tone = "up" if last > prev else ("down" if last < prev else "")
-        chips.append(chip(d.get("name") or key, f"{last:,.0f} ({pct:+.2f}%)", f"price {tone}".strip()))
+        # 用各指數**自己**最後兩個交易日算漲跌（不是共同交易日的最後兩天），
+        # 才會和 Yahoo 上看到的同一個數字。
+        own = d["close"]
+        last, prev = own[-1], (own[-2] if len(own) > 1 else own[-1])
+        diff = round(last - prev, 2)
+        pct = round(diff / prev * 100, 2) if prev else 0.0
+        diff_txt, _ = fmt_diff(diff, 2, pct)
+        tone = "up" if diff > 0 else ("down" if diff < 0 else "")
+        # 收盤點數後面接「▲ 250.12 (0.49%)」：漲紅跌綠、三角形標方向（台股慣例，
+        # 2026-10-07 使用者要求）。指數名稱維持灰字，只有數字上色。
+        chips.append(
+            f'<span class="{("chip price idx " + tone).strip()}">'
+            f'<span class="chip-n">{d.get("name") or key}</span>'
+            f'<span class="chip-v">{last:,.0f}</span><span class="chip-k">{diff_txt}</span></span>')
 
     period_txt = f"{common_dates[0].replace('-', '/')} 起"
     html = f"""
   <div class="stat-box" style="margin-bottom:12px;">
-    <div class="stat-label">相對走勢（{period_txt} = 100）</div>
+    <div class="stat-label">相對走勢（<span id="usIdxBase">{period_txt}</span> = 100）</div>
     <div class="stat-sub">三個指數的點數量級差很多，直接疊圖看不出相對強弱，
       所以統一重訂基期。滑過圖表可同時看到重訂基期後的值與真實收盤點數。</div>
   </div>
 {fold_open("三大指數相對走勢圖")}
+  <div class="tf-bar" id="tf-usidx">
+    <span style="font-size:11px;color:#64748b;margin-right:2px;">週期切換:</span>
+    <button class="tf-btn" onclick="usIdxSetRange('5D',this)">5D</button>
+    <button class="tf-btn" onclick="usIdxSetRange('1M',this)">1M</button>
+    <button class="tf-btn" onclick="usIdxSetRange('3M',this)">3M</button>
+    <button class="tf-btn" onclick="usIdxSetRange('6M',this)">6M</button>
+    <button class="tf-btn" onclick="usIdxSetRange('YTD',this)">YTD</button>
+    <button class="tf-btn" onclick="usIdxSetRange('1Y',this)">1Y</button>
+    <button class="tf-btn" onclick="usIdxSetRange('3Y',this)">3Y</button>
+    <button class="tf-btn active" onclick="usIdxSetRange('ALL',this)">全部</button>
+  </div>
   <div class="custom-legend" id="usIdxLegend"></div>
   <div class="chart-container"><canvas id="usIdxChart"></canvas></div>
 {FOLD_CLOSE}
@@ -3333,6 +3365,7 @@ def render_us_indices_section(indices):
   const usIdxDates = {json.dumps(common_dates, ensure_ascii=False)};
   const rawSeries = [];
   {' '.join(legend_bits)}
+  let usIdxOff = 0;          // 目前畫的是從第幾天開始（tooltip 要拿它對回真實點數）
   const usIdxChart = new Chart(document.getElementById('usIdxChart'), {{
     type: 'line',
     data: {{ labels: usIdxDates.map(fmtLabel), datasets: [{''.join(series_js)}] }},
@@ -3348,7 +3381,7 @@ def render_us_indices_section(indices):
             title: tooltipFullDateTitle('usidx'),
             label: (item) => {{
               const raw = rawSeries[item.datasetIndex];
-              const actual = raw ? raw[item.dataIndex] : null;
+              const actual = raw ? raw[item.dataIndex + usIdxOff] : null;
               const base = item.dataset.label + ': ' + item.parsed.y.toFixed(2);
               return actual === null ? base
                 : base + '（實際 ' + actual.toLocaleString(undefined, {{maximumFractionDigits: 2}}) + '）';
@@ -3364,6 +3397,25 @@ def render_us_indices_section(indices):
   }});
   buildLegend(usIdxChart, 'usIdxLegend');
   chartRegistry['usidx'] = {{ chart: usIdxChart, dates: usIdxDates, close: [], currentDates: usIdxDates.slice(), warnLevels: [] }};
+  /* 週期切換：重訂基期跟著區間走——切到 1M 就是「一個月前＝100」，比的是這一段的
+     相對強弱。只裁切不重訂的話，起點不在 100，三條線的高低就看不出誰漲得多。 */
+  function usIdxSetRange(tf, btn) {{
+    document.querySelectorAll('#tf-usidx .tf-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    const idx = tf === '5D' ? Math.max(0, usIdxDates.length - 5) : filterByRange(usIdxDates, tf);
+    const dates = usIdxDates.slice(idx);
+    usIdxOff = idx;
+    const short = (tf === '5D' || tf === '1M' || tf === '3M');
+    usIdxChart.data.labels = dates.map(short ? fmtLabelShort : fmtLabel);
+    rawSeries.forEach((raw, i) => {{
+      const seg = raw.slice(idx), base = seg[0];
+      usIdxChart.data.datasets[i].data = seg.map(v => base ? Math.round(v / base * 10000) / 100 : v);
+    }});
+    chartRegistry['usidx'].currentDates = dates;
+    const lab = document.getElementById('usIdxBase');
+    if (lab) lab.textContent = dates[0].replace(/-/g, '/') + ' 起';
+    usIdxChart.update();
+  }}
 """
     return html, script, chips
 

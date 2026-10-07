@@ -223,3 +223,34 @@ if __name__ == "__main__":
         print(f"❌ {failed}/{len(tests)} 個測試失敗")
         sys.exit(1)
     print(f"✅ {len(tests)} 個測試全部通過（完全沒打網路）")
+
+
+def test_市值貨幣比與美股三大指數有週期切換():
+    """2026-10-07：這兩張是報告裡唯二長歷史卻沒有週期切換的圖（十年月資料、五年日資料）。
+
+    美股三大指數切週期時要**重訂基期**（區間起點＝100），只裁切的話三條線起點不在
+    100，看不出這一段誰漲得多。
+    """
+    import inspect
+
+    import generate_report_local as grl
+
+    src = inspect.getsource(grl)
+    assert 'id="tf-twmcm1b"' in src and "simpleSetRange('twmcm1b','1Y',this)" in src
+    assert 'id="tf-usidx"' in src and "function usIdxSetRange(tf, btn)" in src
+    body = src.split("function usIdxSetRange(tf, btn)", 1)[1][:1200]
+    assert "base ? Math.round(v / base * 10000) / 100" in body, "切週期沒有重訂基期"
+    assert "item.dataIndex + usIdxOff" in src, "tooltip 的真實點數沒有加回區間位移"
+
+
+def test_美股三大指數那一列有漲跌點數與三角形():
+    """「道瓊工業指數 51,521 ▲ 253.38 (0.49%)」：漲紅跌綠，方向用三角形。"""
+    import generate_report_local as grl
+
+    def series(closes):
+        return {"name": "道瓊工業指數", "dates": ["2026-10-05", "2026-10-06"], "close": closes}
+
+    _, _, up = grl.render_us_indices_section([("dji", series([51267.62, 51521.0]))])
+    assert "chip price idx up" in up[0] and "▲ 253.38 (0.49%)" in up[0] and "51,521" in up[0]
+    _, _, dn = grl.render_us_indices_section([("dji", series([51521.0, 51267.62]))])
+    assert "chip price idx down" in dn[0] and "▼ 253.38" in dn[0]
