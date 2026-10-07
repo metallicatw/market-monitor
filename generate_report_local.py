@@ -566,6 +566,18 @@ CSS = """
   .summary-title.ok { color:#10b981; }
   .summary-list { font-size:12.5px; line-height:2; color:#e2e8f0; }
   .summary-list b { color:#facc15; }
+  /* 〔重點摘要〕的預警清單：不再包一層紅框（外面那張分頁卡就是框，2026-10-07）。
+     一則一列，中間一條細線；左邊小標籤固定寬，內容折行時對齊內容開頭。 */
+  .summary-box.alert-list { margin-top:0; padding:0; border:0; background:none; }
+  .alert-list .summary-title { font-size:15px; margin:2px 0 8px; }
+  .alert-list .summary-list { line-height:1.6; font-size:13px; }
+  .al { display:grid; grid-template-columns:auto 1fr; gap:10px; align-items:baseline;
+        padding:9px 2px; border-top:1px solid rgba(148,163,184,0.14); }
+  .al:first-child { border-top:0; }
+  .al-tag { font-size:11.5px; font-weight:700; padding:1px 8px; border-radius:6px; white-space:nowrap; }
+  .al-warn .al-tag { color:#fca5a5; background:rgba(239,68,68,0.14); border:1px solid rgba(239,68,68,0.45); }
+  .al-buy .al-tag { color:#67e8f9; background:rgba(34,211,238,0.12); border:1px solid rgba(34,211,238,0.4); }
+  .al-txt { color:#e2e8f0; min-width:0; }
   .jp-stock-grid { display:grid; grid-template-columns:1fr; gap:20px; align-items:start; width:100%; box-sizing:border-box; }
   .jp-stock-grid .section-card { margin-bottom:0; display:flex; flex-direction:column; min-width:0; }
   .jp-stock-grid .section-card:hover { box-shadow:0 8px 26px rgba(0,0,0,0.32); transform:translateY(-2px); }
@@ -3717,12 +3729,16 @@ def render_page_header(alerts, taiex, missing=None):
     baseline_disp = taiex["dates"][-1].replace("-", "/") if taiex else "N/A"
 
     if alerts:
+        # 一則一列：左邊一顆小標籤（風險預警／布局機會），右邊是內容；內容折行時對齊
+        # 內容的開頭，不會鑽到標籤底下（2026-10-07 手機版排版）。
         items = "".join(
-            f'<div>{"🔵" if kind == "buy" else "🔴"} <b>{"布局機會" if kind == "buy" else "風險預警"}：</b>{text}</div>'
+            f'<div class="al al-{"buy" if kind == "buy" else "warn"}">'
+            f'<span class="al-tag">{"布局機會" if kind == "buy" else "風險預警"}</span>'
+            f'<span class="al-txt">{text}</span></div>'
             for kind, text in alerts
         )
         summary_html = f"""
-  <div class="summary-box has-alerts">
+  <div class="summary-box has-alerts alert-list">
     <div class="summary-title alert">🚨 本次報告有 {len(alerts)} 項指標觸發預警／布局參考</div>
     <div class="summary-list">{items}</div>
   </div>"""

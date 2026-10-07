@@ -270,3 +270,12 @@ def test_美股三大指數那一列有漲跌點數與三角形():
     assert "chip price idx up" in up[0] and "▲ 253.38 (0.49%)" in up[0] and "51,521" in up[0]
     _, _, dn = grl.render_us_indices_section([("dji", series([51521.0, 51267.62]))])
     assert "chip price idx down" in dn[0] and "▼ 253.38" in dn[0]
+
+
+def test_預警清單不再多包一層紅框():
+    """2026-10-07：〔重點摘要〕裡那一層紅框拿掉（分頁卡本身就是框）；一則一列、標籤＋內容。"""
+    _, html = grl.render_page_header([("warn", "市值貨幣比偏高"), ("buy", "某檔可布局")], None)
+    assert "alert-list" in html and html.count('class="al al-') == 2
+    assert '<span class="al-tag">風險預警</span>' in html and '<span class="al-tag">布局機會</span>' in html
+    css = re.sub(r"/\*.*?\*/", "", grl.CSS, flags=re.S)
+    assert ".summary-box.alert-list { margin-top:0; padding:0; border:0; background:none; }" in css
