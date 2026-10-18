@@ -1,0 +1,16 @@
+secrets.json
+
+local_test/
+*.bak
+
+__pycache__/
+*.pyc
+.venv/
+venv/
+
+.DS_Store
+Thumbs.db
+
+index.html
+
+pages/

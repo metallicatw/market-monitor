@@ -1,0 +1,12 @@
+{
+ "name": "datagov_dropdown_money",
+ "url": "https://data.gov.tw/api/front/dataset/dropdown?list_type=published&qs=貨幣總計數",
+ "method": "GET",
+ "format": "json",
+ "bytes": 257,
+ "sha256": "a84018a61270d09b3b42055cda42c2980af6f021a0d122f012283589a80eddde",
+ "captured_at": "2026-09-09T13:10+08:00",
+ "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120",
+ "first_line": "{\"success\":true,\"code\":200,\"message\":\"\",\"payload\":[{\"nid\":6024,\"vid\":15254135,\"title\":\"貨幣總計數\"},{\"nid\":10755,\"vid\":15261114,\"title\":\"貨幣總計數M1B變動因素分析\"},{\"nid\":10756,\"vid\":15261116,\"title\":\"貨幣總計數M2變動因素分析\"}]}",
+ "note": "USE — 找到 nid=6024（貨幣總計數）與 nid=10755（M1B變動因素分析）。"
+}

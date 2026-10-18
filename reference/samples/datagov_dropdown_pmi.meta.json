@@ -1,0 +1,12 @@
+{
+ "name": "datagov_dropdown_pmi",
+ "url": "https://data.gov.tw/api/front/dataset/dropdown?list_type=published&qs=採購經理人",
+ "method": "GET",
+ "format": "json",
+ "bytes": 339,
+ "sha256": "74f07be6ff1d558dd4b40137fe457299b17d0fb86f9a0dd66c5936cba0297ea4",
+ "captured_at": "2026-09-09T13:10+08:00",
+ "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120",
+ "first_line": "{\"success\":true,\"code\":200,\"message\":\"\",\"payload\":[{\"nid\":55781,\"vid\":15415733,\"title\":\"兩岸經貿交流相關統計指標─中國大陸景氣指標：中國大陸採購經理人指數\"},{\"nid\":27541,\"vid\":15799286,\"title\":\"最新臺灣採購經理人指數新聞稿\"},{\"nid\":6100,\"vid\":15254259,\"",
+ "note": "USE — 這才是 data.gov.tw 能用的搜尋。POST /api/front/dataset/list 不管 body 放什麼（qs/keyword/q/search、JSON 或 form）都回全部 53128 筆，等於沒過濾；GET 同一路徑回 405。"
+}

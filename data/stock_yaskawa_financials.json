@@ -1,0 +1,19 @@
+{
+  "name": "安川電機 (Yaskawa)",
+  "code": "6506.T",
+  "source": "2026年2月期 有価証券報告書 実績値 (きたい資本)",
+  "source_urls": [
+    "https://kitaishihon.com/company/6506/finance",
+    "https://kabuyoho.jp/"
+  ],
+  "fetched_at": "2026-08-17",
+  "note": "此資料為人工從財報網站讀取，非自動化 API 抓取。EPS 為依據營業利益率、純利益率反推計算之估計值，並以 PER×EPS 反推股價核對（約5,384円，與市場實際股價相近，數字合理）。每季財報公布後需人工更新。",
+  "fiscal_period": "FY2026/2 実績",
+  "operating_margin_pct": 8.7,
+  "net_margin_pct": 6.5,
+  "shares_outstanding": 266690000,
+  "eps_jpy": 132.6,
+  "per_x": 40.6,
+  "pbr_x": 2.91,
+  "disclosure_date": "2026-04-10"
+}

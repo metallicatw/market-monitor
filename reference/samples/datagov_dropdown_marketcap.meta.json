@@ -1,0 +1,12 @@
+{
+ "name": "datagov_dropdown_marketcap",
+ "url": "https://data.gov.tw/api/front/dataset/dropdown?list_type=published&qs=市值",
+ "method": "GET",
+ "format": "json",
+ "bytes": 872,
+ "sha256": "c30d8f254486d50237868699249533d4f473f741a4ce3e542033346859af91d1",
+ "captured_at": "2026-09-09T13:10+08:00",
+ "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120",
+ "first_line": "{\"success\":true,\"code\":200,\"message\":\"\",\"payload\":[{\"nid\":104039,\"vid\":16023870,\"title\":\"上市股票每股市值、本益比、週轉率之比較t24\"},{\"nid\":17257,\"vid\":16024333,\"title\":\"上櫃歷史個股市值排行\"},{\"nid\":104041,\"vid\":16023869,\"title\":\"上櫃股票每股市值、本益比、�",
+ "note": "USE — 找市值資料集的搜尋結果，t49/t32/t24 都從這裡來。"
+}

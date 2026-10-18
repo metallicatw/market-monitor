@@ -1,0 +1,18 @@
+{
+  "name": "JX ADVANCED METALS",
+  "code": "5016.T",
+  "source": "2026年3月期 有価証券報告書 実績値 (きたい資本)",
+  "source_urls": [
+    "https://kitaishihon.com/company/5016/finance"
+  ],
+  "fetched_at": "2026-08-17",
+  "note": "此資料為人工從財報網站讀取，非自動化 API 抓取。EPS 為依據營業利益率、純利益率反推計算之估計值。每季財報公布後需人工更新。",
+  "fiscal_period": "FY2026/3 実績",
+  "operating_margin_pct": 11.4,
+  "net_margin_pct": 14.5,
+  "shares_outstanding": 928463102,
+  "eps_jpy": 72.4,
+  "per_x": 45.9,
+  "pbr_x": 6.3,
+  "disclosure_date": "2026-05-11"
+}

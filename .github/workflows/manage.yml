@@ -1,0 +1,135 @@
+name: manage
+
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: "要做什麼"
+        required: true
+        default: "只更新報告"
+        type: choice
+        options:
+          - 只更新報告
+          - 新增個股
+          - 建立或重建季報
+          - 隱藏個股
+          - 恢復顯示
+          - 移除個股
+      code:
+        description: "股票代號或檔名代號（例如 4063 或 shinetsu）"
+        required: false
+        type: string
+      price_buy:
+        description: "股價布局參考線（選填，新增個股時用）"
+        required: false
+        type: string
+      per_buy:
+        description: "本益比布局參考線（選填，留空用預設 20）"
+        required: false
+        type: string
+      years:
+        description: "季報回溯年數（預設 2）"
+        required: false
+        default: "2"
+        type: string
+
+permissions:
+  contents: write
+
+concurrency:
+  group: market-monitor-write
+  cancel-in-progress: false
+
+jobs:
+  manage:
+    runs-on: ubuntu-latest
+    env:
+      JQUANTS_API_KEY: ${{ secrets.JQUANTS_API_KEY }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: 執行指定的動作
+        env:
+          IN_ACTION: ${{ inputs.action }}
+          IN_CODE: ${{ inputs.code }}
+          IN_YEARS: ${{ inputs.years }}
+          IN_PRICE_BUY: ${{ inputs.price_buy }}
+          IN_PER_BUY: ${{ inputs.per_buy }}
+        run: |
+          set -e
+          ACTION="$IN_ACTION"
+          CODE="$IN_CODE"
+          YEARS="$IN_YEARS"
+          if [ -n "$CODE" ]; then
+            case "$CODE" in
+              *[!0-9A-Za-z]*)
+                echo "::error::股票代號只能是數字或英文字母，收到的是：$CODE"
+                exit 1 ;;
+            esac
+          fi
+          for v in "$IN_PRICE_BUY" "$IN_PER_BUY"; do
+            if [ -n "$v" ]; then
+              case "$v" in
+                *[!0-9.]*|*.*.*)
+                  echo "::error::布局門檻只能是數字，收到的是：$v"
+                  exit 1 ;;
+              esac
+            fi
+          done
+          EXTRA=""
+          if [ -n "$IN_PRICE_BUY" ]; then EXTRA="$EXTRA --price-buy $IN_PRICE_BUY"; fi
+          if [ -n "$IN_PER_BUY" ]; then EXTRA="$EXTRA --per-buy $IN_PER_BUY"; fi
+          case "$ACTION" in
+            "新增個股")
+              python manage_stock.py add "$CODE" --build --years "$YEARS" $EXTRA ;;
+            "建立或重建季報")
+              python manage_stock.py build "$CODE" --years "$YEARS" ;;
+            "隱藏個股")
+              python manage_stock.py hide "$CODE" ;;
+            "恢復顯示")
+              python manage_stock.py show "$CODE" ;;
+            "移除個股")
+              python manage_stock.py remove "$CODE" ;;
+            *)
+              echo "只更新報告，不改名單" ;;
+          esac
+
+      - name: 目前名單
+        run: python manage_stock.py list
+
+      - name: 更新資料並產生報告
+        id: update
+        env:
+          IN_ACTION: ${{ inputs.action }}
+          IN_CODE: ${{ inputs.code }}
+        run: |
+          set -e
+          case "$IN_ACTION" in
+            "隱藏個股"|"移除個股")
+              python run.py report ;;
+            "恢復顯示")
+              python fetch_market_data.py --only "$IN_CODE" \
+                || echo "::warning::補抓失敗，先用既有快取產生報告。"
+              python run.py report ;;
+            *)
+              python run.py update ;;
+          esac
+
+      - name: 有變動才提交
+        if: success() || steps.update.outcome == 'failure'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if ! git diff --staged --quiet; then
+            git commit -q -m "update"
+            git push
+          fi
+
+      - name: 發布報告
+        if: hashFiles('index.html') != ''
+        uses: ./.github/actions/publish-report

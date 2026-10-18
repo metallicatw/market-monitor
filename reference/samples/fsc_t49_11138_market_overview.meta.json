@@ -1,0 +1,12 @@
+{
+ "name": "fsc_t49_11138_market_overview",
+ "url": "https://stat.fsc.gov.tw/api/v1/public/datasets/11138/export",
+ "method": "GET",
+ "format": "csv",
+ "bytes": 891,
+ "sha256": "a583ef85da2976c52d5b1ac5f699d4eb0d828e9a51d28889b949ad57e38db696",
+ "captured_at": "2026-09-09T13:10+08:00",
+ "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120",
+ "first_line": "上市櫃家數,公告日期,市值_十億元,年月,成交金額_受益證券_十億元,成交金額_封閉式基金_十億元,成交金額_指數投資證券ETN_十億元,成交金額_指數股票型基金ETF_十億元,成交金額_股票_十億元,成交金額_臺灣存託憑證TDR_十億元,�",
+ "note": "USE — 證期局「臺灣證券市場綜覽t49」。「市值_十億元」＝上市＋上櫃總市值（新臺幣十億元）。只回最近 5 個月的滾動視窗，且有落後（2026-09-09 抓到最新是 202605）。要歷史必須自己逐月累積合併。"
+}

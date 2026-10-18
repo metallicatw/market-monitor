@@ -1,0 +1,12 @@
+{
+ "name": "fsc_t32_103955_global_marketcap",
+ "url": "https://stat.fsc.gov.tw/api/v1/public/datasets/103955/export",
+ "method": "GET",
+ "format": "csv",
+ "bytes": 606,
+ "sha256": "84d8f95719ff303fc568da753670dc598cb12730f92ef0b1e307547cc8e569ad",
+ "captured_at": "2026-09-09T13:10+08:00",
+ "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120",
+ "first_line": "上海_十億美元,公告日期,年月,新加坡_十億美元,日本_十億美元,深圳_十億美元,紐約_十億美元,臺灣_十億美元,那斯達克_十億美元,韓國_十億美元",
+ "note": "NOT THE ONE — 各國市值比較，單位是十億「美元」且只有上市（不含上櫃），拿來配新臺幣 M1B 會單位不一致。留著是為了記錄「試過、不是它」。"
+}

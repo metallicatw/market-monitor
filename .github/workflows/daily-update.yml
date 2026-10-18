@@ -1,0 +1,90 @@
+name: daily
+
+on:
+  schedule:
+    - cron: "23 22 * * 1-5"
+    - cron: "3 23 * * 1-5"
+    - cron: "13 8 * * 1-5"
+    - cron: "3 10 * * 1-5"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: market-monitor-write
+  cancel-in-progress: false
+
+jobs:
+  gate:
+    runs-on: ubuntu-latest
+    outputs:
+      skip: ${{ steps.check.outputs.skip }}
+    steps:
+      - id: check
+        env:
+          SCHED: ${{ github.event.schedule }}
+          TOKEN: ${{ github.token }}
+        run: |
+          case "$SCHED" in
+            "3 23 * * 1-5") after="00:00" ;;
+            "3 10 * * 1-5") after="16:00" ;;
+            *) exit 0 ;;
+          esac
+          today="$(TZ=Asia/Taipei date +%Y-%m-%d)"
+          git init -q r && cd r
+          if git fetch -q --depth 1 "https://x-access-token:${TOKEN}@github.com/${GITHUB_REPOSITORY}.git" report 2>/dev/null; then
+            stamp="$(git show FETCH_HEAD:index.html | grep -o "報告生成時間：[0-9-]* [0-9:]*" | head -1 | sed 's/報告生成時間：//')"
+            if [ "${stamp%% *}" = "$today" ] && [[ "${stamp##* }" > "$after" || "${stamp##* }" = "$after" ]]; then
+              echo "skip=yes" >> "$GITHUB_OUTPUT"
+              exit 0
+            fi
+          fi
+          echo "::warning::earlier run did not publish; running now"
+
+  update:
+    needs: gate
+    if: needs.gate.outputs.skip != 'yes'
+    runs-on: ubuntu-latest
+    env:
+      JQUANTS_API_KEY: ${{ secrets.JQUANTS_API_KEY }}
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: 更新資料並產生報告
+        id: update
+        run: |
+          set +e
+          python run.py update
+          code=$?
+          set -e
+          echo "exit_code=$code" >> "$GITHUB_OUTPUT"
+          if [ "$code" -eq 2 ]; then
+            echo "::warning::some sources failed; report built from cache"
+          elif [ "$code" -ne 0 ]; then
+            echo "::error::update failed ($code)"
+            exit "$code"
+          fi
+
+      - name: 檢查有沒有財報該更新
+        if: always() && steps.update.outputs.exit_code != ''
+        run: python check_earnings_due.py || true
+
+      - name: 有變動才提交
+        if: success() || steps.update.outcome == 'failure'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if ! git diff --staged --quiet; then
+            git commit -q -m "data"
+            git push
+          fi
+
+      - name: 發布報告
+        if: hashFiles('index.html') != ''
+        uses: ./.github/actions/publish-report

@@ -1,0 +1,22 @@
+name: publish-report
+description: Push index.html to the single-commit report branch.
+runs:
+  using: composite
+  steps:
+    - shell: bash
+      env:
+        TOKEN: ${{ github.token }}
+      run: |
+        set -euo pipefail
+        test -s index.html
+        tmp="$(mktemp -d)"
+        cp index.html "$tmp/index.html"
+        npm install --prefix /tmp/ts --no-save --silent typescript@5.6.3 >/dev/null 2>&1 || true
+        NODE_PATH=/tmp/ts/node_modules python tools/strip_comments.py "$tmp/index.html" --noindex
+        cd "$tmp"
+        git init -q -b report
+        git config user.name "github-actions[bot]"
+        git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+        git add index.html
+        git commit -q -m "report"
+        git push -q -f "https://x-access-token:${TOKEN}@github.com/${GITHUB_REPOSITORY}.git" report

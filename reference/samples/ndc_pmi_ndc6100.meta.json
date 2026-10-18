@@ -1,0 +1,12 @@
+{
+ "name": "ndc_pmi_ndc6100",
+ "url": "https://ws.ndc.gov.tw/Download.ashx?u=LzAwMS9hZG1pbmlzdHJhdG9yLzEwL3JlbGZpbGUvNTc4MS82MzkxL2JmOGE0ZWI3LTEwZmUtNGZhMC1iNjQ2LTMwZTg5MGQwMjE4YS5jc3Y%3d&n=6Ie654Gj5o6h6LO857aT55CG5Lq65oyH5pW4KHBtaeWPim5taSkuY3N2&icon=.csv",
+ "method": "GET",
+ "format": "csv",
+ "bytes": 2917,
+ "sha256": "611d0d63cc2befc12819ee27f0d42ce8316a9f8c042744a92e25330ec40f53e0",
+ "captured_at": "2026-09-09T13:10+08:00",
+ "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120",
+ "first_line": "Date,PMI,NMI\r",
+ "note": "USE — 臺灣製造業PMI／非製造業NMI 月資料。data.gov.tw nid=6100（國發會）。欄位 Date,PMI,NMI；Date 為 YYYYMM。metadata 說 2025-01 更新是假的，實檔已到 202608。"
+}

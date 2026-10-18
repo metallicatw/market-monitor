@@ -1,0 +1,44 @@
+name: cleanup
+
+on:
+  workflow_dispatch:
+    inputs:
+      confirm:
+        description: "輸入 DELETE 才會執行（刪除舊的執行紀錄、artifact、舊分支 gh-pages 與 test-real-data）"
+        required: true
+        type: string
+
+permissions:
+  actions: write
+  contents: write
+
+jobs:
+  cleanup:
+    if: inputs.confirm == 'DELETE'
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      GH_TOKEN: ${{ github.token }}
+      R: ${{ github.repository }}
+    steps:
+      - name: artifacts
+        run: |
+          gh api --paginate "repos/$R/actions/artifacts?per_page=100" --jq '.artifacts[].id' \
+            | while read -r id; do gh api -X DELETE "repos/$R/actions/artifacts/$id" >/dev/null || true; done
+      - name: branches
+        run: |
+          for b in gh-pages test-real-data; do gh api -X DELETE "repos/$R/git/refs/heads/$b" >/dev/null 2>&1 || true; done
+      - name: runs
+        run: |
+          n=0
+          for pass in 1 2 3 4 5 6 7 8 9; do
+            ids="$(gh api "repos/$R/actions/runs?per_page=100" --jq '.workflow_runs[] | select(.status=="completed") | .id' || true)"
+            [ -z "$ids" ] && break
+            for id in $ids; do
+              [ "$id" = "$GITHUB_RUN_ID" ] && continue
+              gh api -X DELETE "repos/$R/actions/runs/$id" >/dev/null 2>&1 && n=$((n+1))
+            done
+          done
+          left="$(gh api "repos/$R/actions/runs?per_page=1" --jq '.total_count')"
+          echo "deleted $n runs, $left left"
+          if [ "$left" -gt 1 ]; then echo "::warning::還有 $left 筆，一小時後再按一次（GitHub 每小時 1,000 次 API 上限）"; fi

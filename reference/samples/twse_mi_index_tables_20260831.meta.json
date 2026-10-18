@@ -1,0 +1,12 @@
+{
+ "name": "twse_mi_index_tables_20260831",
+ "url": "https://www.twse.com.tw/rwd/zh/afterTrading/MI_INDEX?date=20260831&type=ALL&response=json",
+ "method": "GET",
+ "format": "json",
+ "bytes": 2305,
+ "sha256": "97aaf20bedfb031fa334a2d31bcf5d1fc4060781399ba844d3d423865e15e2e3",
+ "captured_at": "2026-09-09T13:10+08:00",
+ "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/120",
+ "first_line": "{",
+ "note": "NOT THE ONE — 9 張表全部欄位列在這裡，沒有任何一張有「市值」。已刪掉第 8 張每日收盤行情的 1000+ 列以縮小檔案。需帶瀏覽器 UA，否則 connection reset。"
+}

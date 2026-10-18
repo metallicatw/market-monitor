@@ -1,0 +1,47 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - "data/**"
+      - "index.html"
+      - "**.md"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - run: python tests/test_parsers_offline.py
+      - run: python tests/test_card_actions_js.py
+      - run: python tests/test_config_and_failures.py
+      - run: python tests/test_info_tips.py
+      - run: python tests/test_tabs_layout.py
+      - run: |
+          python -m compileall -q \
+            fetch_market_data.py generate_report_local.py config_loader.py \
+            explanations.py run.py manage_stock.py
+      - run: |
+          python -c "
+          import config_loader as c
+          fred = c.load_fred_series()
+          idx = c.load_us_indices()
+          groups = c.load_us_indicator_groups()
+          assert fred and idx and groups
+          assert not [s['id'] for s in fred if not s.get('years_back')]
+          "

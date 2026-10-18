@@ -1,0 +1,12 @@
+{
+ "name": "michigan_tbmics",
+ "url": "https://www.sca.isr.umich.edu/files/tbmics.csv",
+ "method": "GET",
+ "format": "csv",
+ "bytes": 12225,
+ "sha256": "9c3636a2159c1003f9985280f6287025f60661adf8574a69026fb50a0d748b64",
+ "captured_at": "2026-09-23T21:40+08:00",
+ "user_agent": "Mozilla/5.0 (compatible; MarketMonitorBot/1.0)",
+ "first_line": "Month,YYYY,ICS_ALL",
+ "note": "USE — 密大消費者信心 ICS 月資料（終值），官方網站 Tables 頁的 CSV。欄位 Month,YYYY,ICS_ALL（Month 是英文全名）。比 FRED UMCSENT 早一個月：FRED 依授權條件延遲一個月，2026-09-23 抓時 FRED 只到 2026-07，這一份已有 2026-08（51.7）。不含當月初值。"
+}

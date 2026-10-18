@@ -1,0 +1,9 @@
+{
+  "url": "https://www.cbc.gov.tw/public/data/OpenData/%E7%B6%93%E7%A0%94%E8%99%95/EG27M01.csv",
+  "method": "GET",
+  "body": null,
+  "fetched_at": "2026-09-10",
+  "bytes": 61129,
+  "sha256": "b94398223e85bb373441ac2a9bfb096aa4b378fa93226b0569debcff46c92b4b",
+  "note": "中央銀行 經研處 OpenData：上市股票統計（月）。欄「上市股票-總市值-原始值」單位新臺幣百萬元，期別欄「月」格式 2026M07，1987M05 起無缺口。"
+}
