@@ -55,6 +55,11 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: 自動補季報（TDnet 即時，J-Quants 備援）
+        continue-on-error: true
+        timeout-minutes: 5
+        run: python auto_financials.py
+
       - name: 更新資料並產生報告
         id: update
         run: |

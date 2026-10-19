@@ -2306,7 +2306,8 @@ def render_jp_stock_section(stock, fin, key, quarterly=None, annual=None):
         src_urls = fin.get("source_urls") or (annual.get("source_urls") if annual else []) or []
         disclosure_date = fin.get("disclosure_date") or "未標註"
         src_links = source_links(src_urls) or "（未標註來源）"
-        manual_note = "人工登錄" if fin else "API 自動"
+        auto_src = str(fin.get("source") or "").startswith(("TDnet", "J-Quants"))
+        manual_note = "人工登錄" if (fin and not auto_src) else "API 自動"
         date_note = f"　｜　公布 {disclosure_date}" if fin.get("disclosure_date") else ""
 
         fin_html = f"""
