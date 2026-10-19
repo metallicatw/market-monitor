@@ -141,6 +141,23 @@ def _merge_series(existing, new_dates, new_fields):
 
 
 
+STALL_GRACE_WEEKDAYS = 3
+
+
+def _weekdays_between(last, today):
+    try:
+        d = date.fromisoformat(str(last)[:10])
+    except ValueError:
+        return 99
+    n = 0
+    d += timedelta(days=1)
+    while d < today:
+        if d.weekday() < 5:
+            n += 1
+        d += timedelta(days=1)
+    return n
+
+
 def _stalled(label, existing, merged):
     if not (existing and existing.get("dates")):
         return False
@@ -151,6 +168,10 @@ def _stalled(label, existing, merged):
     if merged["dates"][-1] > existing["dates"][-1]:
         return False
     if len(merged["dates"]) > len(existing["dates"]):
+        return False
+    missing = _weekdays_between(existing["dates"][-1], _today())
+    if missing <= STALL_GRACE_WEEKDAYS:
+        print(f"ℹ️ {label}：還沒有新的交易日資料（最後一天 {existing['dates'][-1]}），沿用既有快取。")
         return False
     print(f"⚠️ {label}：資料最後一天還停在 {existing['dates'][-1]}，一筆都沒有前進。"
           "多半是上游回了空的或格式變了——既有快取原封不動保留，"

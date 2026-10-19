@@ -17,7 +17,7 @@ concurrency:
 
 jobs:
   gate:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     outputs:
       skip: ${{ steps.check.outputs.skip }}
     steps:
@@ -45,7 +45,7 @@ jobs:
   update:
     needs: gate
     if: needs.gate.outputs.skip != 'yes'
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     env:
       JQUANTS_API_KEY: ${{ secrets.JQUANTS_API_KEY }}
     steps:

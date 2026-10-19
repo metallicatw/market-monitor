@@ -301,6 +301,18 @@ def test_資料沒有前進就算失敗():
     assert not F._stalled("測試", old, filled), "補了中間的洞卻被當成沒前進"
 
 
+def test_還沒到下一個交易日不算失敗(monkeypatch):
+    import datetime as dt
+
+    import fetch_market_data as F
+
+    fri = {"dates": ["2026-10-15", "2026-10-16"], "close": [1.0, 2.0]}
+    for today, stalled in [("2026-10-17", False), ("2026-10-19", False), ("2026-10-20", False),
+                           ("2026-10-22", False), ("2026-10-23", True)]:
+        monkeypatch.setattr(F, "_today", lambda t=today: dt.date.fromisoformat(t))
+        assert F._stalled("測試", fri, dict(fri)) is stalled, today
+
+
 def test_第一次跑沒有快照可以比():
     import fetch_market_data as F
 
