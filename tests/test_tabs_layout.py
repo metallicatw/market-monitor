@@ -80,7 +80,7 @@ def test_總經三頁最上面沒有那一排摘要數字():
 
 def test_子分頁照使用者要的切法():
     html = _report()
-    want = {"tw": ["taiex", "twmacro"], "us": ["usidx", "usmacro", "macro"],
+    want = {"tw": ["taiex", "twmacro", "twmargin"], "us": ["usidx", "usmacro", "macro"],
             "jp": ["nikkei", "murata"]}
     for tab, subs in want.items():
         start = html.index(f'id="pane-{tab}"')
