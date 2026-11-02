@@ -1214,7 +1214,11 @@ def fetch_tw_margin(max_days=None, mr_days=None):
         return None
     max_days = max_days or int(os.environ.get("MARGIN_MAX_DAYS", "60"))
     mr_days = mr_days or int(os.environ.get("MARGIN_MR_DAYS", "10"))
-    st = tw_margin.fetch(DATA_DIR, calendar=cal, today=_today(), max_days=max_days, mr_days=mr_days)
+    from config_loader import load_thresholds  # noqa: PLC0415
+
+    window = int(load_thresholds().get("margin_mr_window") or 400)
+    st = tw_margin.fetch(DATA_DIR, calendar=cal, today=_today(), max_days=max_days, mr_days=mr_days,
+                         mr_window=window)
     if st["days"] == 0 and st["blocked"]:
         SOFT_FAILURES.append("融資餘額（" + st["blocked"][0] + "）")
     return st

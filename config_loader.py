@@ -33,7 +33,7 @@ DEFAULT_THRESHOLDS = {
     "tw_marketcap_m1b_high": 2.6,
     "tw_marketcap_m1b_low": 1.9,
     # 融資餘額與信用交易（tw_margin.py）
-    "margin_mr_panic": 140, "margin_mr_warn": 150, "margin_mr_high": 180,
+    "margin_mr_panic": 155, "margin_mr_warn": 162, "margin_mr_high": 180, "margin_mr_window": 400,
     "margin_pct_high": 90, "margin_pct_low": 20, "margin_yoy_hot": 40,
     "margin_gap_hot": 5, "margin_m20_hot": 8, "margin_m20_purge": -10, "margin_idx20_purge": -8,
     "margin_idx20_div": -3, "margin_m20_div": 3, "margin_day_drop": 2.0,

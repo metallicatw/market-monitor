@@ -15,9 +15,11 @@
     同時用它的「前日餘額」改正前一個交易日（也因此回補歷史時只要每隔一天抓一次）。
 
 融資維持率（估算）＝ Σ（個股融資餘額張數 × 1000 × 收盤價）÷ 融資金額 × 100%
-    跟坊間（CMoney 等）的算法相同，只算融資部位；證交所公布的「整戶擔保維持率」另外計入其他擔保品，
-    會高 5～35 個百分點（2026-07-27 官方約 175%、坊間估算約 143%）。所以門檻用這個算法自己的歷史經驗：
-    ≤140% 恐慌（2025-04 關稅股災、2026-07 下殺都到這裡）、140～150% 警戒、≥180% 偏高（樂觀）。
+    只算融資部位。交叉驗證：2026-07-29 上櫃算出 150.0%，凱基證券同日估算 149.97%；2026-10-30 合計 170.6%，
+    證交所公布的整戶擔保維持率（另計其他擔保品）同期約 175%。CMoney 的估算系統性偏低約 20 個百分點
+    （同日上櫃 126.8%），所以網路上「140% 以下恐慌」的說法是用那一套，不能直接套在這裡。
+    門檻依 2026-07 斷頭潮實測校準：≤155% 恐慌（追繳／斷頭潮）、≤162% 警戒、≥180% 偏高（樂觀）；
+    補滿 400 個交易日（涵蓋 2025-04 關稅股災）之後再依實際分布檢視。
 
 禮貌：同一個網站兩次請求至少隔 3.5 秒，一趟最多補固定天數；證交所回「因為安全性考量…」或斷線，
 整趟停止連證交所（不繞過），進度存檔，下一趟接著補。
@@ -218,7 +220,7 @@ def _dump(rows: dict[str, dict], meta: dict) -> dict:
 
 
 def fetch(data_dir: str, *, calendar: list[str], today: date, max_days: int = 60, mr_days: int = 10,
-          mr_window: int = 260, net: Net | None = None, log=print) -> dict:
+          mr_window: int = 400, net: Net | None = None, log=print) -> dict:
     """依加權指數的交易日曆補資料：新的先補，再往回補歷史；回傳這一趟的統計。"""
     net = net or Net()
     path = os.path.join(data_dir, FILE)
@@ -226,11 +228,18 @@ def fetch(data_dir: str, *, calendar: list[str], today: date, max_days: int = 60
     rows = _table(old)
     cal = sorted(d for d in calendar if d <= today.isoformat())
     prev_of = {cal[i]: cal[i - 1] for i in range(1, len(cal))}
-    stats = {"days": 0, "mr": 0, "requests": 0, "blocked": []}
+    stats = {"days": 0, "mr": 0, "requests": 0, "blocked": [], "notes": []}
+
+    fresh = set(cal[-3:])
 
     def need(d):
+        """缺數字就要抓；還沒定案（等隔天表上的「前日餘額」改正）只對最近 3 個交易日重抓——
+        回補是隔天抓一次，被抓的那幾天定案要靠下一天的表，而下一天已經有數字、不會再抓；
+        那種日子的「今日餘額」跟定案值只差調帳，不值得為它多抓一次（否則每一趟都會重抓同一批）。"""
         r = rows.get(d) or {}
-        return r.get("twse_amt") is None or r.get("tpex_amt") is None or not r.get("final")
+        if r.get("twse_amt") is None or r.get("tpex_amt") is None:
+            return True
+        return not r.get("final") and d in fresh
 
     def put(d, market, vals, final):
         r = rows.setdefault(d, dict.fromkeys(ALL_FIELDS))
@@ -312,6 +321,8 @@ def fetch(data_dir: str, *, calendar: list[str], today: date, max_days: int = 60
                 if not close:
                     close = parse_twse_close(net.json(TWSE_CLOSE.format(ymd=d.replace("-", ""))) or {})
                 mr_tw = maintenance(lots, close, r.get("twse_amt"))
+                if lots and not close:
+                    stats["notes"].append(f"{d} 上市收盤價讀不到（證交所 MI_INDEX 格式可能改了），上市維持率沒算")
         except Blocked as e:
             stats["blocked"].append(str(e))
         if mr_tw is not None:
@@ -334,7 +345,8 @@ def fetch(data_dir: str, *, calendar: list[str], today: date, max_days: int = 60
     os.replace(tmp, path)
     missing = sum(1 for d in cal if need(d))
     log(f"✅ 融資餘額：這一趟補 {done} 天、維持率 {stats['mr']} 天，連線 {net.requests} 次；"
-        f"日曆上還缺 {missing} 天" + (f"；{stats['blocked'][0]}" if stats["blocked"] else ""))
+        f"日曆上還缺 {missing} 天" + (f"；{stats['blocked'][0]}" if stats["blocked"] else "")
+        + (f"；⚠️ {stats['notes'][0]}（共 {len(stats['notes'])} 天）" if stats["notes"] else ""))
     stats["missing"] = missing
     return stats
 
@@ -342,7 +354,7 @@ def fetch(data_dir: str, *, calendar: list[str], today: date, max_days: int = 60
 # ── 判讀 ───────────────────────────────────────────────────────────────
 
 DEFAULTS = {
-    "margin_mr_panic": 140, "margin_mr_warn": 150, "margin_mr_high": 180,
+    "margin_mr_panic": 155, "margin_mr_warn": 162, "margin_mr_high": 180, "margin_mr_window": 400,
     "margin_pct_high": 90, "margin_pct_low": 20, "margin_yoy_hot": 40,
     "margin_gap_hot": 5, "margin_m20_hot": 8, "margin_m20_purge": -10, "margin_idx20_purge": -8,
     "margin_idx20_div": -3, "margin_m20_div": 3, "margin_day_drop": 2.0,

@@ -436,6 +436,20 @@ CSS = """
   .chart-container.short { height:260px; }
   .mg-why { margin:4px 0 0 18px; padding:0; font-size:13px; color:#cbd5e1; line-height:1.7; }
   .mg-btwrap { overflow-x:auto; -webkit-overflow-scrolling:touch; }
+  .mg-ctl .tf-bar { margin:4px 0 6px 0; }
+  .mg-lab { font-size:11px; color:#64748b; margin-right:2px; }
+  .mg-slider { position:relative; height:26px; margin:0 6px 2px; }
+  .mg-track { position:absolute; left:0; right:0; top:11px; height:4px; border-radius:2px; background:rgba(100,116,139,0.35); }
+  .mg-fill { position:absolute; top:0; height:4px; border-radius:2px; background:#3b82f6; }
+  .mg-slider input[type=range] { position:absolute; left:0; top:0; width:100%; height:26px; margin:0; background:none;
+    pointer-events:none; -webkit-appearance:none; appearance:none; }
+  .mg-slider input[type=range]::-webkit-slider-runnable-track { background:transparent; height:26px; }
+  .mg-slider input[type=range]::-moz-range-track { background:transparent; }
+  .mg-slider input[type=range]::-webkit-slider-thumb { pointer-events:auto; -webkit-appearance:none; width:16px; height:16px;
+    margin-top:5px; border-radius:50%; background:#e2e8f0; border:2px solid #3b82f6; cursor:ew-resize; }
+  .mg-slider input[type=range]::-moz-range-thumb { pointer-events:auto; width:14px; height:14px; border-radius:50%;
+    background:#e2e8f0; border:2px solid #3b82f6; cursor:ew-resize; }
+  .mg-span { font-size:11.5px; color:#94a3b8; text-align:center; margin-bottom:6px; font-variant-numeric:tabular-nums; }
   .mg-bt { width:100%; border-collapse:collapse; font-size:12.5px; font-variant-numeric:tabular-nums; }
   .mg-bt th, .mg-bt td { padding:5px 8px; border-bottom:1px solid var(--border-color); text-align:right; white-space:nowrap; }
   .mg-bt th { color:#94a3b8; font-weight:600; }
@@ -2980,21 +2994,16 @@ def render_tw_margin_section(a):
   </div>
 
 {fold_open("融資金額 × 加權指數")}
-  <div class="tf-bar" id="tf-mg">
-    <span style="font-size:11px;color:#64748b;margin-right:2px;">週期切換:</span>
-    <button class="tf-btn" onclick="mgSetRange('3M',this)">3M</button>
-    <button class="tf-btn" onclick="mgSetRange('6M',this)">6M</button>
-    <button class="tf-btn active" onclick="mgSetRange('1Y',this)">1Y</button>
-    <button class="tf-btn" onclick="mgSetRange('3Y',this)">3Y</button>
-    <button class="tf-btn" onclick="mgSetRange('ALL',this)">全部</button>
-  </div>
+  <div class="mg-ctl" id="mgctl-amt"></div>
   <div class="chart-container"><canvas id="mgAmtChart"></canvas></div>
 {FOLD_CLOSE}
 {fold_open("融資維持率（估算）")}
+  <div class="mg-ctl" id="mgctl-mr"></div>
   <div class="chart-container short"><canvas id="mgMrChart"></canvas></div>
-  <div class="stat-sub">維持率每天算一次（需要每一檔的融資餘額與收盤價），從 {"—" if not any(v is not None for v in se['mr']) else next(d for d, v in zip(se['dates'], se['mr']) if v is not None)} 開始，往後每天累積、往回每天補約 10 天。</div>
+  <div class="stat-sub">維持率每天算一次（需要每一檔的融資餘額與收盤價），從 {"—" if not any(v is not None for v in se['mr']) else next(d for d, v in zip(se['dates'], se['mr']) if v is not None)} 開始，往後每天累積、往回每趟補約 10 天，最多補到最近 {cfg.get('margin_mr_window', 400)} 個交易日。</div>
 {FOLD_CLOSE}
 {fold_open("20 日變化：融資 vs 指數")}
+  <div class="mg-ctl" id="mgctl-chg"></div>
   <div class="chart-container short"><canvas id="mgChgChart"></canvas></div>
 {FOLD_CLOSE}
 {bt_html}
@@ -3048,20 +3057,44 @@ def render_tw_margin_section(a):
         plugins: {{ legend:{{ labels:{{ color:'#cbd5e1', boxWidth:12 }} }}, tooltip: tip }},
         scales: {{ x:{{ ticks:tick, grid }}, y:{{ ticks:{{ color:'#94a3b8', callback:(v) => v + '%' }}, grid }} }} }}
     }});
-    const charts = [amt, mrc, chg];
-    window.mgSetRange = function(tf, btn) {{
-      document.querySelectorAll('#tf-mg .tf-btn').forEach((b) => b.classList.remove('active'));
-      btn.classList.add('active');
-      const k = tf === 'ALL' ? 0 : filterByRange(D, tf);
-      const labels = D.slice(k).map(fmtLabel);
-      charts.forEach((c, ci) => {{
-        c.data.labels = labels;
-        const src = ci === 0 ? [TW, TP, IDX] : ci === 1 ? [MR, MRW, MRP] : [M20, I20];
-        c.data.datasets.forEach((ds, j) => {{ ds.data = j < src.length ? src[j].slice(k) : labels.map(() => ds.data[0]); }});
-        c.update();
-      }});
-    }};
-    window.mgSetRange('1Y', document.querySelector('#tf-mg .tf-btn.active'));
+    // 每張圖各自的〈縮放區間〉（3M／6M／1Y／3Y／全部）＋〈滑桿〉（雙頭：拖左邊改起點、拖右邊改終點）
+    function mgCtl(host, chart, srcs, first) {{
+      const n = D.length, el = document.getElementById(host);
+      if (!el || n < 2) return;
+      const tfs = [['3M','3M'],['6M','6M'],['1Y','1Y'],['3Y','3Y'],['ALL','全部']];
+      el.innerHTML = '<div class="tf-bar"><span class="mg-lab">縮放區間:</span>' +
+        tfs.map(([k, t]) => '<button type="button" class="tf-btn" data-tf="' + k + '">' + t + '</button>').join('') + '</div>' +
+        '<div class="mg-slider"><div class="mg-track"><div class="mg-fill"></div></div>' +
+        '<input type="range" class="mg-lo" min="' + first + '" max="' + (n - 1) + '" step="1" aria-label="區間起點">' +
+        '<input type="range" class="mg-hi" min="' + first + '" max="' + (n - 1) + '" step="1" aria-label="區間終點"></div>' +
+        '<div class="mg-span"></div>';
+      const lo = el.querySelector('.mg-lo'), hi = el.querySelector('.mg-hi'), fill = el.querySelector('.mg-fill'),
+            span = el.querySelector('.mg-span'), btns = el.querySelectorAll('.tf-btn'), GAP = 5;
+      function apply() {{
+        const a = +lo.value, b = +hi.value;
+        chart.data.labels = D.slice(a, b + 1).map(b - a < 130 ? fmtLabelShort : fmtLabel);
+        chart.data.datasets.forEach((ds, j) => {{
+          if (j < srcs.length) ds.data = srcs[j].slice(a, b + 1);
+          else {{ const v = ds._lvl !== undefined ? ds._lvl : (ds._lvl = ds.data[0]); ds.data = chart.data.labels.map(() => v); }}
+        }});
+        chart.update('none');
+        const w = Math.max(1, n - 1 - first);
+        fill.style.left = ((a - first) / w * 100) + '%'; fill.style.width = ((b - a) / w * 100) + '%';
+        span.textContent = D[a] + ' ～ ' + D[b] + '（' + (b - a + 1) + ' 個交易日）';
+      }}
+      function setTf(tf) {{
+        btns.forEach((x) => x.classList.toggle('active', x.dataset.tf === tf));
+        lo.value = tf === 'ALL' ? first : Math.max(first, filterByRange(D, tf)); hi.value = n - 1; apply();
+      }}
+      btns.forEach((x) => x.addEventListener('click', () => setTf(x.dataset.tf)));
+      lo.addEventListener('input', () => {{ if (+lo.value > +hi.value - GAP) lo.value = +hi.value - GAP; btns.forEach((x) => x.classList.remove('active')); apply(); }});
+      hi.addEventListener('input', () => {{ if (+hi.value < +lo.value + GAP) hi.value = +lo.value + GAP; btns.forEach((x) => x.classList.remove('active')); apply(); }});
+      setTf(n - first > 300 ? '1Y' : 'ALL');
+    }}
+    const firstMr = Math.max(0, MR.findIndex((v) => v !== null));
+    mgCtl('mgctl-amt', amt, [TW, TP, IDX], 0);
+    mgCtl('mgctl-mr', mrc, [MR, MRW, MRP], firstMr);
+    mgCtl('mgctl-chg', chg, [M20, I20], 0);
   }})();
 """
     return html, script

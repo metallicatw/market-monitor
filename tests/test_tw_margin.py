@@ -51,6 +51,16 @@ def test_融資維持率估算_用實際的10月30日資料():
     assert M.maintenance(tp["lots"], {"0050": 100.0}, tp["today"]["amt"]) is None
 
 
+def test_交叉驗證_2026年7月29日斷頭潮_對新聞與券商估算():
+    tp = M.parse_tpex_bal(sample("tpex_margin_balance_20260729"))
+    # 經濟日報 2026-07-30：上櫃融資單日減少 135.75 億元
+    assert round(tp["today"]["amt"] - tp["prev"]["amt"], 2) == -135.75
+    # 凱基證券同日估算上櫃維持率約 149.97%（CMoney 的算法低約 20 個百分點，不是這一套）
+    mr = M.maintenance(tp["lots"], M.parse_tpex_close(sample("tpex_close_20260729")), tp["today"]["amt"])
+    assert abs(mr - 149.97) < 0.5, mr
+    assert mr <= M.DEFAULTS["margin_mr_panic"]                 # 斷頭潮那天要落在「恐慌」區
+
+
 class FakeNet(M.Net):
     def __init__(self, pages, block_twse_after=None):
         self.pages, self.calls, self.n_twse = pages, [], 0
@@ -99,6 +109,12 @@ def test_抓第d天時用前日餘額改正前一天_回補隔天抓一次就好
     ms_calls = [u for u in net.calls if "selectType=MS" in u]
     assert len(ms_calls) == 3, ms_calls              # 5 天只要抓 30、28、26 三天
     assert st["days"] == 3
+    # 第二趟：較早、只有「今日餘額」的那幾天不會再重抓（以前會卡住、每一趟都重抓同一批）
+    net2 = FakeNet(pages)
+    st2 = M.fetch(tmp, calendar=cal, today=date(2026, 11, 2), max_days=60, mr_days=0, net=net2, log=lambda *a: None)
+    old_days = [u for u in net2.calls if "selectType=MS" in u and ("20261026" in u or "20261027" in u)]
+    assert old_days == [], old_days
+    assert st2["missing"] <= 3
 
 
 def test_證交所擋下就整趟不再連_櫃買照補_下次接著補():
@@ -158,7 +174,8 @@ def test_報告頁與說明():
     n = 400
     a = M.analyze(*_series(n, [5000 + i for i in range(n)], [20000 + i for i in range(n)], [None] * (n - 1) + [165.0]))
     html, script = G.render_tw_margin_section(a)
-    assert "融資餘額與信用交易" in html and "mgAmtChart" in html and "mgSetRange" in script
+    assert "融資餘額與信用交易" in html and "mgAmtChart" in html and "mgCtl(" in script
+    assert html.count('class="mg-ctl"') == 3                    # 三張圖各自有縮放區間與滑桿
     assert "tw_margin" in explanations.TIPS
 
 
