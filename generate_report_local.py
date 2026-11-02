@@ -434,6 +434,11 @@ CSS = """
   .legend-icon-bar { display:inline-block; width:10px; height:10px; border-radius:2px; margin-right:5px; }
   .chart-container { position:relative; width:100%; min-width:0; height:380px; }
   .chart-container.short { height:260px; }
+  .mg-why { margin:4px 0 0 18px; padding:0; font-size:13px; color:#cbd5e1; line-height:1.7; }
+  .mg-btwrap { overflow-x:auto; -webkit-overflow-scrolling:touch; }
+  .mg-bt { width:100%; border-collapse:collapse; font-size:12.5px; font-variant-numeric:tabular-nums; }
+  .mg-bt th, .mg-bt td { padding:5px 8px; border-bottom:1px solid var(--border-color); text-align:right; white-space:nowrap; }
+  .mg-bt th { color:#94a3b8; font-weight:600; }
   .chart-source-box { margin-top:8px; padding:3px 10px; background:rgba(11,15,25,0.7); border-radius:5px;
                         border:1px solid rgba(36,48,73,0.7); font-size:10px; color:#64748b;
                         white-space:nowrap; overflow:hidden; text-overflow:ellipsis; line-height:1.9; }
@@ -2871,6 +2876,197 @@ def render_tw_marketcap_m1b_section(ratio_data):
     return html, script
 
 
+MARGIN_STATE_COLOR = {"purge": "#22d3ee", "hot": "#ef4444", "catch": "#f97316", "delever": "#f59e0b",
+                      "healthy": "#34d399", "neutral": "#94a3b8"}
+MARGIN_STATE_NAME = {"purge": "籌碼清洗・留意落底", "hot": "過熱警戒", "catch": "散戶接刀（背離）",
+                     "delever": "去槓桿", "healthy": "法人主導・融資溫和", "neutral": "中性"}
+
+
+def _mg_pct(v, signed=True, d=1):
+    if v is None:
+        return '<span style="color:#64748b;">—</span>'
+    color = "#ef4444" if v > 0 else ("#22c55e" if v < 0 else "#cbd5e1")
+    return f'<span style="color:{color};">{v:+.{d}f}%</span>' if signed else f"{v:.{d}f}%"
+
+
+def render_tw_margin_section(a):
+    """台股重要經濟指標 →〈融資餘額與信用交易〉。a 是 tw_margin.analyze() 的結果。"""
+    if not a:
+        return "", ""
+    s, se, cfg = a["snap"], a["series"], a["cfg"]
+    color = MARGIN_STATE_COLOR.get(s["state"], "#94a3b8")
+    why = "".join(f"<li>{w}</li>" for w in s["why"]) or "<li>各項指標都在一般區間。</li>"
+    d1 = s.get("d1")
+    d1_txt = (f'<span class="stat-chg" style="color:{"#ef4444" if d1 > 0 else "#22c55e"};">'
+              f'{d1:+,.1f} 億（{s["d1_pct"]:+.2f}%）較前一交易日</span>') if d1 is not None and s.get("d1_pct") is not None else ""
+    mr = s.get("mr")
+    mr_any = s.get("mr_any")
+    if mr is not None:
+        if mr <= cfg["margin_mr_panic"]:
+            mr_zone, mr_col = "恐慌（追繳／斷頭潮）", "#22d3ee"
+        elif mr <= cfg["margin_mr_warn"]:
+            mr_zone, mr_col = "警戒", "#f59e0b"
+        elif mr >= cfg["margin_mr_high"]:
+            mr_zone, mr_col = "偏高（樂觀）", "#ef4444"
+        else:
+            mr_zone, mr_col = "一般", "#94a3b8"
+        mr_html = (f'<span class="stat-value" style="color:{mr_col};">{mr:.1f}%</span>'
+                   f'<span class="zone-badge" style="color:{mr_col};border:1px solid {mr_col};">{mr_zone}</span>')
+    elif mr_any is not None:
+        mr_html = f'<span class="stat-value" style="color:#64748b;">{mr_any:.1f}%</span><span class="stat-chg" style="color:#64748b;">（{s["mr_day"]}，較舊）</span>'
+    else:
+        mr_html = '<span class="stat-value" style="color:#64748b;">—</span>'
+    pct_txt = f"近 5 年第 <b>{s['pct']}</b> 百分位" if s.get("pct") is not None else "歷史還在回補（滿半年後顯示百分位）"
+    cap_txt = (f"占上市櫃總市值 <b>{s['cap']['ratio']:.2f}%</b>（市值用 {s['cap']['month']} 月）"
+               if s.get("cap") else "")
+    episodes = s.get("episodes") or {}
+    rows_bt = []
+    for st in ("purge", "hot", "catch", "delever", "healthy", "neutral"):
+        ev = episodes.get(st) or []
+        r20 = [e["r20"] for e in ev if "r20" in e]
+        r60 = [e["r60"] for e in ev if "r60" in e]
+        if not ev:
+            continue
+        avg = lambda xs: (sum(xs) / len(xs)) if xs else None  # noqa: E731
+        win = lambda xs: (sum(1 for x in xs if x > 0) / len(xs) * 100) if xs else None  # noqa: E731
+        rows_bt.append(
+            f'<tr><td style="color:{MARGIN_STATE_COLOR[st]};text-align:left;">{MARGIN_STATE_NAME[st]}</td>'
+            f'<td>{len(ev)}</td><td>{_mg_pct(avg(r20))}</td><td>{"—" if win(r20) is None else f"{win(r20):.0f}%"}</td>'
+            f'<td>{_mg_pct(avg(r60))}</td><td>{"—" if win(r60) is None else f"{win(r60):.0f}%"}</td></tr>')
+    bt_html = ""
+    if rows_bt and s["days"] >= 250:
+        bt_html = f"""
+{fold_open("歷史驗證：各狀態出現後加權指數的表現")}
+  <div class="mg-btwrap"><table class="mg-bt">
+    <thead><tr><th style="text-align:left;">狀態（第一天）</th><th>次數</th><th>20 日平均</th><th>20 日上漲機率</th><th>60 日平均</th><th>60 日上漲機率</th></tr></thead>
+    <tbody>{"".join(rows_bt)}</tbody></table></div>
+  <div class="stat-sub">資料 {s['first']} 起共 {s['days']} 個交易日；每天用同一套規則判一次狀態，狀態改變的那一天算一次，
+  看之後 20、60 個交易日加權指數的漲跌。次數少的狀態只能當參考。</div>
+{FOLD_CLOSE}"""
+    elif s["days"] < 250:
+        bt_html = f'<div class="stat-sub" style="margin:6px 0 12px;">歷史驗證：目前有 {s["days"]} 個交易日（{s["first"]} 起），每天排程會往回補，滿一年後這裡會出現各狀態之後的指數表現。</div>'
+
+    html = titled_row("融資餘額與信用交易（上市＋上櫃）", "twMarginInfo", "tw_margin", level="sub-title") + f"""
+  <div class="stat-box" style="margin-bottom:12px;border-color:{color};">
+    <div class="stat-label">目前判讀（{s['date']}）
+      <span class="zone-badge" style="background:rgba(0,0,0,0.25);color:{color};border:1px solid {color};">{s['label']}</span></div>
+    <ul class="mg-why">{why}</ul>
+  </div>
+  <div class="stat-grid">
+    <div class="stat-box">
+      <div class="stat-label">融資金額　上市＋上櫃</div>
+      <div><span class="stat-value">{s['total']:,.1f} 億</span>{d1_txt}</div>
+      <div class="stat-sub">上市 {s['twse']:,.1f} 億｜上櫃 {s['tpex']:,.1f} 億（上櫃占 {s['otc_share']:.1f}%）｜{pct_txt}｜近 5 年高點 {s['high']:,.0f} 億</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-label">融資維持率（估算）{f"　{s['mr_day']}" if s.get('mr_day') else ""}</div>
+      <div>{mr_html}</div>
+      <div class="stat-sub">上市 {"—" if s.get('mr_twse') is None else f"{s['mr_twse']:.1f}%"}｜上櫃 {"—" if s.get('mr_tpex') is None else f"{s['mr_tpex']:.1f}%"}
+        ｜≤{cfg['margin_mr_panic']}% 恐慌、≤{cfg['margin_mr_warn']}% 警戒、≥{cfg['margin_mr_high']}% 偏高｜130% 是追繳線</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-label">速度與背離（20 個交易日）</div>
+      <div><span class="stat-value" style="font-size:22px;">融資 {_mg_pct(s.get('m20'))}</span>
+        <span class="stat-chg" style="color:#cbd5e1;">指數 {_mg_pct(s.get('idx20'))}</span></div>
+      <div class="stat-sub">融資年增 {_mg_pct(s.get('yoy'), d=0)}（≥{cfg['margin_yoy_hot']}% 歷史高風險）｜融資增速比指數快 {cfg['margin_gap_hot']} 個百分點以上＝散戶追價；指數跌、融資增＝散戶接刀</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-label">槓桿相對規模</div>
+      <div><span class="stat-value" style="font-size:22px;">{"—" if s.get('cap') is None else f"{s['cap']['ratio']:.2f}%"}</span>
+        <span class="stat-chg" style="color:#cbd5e1;">融資 ÷ 總市值</span></div>
+      <div class="stat-sub">{cap_txt}{"｜" if cap_txt else ""}券資比 {"—" if s.get('short_ratio') is None else f"{s['short_ratio']:.2f}%"}
+        {"" if s.get('value_ratio') is None else f"｜融資餘額是上市當日成交值的 {s['value_ratio']:.1f} 倍"}</div>
+    </div>
+  </div>
+
+{fold_open("融資金額 × 加權指數")}
+  <div class="tf-bar" id="tf-mg">
+    <span style="font-size:11px;color:#64748b;margin-right:2px;">週期切換:</span>
+    <button class="tf-btn" onclick="mgSetRange('3M',this)">3M</button>
+    <button class="tf-btn" onclick="mgSetRange('6M',this)">6M</button>
+    <button class="tf-btn active" onclick="mgSetRange('1Y',this)">1Y</button>
+    <button class="tf-btn" onclick="mgSetRange('3Y',this)">3Y</button>
+    <button class="tf-btn" onclick="mgSetRange('ALL',this)">全部</button>
+  </div>
+  <div class="chart-container"><canvas id="mgAmtChart"></canvas></div>
+{FOLD_CLOSE}
+{fold_open("融資維持率（估算）")}
+  <div class="chart-container short"><canvas id="mgMrChart"></canvas></div>
+  <div class="stat-sub">維持率每天算一次（需要每一檔的融資餘額與收盤價），從 {"—" if not any(v is not None for v in se['mr']) else next(d for d, v in zip(se['dates'], se['mr']) if v is not None)} 開始，往後每天累積、往回每天補約 10 天。</div>
+{FOLD_CLOSE}
+{fold_open("20 日變化：融資 vs 指數")}
+  <div class="chart-container short"><canvas id="mgChgChart"></canvas></div>
+{FOLD_CLOSE}
+{bt_html}
+  <div class="chart-source-box" title="資料來源">
+    📌 <a href="https://www.twse.com.tw/zh/trading/margin/mi-margn.html" target="_blank">證交所 融資融券餘額（集中市場）</a>
+    ｜<a href="https://www.tpex.org.tw/zh-tw/mainboard/trading/margin-trading/transactions.html" target="_blank">櫃買中心 融資融券餘額（櫃買市場）</a>
+    ｜收盤價：證交所、櫃買中心｜融資維持率為自行估算（只算融資部位），官方「整戶擔保維持率」另計其他擔保品、會比較高
+  </div>
+"""
+    script = f"""
+  (function(){{
+    const D = {json.dumps(se['dates'])}, TOT = {json.dumps(se['total'])}, TW = {json.dumps(se['twse'])},
+          TP = {json.dumps(se['tpex'])}, IDX = {json.dumps(se['idx'])}, MR = {json.dumps(se['mr'])},
+          MRW = {json.dumps(se['mr_twse'])}, MRP = {json.dumps(se['mr_tpex'])},
+          M20 = {json.dumps(se['m20'])}, I20 = {json.dumps(se['idx20'])};
+    const grid = {{ color: 'rgba(38,51,77,0.35)' }}, tick = {{ color: '#94a3b8', maxTicksLimit: window.innerWidth < 600 ? 4 : 8, maxRotation: 0 }};
+    const tip = {{ backgroundColor: 'rgba(15,23,42,0.95)', titleColor:'#f8fafc', bodyColor:'#cbd5e1', borderColor:'#334155', borderWidth:1 }};
+    const amt = new Chart(document.getElementById('mgAmtChart'), {{
+      data: {{ labels: D.map(fmtLabel), datasets: [
+        {{ type:'bar', label:'上市融資（億）', data: TW, backgroundColor:'rgba(56,189,248,0.55)', stack:'m', yAxisID:'y', order:2 }},
+        {{ type:'bar', label:'上櫃融資（億）', data: TP, backgroundColor:'rgba(245,158,11,0.65)', stack:'m', yAxisID:'y', order:2 }},
+        {{ type:'line', label:'加權指數', data: IDX, borderColor:'rgb(250,250,250)', borderWidth:1.6, pointRadius:0, yAxisID:'y1', order:1, spanGaps:true }}
+      ] }},
+      options: {{ responsive:true, maintainAspectRatio:false, interaction:{{ mode:'index', intersect:false }},
+        plugins: {{ legend:{{ labels:{{ color:'#cbd5e1', boxWidth:12 }} }}, tooltip: {{ ...tip,
+          callbacks: {{ footer: (items) => {{ const i = items[0].dataIndex + D.length - amt.data.labels.length;
+            return TOT[i] != null ? '合計 ' + TOT[i].toLocaleString() + ' 億' : ''; }} }} }} }},
+        scales: {{ x: {{ stacked:true, ticks:tick, grid }}, y: {{ stacked:true, ticks:{{ color:'#94a3b8' }}, grid, title:{{ display:true, text:'億元', color:'#64748b' }} }},
+                   y1: {{ position:'right', ticks:{{ color:'#e2e8f0' }}, grid:{{ drawOnChartArea:false }} }} }} }}
+    }});
+    const mrc = new Chart(document.getElementById('mgMrChart'), {{
+      type:'line', data: {{ labels: D.map(fmtLabel), datasets: [
+        {{ label:'合計', data: MR, borderColor:'rgb(167,139,250)', borderWidth:2, pointRadius:0, spanGaps:true }},
+        {{ label:'上市', data: MRW, borderColor:'rgba(56,189,248,0.8)', borderWidth:1.2, pointRadius:0, spanGaps:true }},
+        {{ label:'上櫃', data: MRP, borderColor:'rgba(245,158,11,0.8)', borderWidth:1.2, pointRadius:0, spanGaps:true }},
+        {{ label:'{cfg['margin_mr_high']}% 偏高', data: D.map(() => {cfg['margin_mr_high']}), borderColor:'#ef4444', borderDash:[5,4], borderWidth:1, pointRadius:0 }},
+        {{ label:'{cfg['margin_mr_warn']}% 警戒', data: D.map(() => {cfg['margin_mr_warn']}), borderColor:'#f59e0b', borderDash:[5,4], borderWidth:1, pointRadius:0 }},
+        {{ label:'{cfg['margin_mr_panic']}% 恐慌', data: D.map(() => {cfg['margin_mr_panic']}), borderColor:'#22d3ee', borderDash:[5,4], borderWidth:1, pointRadius:0 }},
+        {{ label:'130% 追繳線', data: D.map(() => 130), borderColor:'#64748b', borderDash:[2,3], borderWidth:1, pointRadius:0 }}
+      ] }},
+      options: {{ responsive:true, maintainAspectRatio:false, interaction:{{ mode:'index', intersect:false }},
+        plugins: {{ legend:{{ labels:{{ color:'#cbd5e1', boxWidth:12 }} }}, tooltip: {{ ...tip, filter:(it) => !it.dataset.borderDash }} }},
+        scales: {{ x:{{ ticks:tick, grid }}, y:{{ ticks:{{ color:'#94a3b8', callback:(v) => v + '%' }}, grid }} }} }}
+    }});
+    const chg = new Chart(document.getElementById('mgChgChart'), {{
+      type:'line', data: {{ labels: D.map(fmtLabel), datasets: [
+        {{ label:'融資 20 日變化 %', data: M20, borderColor:'rgb(245,158,11)', borderWidth:1.8, pointRadius:0, spanGaps:true }},
+        {{ label:'加權指數 20 日變化 %', data: I20, borderColor:'rgb(226,232,240)', borderWidth:1.4, pointRadius:0, spanGaps:true }}
+      ] }},
+      options: {{ responsive:true, maintainAspectRatio:false, interaction:{{ mode:'index', intersect:false }},
+        plugins: {{ legend:{{ labels:{{ color:'#cbd5e1', boxWidth:12 }} }}, tooltip: tip }},
+        scales: {{ x:{{ ticks:tick, grid }}, y:{{ ticks:{{ color:'#94a3b8', callback:(v) => v + '%' }}, grid }} }} }}
+    }});
+    const charts = [amt, mrc, chg];
+    window.mgSetRange = function(tf, btn) {{
+      document.querySelectorAll('#tf-mg .tf-btn').forEach((b) => b.classList.remove('active'));
+      btn.classList.add('active');
+      const k = tf === 'ALL' ? 0 : filterByRange(D, tf);
+      const labels = D.slice(k).map(fmtLabel);
+      charts.forEach((c, ci) => {{
+        c.data.labels = labels;
+        const src = ci === 0 ? [TW, TP, IDX] : ci === 1 ? [MR, MRW, MRP] : [M20, I20];
+        c.data.datasets.forEach((ds, j) => {{ ds.data = j < src.length ? src[j].slice(k) : labels.map(() => ds.data[0]); }});
+        c.update();
+      }});
+    }};
+    window.mgSetRange('1Y', document.querySelector('#tf-mg .tf-btn.active'));
+  }})();
+"""
+    return html, script
+
+
 def render_us_indices_section(indices):
     usable = [(k, d) for k, d in indices if d and d.get("dates")]
     if not usable:
@@ -3261,13 +3457,16 @@ def render_page_header(alerts, taiex, missing=None):
 
 def build_html(taiex, vix, nikkei, michigan, murata, jp_stocks,
                tw_pmi=None, tw_mc_m1b=None, us_indices=None, us_fred=None,
-               missing=None):
+               missing=None, tw_margin=None):
     scripts = []
     us_indices = us_indices or []
     us_fred = us_fred or {}
 
     alerts = collect_alerts(taiex, vix, nikkei, michigan, murata, jp_stocks,
                             tw_pmi=tw_pmi, tw_mc_m1b=tw_mc_m1b)
+    if tw_margin:
+        import tw_margin as TM  # noqa: PLC0415
+        alerts = list(alerts) + TM.alerts(tw_margin)
     header_html, summary_html = render_page_header(alerts, taiex, missing)
 
     n_warn = sum(1 for kind, _ in alerts if kind == "warn")
@@ -3294,6 +3493,11 @@ def build_html(taiex, vix, nikkei, michigan, murata, jp_stocks,
     if macro_tw_html:
         tw_subs.append(("twmacro", "台股資金面與景氣領先指標", "".join(macro_tw_html)))
         scripts.append("".join(macro_tw_scripts))
+    if tw_margin:
+        h, sc = render_tw_margin_section(tw_margin)
+        if h:
+            tw_subs.append(("twmargin", "融資餘額與信用交易", ind_block(h, IND_TONES[2])))
+            scripts.append(sc)
 
     if tw_subs:
         panes.append(("tw", "台股重要經濟指標", "", sub_tabs("tw", tw_subs)))
@@ -3451,6 +3655,13 @@ def main():
 
     tw_pmi = load_json("tw_pmi.json")
     tw_mc_m1b = load_json("tw_marketcap_m1b.json")
+    tw_margin = None
+    try:
+        import tw_margin as TM  # noqa: PLC0415
+        tw_margin = TM.analyze(load_json(TM.FILE), taiex, load_json("tw_market_cap.json"),
+                               {k: v for k, v in load_thresholds().items() if k.startswith("margin_")})
+    except Exception as e:  # noqa: BLE001 - 一個子分頁壞掉不能讓整份報告出不來
+        print(f"⚠️ 融資餘額的判讀算不出來，這次報告不顯示那一頁：{e!r}")
 
     us_indices = [(idx["key"], load_json(f"index_{idx['key']}.json")) for idx in US_INDEX_CONFIG]
     us_fred = {}
@@ -3496,7 +3707,7 @@ def main():
 
     html = build_html(taiex, vix, nikkei, michigan, murata, jp_stocks,
                       missing=missing,
-                      tw_pmi=tw_pmi, tw_mc_m1b=tw_mc_m1b,
+                      tw_pmi=tw_pmi, tw_mc_m1b=tw_mc_m1b, tw_margin=tw_margin,
                       us_indices=us_indices, us_fred=us_fred)
 
     if args.local:

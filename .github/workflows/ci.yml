@@ -33,10 +33,11 @@ jobs:
       - run: python tests/test_auto_financials.py
       - run: python tests/test_info_tips.py
       - run: python tests/test_tabs_layout.py
+      - run: python tests/test_tw_margin.py
       - run: |
           python -m compileall -q \
             fetch_market_data.py generate_report_local.py config_loader.py auto_financials.py \
-            explanations.py run.py manage_stock.py
+            explanations.py run.py manage_stock.py tw_margin.py
       - run: |
           python -c "
           import config_loader as c

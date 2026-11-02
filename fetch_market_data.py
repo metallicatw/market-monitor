@@ -1202,6 +1202,24 @@ def compute_tw_marketcap_m1b_ratio():
     return result
 
 
+def fetch_tw_margin(max_days=None, mr_days=None):
+    """台股融資餘額（上市＋上櫃）與融資維持率（估算）。交易日曆用加權指數的快取。
+    一趟最多補 max_days 天（預設 60，環境變數 MARGIN_MAX_DAYS 可改），歷史分好幾趟補齊。"""
+    import tw_margin  # noqa: PLC0415
+
+    taiex = _load_cache("taiex.json") or {}
+    cal = taiex.get("dates") or []
+    if not cal:
+        print("⚠️ 融資餘額：沒有加權指數的交易日曆，這次略過")
+        return None
+    max_days = max_days or int(os.environ.get("MARGIN_MAX_DAYS", "60"))
+    mr_days = mr_days or int(os.environ.get("MARGIN_MR_DAYS", "10"))
+    st = tw_margin.fetch(DATA_DIR, calendar=cal, today=_today(), max_days=max_days, mr_days=mr_days)
+    if st["days"] == 0 and st["blocked"]:
+        SOFT_FAILURES.append("融資餘額（" + st["blocked"][0] + "）")
+    return st
+
+
 def fetch_index(symbol, key, name="", years_back=5, incremental=True):
     label = name or symbol
     existing = _load_cache(f"index_{key}.json") if incremental else None
@@ -1307,6 +1325,7 @@ if __name__ == "__main__":
     _run("M1B", fetch_tw_m1b)
     _run("上市櫃總市值", fetch_tw_market_cap)
     _run("市值貨幣比", compute_tw_marketcap_m1b_ratio)
+    _run("融資餘額與融資維持率", fetch_tw_margin)
 
     print("=" * 60)
     print("【美股】")
