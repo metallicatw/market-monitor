@@ -3546,7 +3546,7 @@ def build_html(taiex, vix, nikkei, michigan, murata, jp_stocks,
     if tw_margin:
         h, sc = render_tw_margin_section(tw_margin)
         if h:
-            tw_subs.append(("twmargin", "融資餘額與信用交易", ind_block(h, IND_TONES[2])))
+            tw_subs.append(("twmargin", "融資餘額與信用交易", h))   # 五塊各有自己的色框，外層不再加 ind-block 的色條
             scripts.append(sc)
 
     if tw_subs:
