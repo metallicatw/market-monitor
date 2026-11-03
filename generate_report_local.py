@@ -434,6 +434,17 @@ CSS = """
   .legend-icon-bar { display:inline-block; width:10px; height:10px; border-radius:2px; margin-right:5px; }
   .chart-container { position:relative; width:100%; min-width:0; height:380px; }
   .chart-container.short { height:260px; }
+  /* 〈融資餘額與信用交易〉分成五塊（總覽、融資金額、維持率、20 日變化、歷史驗證），各一個顏色 */
+  .mg-panel { --mgc:#38bdf8; margin:0 0 16px; padding:12px 14px 12px; border-radius:12px;
+              border:1px solid color-mix(in srgb, var(--mgc) 38%, transparent); border-left:5px solid var(--mgc);
+              background:linear-gradient(180deg, color-mix(in srgb, var(--mgc) 10%, transparent) 0%, rgba(11,15,25,0.30) 140px); }
+  .mg-panel > .title-row:first-child, .mg-panel > .sub-title:first-child { margin-top:0; }
+  .mg-panel .sub-title { color:color-mix(in srgb, var(--mgc) 60%, #f8fafc); }
+  .mg-panel-h { display:flex; align-items:center; gap:6px; margin:-12px -14px 10px; padding:9px 14px;
+                border-radius:7px 11px 0 0; font-size:14px; font-weight:800; letter-spacing:.02em;
+                color:color-mix(in srgb, var(--mgc) 70%, #f8fafc);
+                background:color-mix(in srgb, var(--mgc) 18%, transparent);
+                border-bottom:1px solid color-mix(in srgb, var(--mgc) 35%, transparent); }
   .mg-why { margin:4px 0 0 18px; padding:0; font-size:13px; color:#cbd5e1; line-height:1.7; }
   .mg-btwrap { overflow-x:auto; -webkit-overflow-scrolling:touch; }
   .mg-ctl .tf-bar { margin:4px 0 6px 0; }
@@ -451,7 +462,7 @@ CSS = """
     background:#e2e8f0; border:2px solid #3b82f6; cursor:ew-resize; }
   .mg-span { font-size:11.5px; color:#94a3b8; text-align:center; margin-bottom:6px; font-variant-numeric:tabular-nums; }
   .mg-bt { width:100%; border-collapse:collapse; font-size:12.5px; font-variant-numeric:tabular-nums; }
-  .mg-bt th, .mg-bt td { padding:5px 8px; border-bottom:1px solid var(--border-color); text-align:right; white-space:nowrap; }
+  .mg-bt th, .mg-bt td { padding:5px 8px; border-bottom:1px solid var(--border-color); text-align:center !important; vertical-align:middle; white-space:nowrap; }
   .mg-bt th { color:#94a3b8; font-weight:600; }
   .chart-source-box { margin-top:8px; padding:3px 10px; background:rgba(11,15,25,0.7); border-radius:5px;
                         border:1px solid rgba(36,48,73,0.7); font-size:10px; color:#64748b;
@@ -2903,6 +2914,15 @@ def _mg_pct(v, signed=True, d=1):
     return f'<span style="color:{color};">{v:+.{d}f}%</span>' if signed else f"{v:.{d}f}%"
 
 
+MG_PANEL_TONES = {"top": "#38bdf8", "amt": "#f59e0b", "mr": "#a78bfa", "chg": "#34d399", "bt": "#f472b6"}
+
+
+def _mg_panel(key, body, label=None):
+    """〈融資餘額與信用交易〉的一塊：各自一個顏色（左側色條、標題列底色），一眼看得出換了一塊。"""
+    head = f'<div class="mg-panel-h">📈 {label}</div>' if label else ""
+    return f'<section class="mg-panel mg-{key}" style="--mgc:{MG_PANEL_TONES[key]};">{head}{body}</section>'
+
+
 def render_tw_margin_section(a):
     """台股重要經濟指標 →〈融資餘額與信用交易〉。a 是 tw_margin.analyze() 的結果。"""
     if not a:
@@ -2949,18 +2969,17 @@ def render_tw_margin_section(a):
             f'<td>{_mg_pct(avg(r60))}</td><td>{"—" if win(r60) is None else f"{win(r60):.0f}%"}</td></tr>')
     bt_html = ""
     if rows_bt and s["days"] >= 250:
-        bt_html = f"""
-{fold_open("歷史驗證：各狀態出現後加權指數的表現")}
+        bt_html = _mg_panel("bt", f"""
   <div class="mg-btwrap"><table class="mg-bt">
     <thead><tr><th style="text-align:left;">狀態（第一天）</th><th>次數</th><th>20 日平均</th><th>20 日上漲機率</th><th>60 日平均</th><th>60 日上漲機率</th></tr></thead>
     <tbody>{"".join(rows_bt)}</tbody></table></div>
   <div class="stat-sub">資料 {s['first']} 起共 {s['days']} 個交易日；每天用同一套規則判一次狀態，狀態改變的那一天算一次，
   看之後 20、60 個交易日加權指數的漲跌。次數少的狀態只能當參考。</div>
-{FOLD_CLOSE}"""
+""", "歷史驗證：各狀態出現後加權指數的表現")
     elif s["days"] < 250:
         bt_html = f'<div class="stat-sub" style="margin:6px 0 12px;">歷史驗證：目前有 {s["days"]} 個交易日（{s["first"]} 起），每天排程會往回補，滿一年後這裡會出現各狀態之後的指數表現。</div>'
 
-    html = titled_row("融資餘額與信用交易（上市＋上櫃）", "twMarginInfo", "tw_margin", level="sub-title") + f"""
+    top = titled_row("融資餘額與信用交易（上市＋上櫃）", "twMarginInfo", "tw_margin", level="sub-title") + f"""
   <div class="stat-box" style="margin-bottom:12px;border-color:{color};">
     <div class="stat-label">目前判讀（{s['date']}）
       <span class="zone-badge" style="background:rgba(0,0,0,0.25);color:{color};border:1px solid {color};">{s['label']}</span></div>
@@ -2992,21 +3011,19 @@ def render_tw_margin_section(a):
         {"" if s.get('value_ratio') is None else f"｜融資餘額是上市當日成交值的 {s['value_ratio']:.1f} 倍"}</div>
     </div>
   </div>
-
-{fold_open("融資金額 × 加權指數")}
+"""
+    mr_first = "—" if not any(v is not None for v in se['mr']) else next(d for d, v in zip(se['dates'], se['mr']) if v is not None)
+    html = _mg_panel("top", top) + _mg_panel("amt", """
   <div class="mg-ctl" id="mgctl-amt"></div>
   <div class="chart-container"><canvas id="mgAmtChart"></canvas></div>
-{FOLD_CLOSE}
-{fold_open("融資維持率（估算）")}
+""", "融資金額 × 加權指數") + _mg_panel("mr", f"""
   <div class="mg-ctl" id="mgctl-mr"></div>
   <div class="chart-container short"><canvas id="mgMrChart"></canvas></div>
-  <div class="stat-sub">維持率每天算一次（需要每一檔的融資餘額與收盤價），從 {"—" if not any(v is not None for v in se['mr']) else next(d for d, v in zip(se['dates'], se['mr']) if v is not None)} 開始，往後每天累積、往回每趟補約 10 天，最多補到最近 {cfg.get('margin_mr_window', 400)} 個交易日。</div>
-{FOLD_CLOSE}
-{fold_open("20 日變化：融資 vs 指數")}
+  <div class="stat-sub">維持率每天算一次（需要每一檔的融資餘額與收盤價），從 {mr_first} 開始，往後每天累積、往回每趟補約 10 天，最多補到最近 {cfg.get('margin_mr_window', 400)} 個交易日。</div>
+""", "融資維持率（估算）") + _mg_panel("chg", """
   <div class="mg-ctl" id="mgctl-chg"></div>
   <div class="chart-container short"><canvas id="mgChgChart"></canvas></div>
-{FOLD_CLOSE}
-{bt_html}
+""", "20 日變化：融資 vs 指數") + bt_html + """
   <div class="chart-source-box" title="資料來源">
     📌 <a href="https://www.twse.com.tw/zh/trading/margin/mi-margn.html" target="_blank">證交所 融資融券餘額（集中市場）</a>
     ｜<a href="https://www.tpex.org.tw/zh-tw/mainboard/trading/margin-trading/transactions.html" target="_blank">櫃買中心 融資融券餘額（櫃買市場）</a>
