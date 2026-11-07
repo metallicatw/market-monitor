@@ -35,6 +35,8 @@ import urllib.request
 from datetime import date
 
 FILE = "tw_margin.json"
+STOCK_FILE = "tw_margin_stocks.json"   # 個股融資餘額（張），最近 60 個交易日；給金股道〈估值決策〉第 3 道防線
+KEEP_STOCK_DAYS = 60
 TWSE_MS = "https://www.twse.com.tw/rwd/zh/marginTrading/MI_MARGN?date={ymd}&selectType=MS&response=json"
 TWSE_ALL = "https://www.twse.com.tw/rwd/zh/marginTrading/MI_MARGN?date={ymd}&selectType=ALL&response=json"
 TWSE_CLOSE = "https://www.twse.com.tw/rwd/zh/afterTrading/MI_INDEX?date={ymd}&type=ALLBUT0999&response=json"
@@ -303,6 +305,8 @@ def fetch(data_dir: str, *, calendar: list[str], today: date, max_days: int = 60
                 if lots is None:
                     tp = parse_tpex_bal(net.json(TPEX_BAL.format(y=y, m=m, d=dd)) or {})
                     lots = tp["lots"] if tp else {}
+                    if lots:
+                        tpex_lots_cache[d] = lots
                 close = parse_tpex_close(net.json(TPEX_CLOSE.format(y=y, m=m, d=dd)) or {})
                 mr_tp = maintenance(lots, close, r.get("tpex_amt"))
         except Blocked as e:
@@ -318,6 +322,8 @@ def fetch(data_dir: str, *, calendar: list[str], today: date, max_days: int = 60
             if "www.twse.com.tw" not in net.blocked:
                 if lots is None:
                     lots = parse_twse_all(net.json(TWSE_ALL.format(ymd=d.replace("-", ""))) or {})
+                    if lots:
+                        twse_lots_cache[d] = lots
                 if not close:
                     close = parse_twse_close(net.json(TWSE_CLOSE.format(ymd=d.replace("-", ""))) or {})
                 mr_tw = maintenance(lots, close, r.get("twse_amt"))
@@ -334,6 +340,31 @@ def fetch(data_dir: str, *, calendar: list[str], today: date, max_days: int = 60
             stats["mr"] += 1
     stats["days"] = done
     stats["requests"] = net.requests
+    # 個股融資餘額：上面為了算維持率已經抓了個股表（上市 ALL、上櫃 balance），順便存下來，不另外抓
+    try:
+        day_lots: dict[str, dict] = {}
+        for d, lots in tpex_lots_cache.items():
+            day_lots.setdefault(d, {}).update(lots or {})
+        for d, lots in twse_lots_cache.items():
+            day_lots.setdefault(d, {}).update(lots or {})
+        if day_lots:
+            spath = os.path.join(data_dir, STOCK_FILE)
+            sold = _load(spath)
+            old_map = {dd: {c: v["lots"][i] for c, v in (sold.get("stocks") or {}).items()
+                            if i < len(v.get("lots") or []) and v["lots"][i] is not None}
+                       for i, dd in enumerate(sold.get("dates") or [])}
+            for d, lots in day_lots.items():
+                old_map.setdefault(d, {}).update(lots)
+            keep = sorted(old_map)[-KEEP_STOCK_DAYS:]
+            codes = sorted({c for d in keep for c in old_map[d]})
+            sdoc = {"source": "證交所 MI_MARGN（個股）／櫃買中心 融資融券餘額", "unit": "融資餘額（張）", "dates": keep,
+                    "stocks": {c: {"lots": [old_map[d].get(c) for d in keep]} for c in codes}}
+            tmp_s = spath + ".tmp"
+            with open(tmp_s, "w", encoding="utf-8") as f:
+                json.dump(sdoc, f, ensure_ascii=False, separators=(",", ":"))
+            os.replace(tmp_s, spath)
+    except Exception as e:  # noqa: BLE001 - 個股檔寫不出來不影響大盤融資
+        stats["notes"].append(f"個股融資檔沒有寫出：{e!r}")
     meta = {"source": "證交所 MI_MARGN／MI_INDEX／openapi STOCK_DAY_ALL；櫃買中心 融資融券餘額／每日收盤行情",
             "unit": "融資金額：億元；張數：張；維持率：%（估算）",
             "fetched_at": today.isoformat(),

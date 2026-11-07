@@ -981,13 +981,25 @@ def fetch_tw_m1b(years_back=11, incremental=True):
 
     idx_val = _find_col("Ｍ１Ｂ", "原始值")
     idx_yoy = _find_col("Ｍ１Ｂ", "年增率")
+    # 同一份 CSV 也有 M2：一起存，畫「M1B／M2 年增率黃金交叉、死亡交叉」不必再抓一次
+    idx_m2 = _find_col("Ｍ２", "原始值")
+    idx_m2_yoy = _find_col("Ｍ２", "年增率")
     if idx_val is None:
         print(f"⚠️ M1B 在回應裡找不到「Ｍ１Ｂ-原始值」欄位，未寫入任何檔案。"
               f"欄位清單：{header[:5]}...（共 {len(header)} 欄）")
         return None
 
     cutoff = _years_ago(years_back).isoformat()
-    out_dates, out_val, out_yoy = [], [], []
+    out_dates, out_val, out_yoy, out_m2, out_m2_yoy = [], [], [], [], []
+
+    def _cell(r, i):
+        if i is None or i >= len(r):
+            return None
+        try:
+            return float(r[i].replace(",", "").strip())
+        except (ValueError, AttributeError):
+            return None
+
     for r in rows[1:]:
         if idx_val >= len(r):
             continue
@@ -1007,6 +1019,8 @@ def fetch_tw_m1b(years_back=11, incremental=True):
         out_dates.append(iso)
         out_val.append(val)
         out_yoy.append(yoy)
+        out_m2.append(_cell(r, idx_m2))
+        out_m2_yoy.append(_cell(r, idx_m2_yoy))
 
     if not out_dates:
         print("⚠️ M1B 解析不到任何資料列，未寫入任何檔案。")
@@ -1018,7 +1032,7 @@ def fetch_tw_m1b(years_back=11, incremental=True):
               f"很可能抓到了 EF19M01「變動因素分析」而不是 EF15M01。未寫入任何檔案。")
         return None
 
-    merged = _merge_series(existing, out_dates, {"m1b": out_val, "yoy": out_yoy})
+    merged = _merge_series(existing, out_dates, {"m1b": out_val, "yoy": out_yoy, "m2": out_m2, "m2_yoy": out_m2_yoy})
     result = {
         "source": "中央銀行 貨幣總計數（日平均數，月資料）EF15M01",
         "landing_page": "https://data.gov.tw/dataset/6024",
@@ -1027,6 +1041,8 @@ def fetch_tw_m1b(years_back=11, incremental=True):
         "dates": merged["dates"],
         "m1b": merged["m1b"],
         "yoy": merged["yoy"],
+        "m2": merged.get("m2") or [],
+        "m2_yoy": merged.get("m2_yoy") or [],
     }
     out_path = os.path.join(DATA_DIR, "tw_m1b.json")
     _write_json(out_path, result)
@@ -1171,7 +1187,11 @@ def compute_tw_marketcap_m1b_ratio():
         return None
 
     m1b_by_month = dict(zip(m1b["dates"], m1b["m1b"]))
+    m2_by_month = dict(zip(m1b["dates"], m1b.get("m2") or []))
+    yoy1 = dict(zip(m1b["dates"], m1b.get("yoy") or []))
+    yoy2 = dict(zip(m1b["dates"], m1b.get("m2_yoy") or []))
     out_dates, out_ratio, out_cap, out_m1b = [], [], [], []
+    out_m2, out_ratio_m2, out_y1, out_y2 = [], [], [], []
     for d, c in zip(cap["dates"], cap["market_cap"]):
         mv = m1b_by_month.get(d)
         if c is None or mv in (None, 0):
@@ -1180,6 +1200,11 @@ def compute_tw_marketcap_m1b_ratio():
         out_ratio.append(round(c / mv, 4))
         out_cap.append(c)
         out_m1b.append(mv)
+        m2v = m2_by_month.get(d)
+        out_m2.append(m2v)
+        out_ratio_m2.append(round(c / m2v, 4) if m2v else None)
+        out_y1.append(yoy1.get(d))
+        out_y2.append(yoy2.get(d))
 
     if not out_dates:
         print("⚠️ 市值貨幣比：市值與 M1B 沒有任何共同月份（市值來源落後太多？），本次不計算。")
@@ -1194,6 +1219,10 @@ def compute_tw_marketcap_m1b_ratio():
         "ratio": out_ratio,
         "market_cap": out_cap,
         "m1b": out_m1b,
+        "m2": out_m2,                 # 同一份央行 CSV（EF15M01），不另外抓
+        "ratio_m2": out_ratio_m2,     # 市值 ÷ M2（整體資金水位）
+        "m1b_yoy": out_y1,
+        "m2_yoy": out_y2,
     }
     out_path = os.path.join(DATA_DIR, "tw_marketcap_m1b.json")
     _write_json(out_path, result)
@@ -1221,6 +1250,23 @@ def fetch_tw_margin(max_days=None, mr_days=None):
                          mr_window=window)
     if st["days"] == 0 and st["blocked"]:
         SOFT_FAILURES.append("融資餘額（" + st["blocked"][0] + "）")
+    return st
+
+
+def fetch_tw_daytrade(max_days=None):
+    """台股當沖比（上市＋上櫃）。交易日曆用加權指數的快取；一趟最多補 max_days 天（預設 40）。
+    同一次請求順便存個股最近 20 日的當沖股數，給金股道〈估值決策〉算個股當沖比（不重複抓）。"""
+    import tw_daytrade  # noqa: PLC0415
+
+    taiex = _load_cache("taiex.json") or {}
+    cal = taiex.get("dates") or []
+    if not cal:
+        print("⚠️ 當沖比：沒有加權指數的交易日曆，這次略過")
+        return None
+    max_days = max_days or int(os.environ.get("DAYTRADE_MAX_DAYS", "40"))
+    st = tw_daytrade.fetch(DATA_DIR, calendar=cal, today=_today(), max_days=max_days)
+    if st["days"] == 0 and st["blocked"]:
+        SOFT_FAILURES.append("當沖比（" + st["blocked"][0] + "）")
     return st
 
 
@@ -1330,6 +1376,7 @@ if __name__ == "__main__":
     _run("上市櫃總市值", fetch_tw_market_cap)
     _run("市值貨幣比", compute_tw_marketcap_m1b_ratio)
     _run("融資餘額與融資維持率", fetch_tw_margin)
+    _run("當沖比", fetch_tw_daytrade)
 
     print("=" * 60)
     print("【美股】")

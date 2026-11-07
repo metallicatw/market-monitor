@@ -2901,6 +2901,126 @@ def render_tw_marketcap_m1b_section(ratio_data):
     return html, script
 
 
+DT_ZONE_COLOR = {"冷清": "#22d3ee", "常態": "#94a3b8", "偏熱": "#f59e0b", "過熱": "#ef4444"}
+
+
+def render_tw_daytrade_section(a):
+    """台股重要經濟指標 →〈當沖比與投機熱度〉。a 是 tw_daytrade.analyze() 的結果。"""
+    if not a:
+        return "", ""
+    zname, zwhy = a["zone"] or ("—", "")
+    zc = DT_ZONE_COLOR.get(zname, "#94a3b8")
+    combo = a.get("combo")
+    combo_html = (f'<div class="stat-sub">搭配指數與融資（20 日）：<b style="color:{zc};">{combo[0]}</b>　{combo[1]}'
+                  f'｜指數 {a["idx20"]:+.1f}%、融資 {a["mg20"]:+.1f}%</div>') if combo else ""
+    html = titled_row("當沖比（上市＋上櫃，成交值）", "twDaytradeInfo", "tw_daytrade", level="sub-title") + f"""
+  <div class="stat-box" style="margin-bottom:14px;">
+    <div class="stat-label">近 20 日平均
+      <span class="zone-badge" style="background:rgba(0,0,0,0.25);color:{zc};border:1px solid {zc};">{zname}</span>
+    </div>
+    <div><span class="stat-value" style="color:{zc};">{a['ma20']:.2f}%</span>
+      <span class="stat-chg">最新 {a['day']}：{a['last']:.2f}%｜近 {min(a['n'], 400)} 日第 {a['pct']} 百分位</span></div>
+    <div class="stat-sub">{zwhy}｜區間：&lt;25% 冷清、25–35% 常態、35–45% 偏熱、≥45% 過熱（成交值口徑）</div>
+    {combo_html}
+  </div>
+{fold_open("當沖比走勢圖")}
+  <div class="tf-bar" id="tf-twdt">
+    <span style="font-size:11px;color:#64748b;margin-right:2px;">週期切換:</span>
+    <button class="tf-btn" onclick="simpleSetRange('twdt','3M',this)">3M</button>
+    <button class="tf-btn" onclick="simpleSetRange('twdt','1Y',this)">1Y</button>
+    <button class="tf-btn active" onclick="simpleSetRange('twdt','ALL',this)">全部</button>
+  </div>
+  <div class="custom-legend" id="twDtLegend"></div>
+  <div class="chart-container short"><canvas id="twDtChart"></canvas></div>
+{FOLD_CLOSE}
+  <div class="chart-source-box" title="資料來源與更新時間">
+    📌 <a href="https://www.twse.com.tw/zh/trading/day-trading/twtb4u.html" target="_blank">證交所 當日沖銷交易標的及統計</a>
+    ｜<a href="https://www.tpex.org.tw/zh-tw/mainboard/trading/intraday/statistics.html" target="_blank">櫃買中心 當日沖銷交易統計</a>
+    ｜合併比重為自行換算（Σ當沖買進金額 ÷ Σ市場成交金額）
+  </div>
+"""
+    script = f"""
+  const dtDates = {json.dumps(a['dates'], ensure_ascii=False)};
+  const dtRatio = {json.dumps(a['ratio'], ensure_ascii=False)};
+  const twDtChart = new Chart(document.getElementById('twDtChart'), {{
+    type: 'line',
+    data: {{ labels: dtDates.map(fmtLabel), datasets: [
+      {{ label: '當沖比（成交值）', data: dtRatio, borderColor: 'rgb(244,114,182)', backgroundColor: (c) => gradientFill(c, '244,114,182'),
+         fill: true, tension: 0, pointRadius: 0, pointHoverRadius: 5, borderWidth: 1.6, order: 1 }},
+      {{ label: '45% 過熱', data: dtDates.map(() => 45), borderColor: '#ef4444', borderDash: [5,4], borderWidth: 1.1, pointRadius: 0, fill: false, order: 2 }},
+      {{ label: '35% 偏熱', data: dtDates.map(() => 35), borderColor: '#f59e0b', borderDash: [5,4], borderWidth: 1.1, pointRadius: 0, fill: false, order: 3 }},
+      {{ label: '25% 冷清', data: dtDates.map(() => 25), borderColor: '#22d3ee', borderDash: [5,4], borderWidth: 1.1, pointRadius: 0, fill: false, order: 4 }}
+    ] }},
+    options: {{ responsive: true, maintainAspectRatio: false, interaction: {{ mode: 'index', intersect: false }},
+      plugins: {{ legend: {{ display: false }}, tooltip: {{ backgroundColor: 'rgba(15,23,42,0.95)', titleColor:'#f8fafc', bodyColor:'#cbd5e1',
+        borderColor: '#334155', borderWidth: 1, padding: 10, filter: (item) => !item.dataset.borderDash,
+        callbacks: {{ title: tooltipFullDateTitle('twdt') }} }} }},
+      scales: {{ x: {{ type: 'category', ticks: {{ maxTicksLimit: 8, maxRotation: 0, color: '#94a3b8' }}, grid: {{ color: 'rgba(38,51,77,0.35)' }} }},
+                y: {{ ticks: {{ callback: (v) => v + '%' }}, grid: {{ color: 'rgba(38,51,77,0.35)' }} }} }} }}
+  }});
+  buildLegend(twDtChart, 'twDtLegend');
+  chartRegistry['twdt'] = {{ chart: twDtChart, dates: dtDates, close: dtRatio, currentDates: dtDates.slice(), warnLevels: [45,35,25] }};
+"""
+    return html, script
+
+
+def render_tw_money_section(mc):
+    """〈台股資金面〉：M1B 與 M2 年增率（黃金交叉／死亡交叉）、M1B 近 6 個月月均增加額、市值 ÷ M2。"""
+    dates = mc.get("dates") or []
+    y1, y2 = mc.get("m1b_yoy") or [], mc.get("m2_yoy") or []
+    pairs = [(d, a, b) for d, a, b in zip(dates, y1, y2, strict=False) if a is not None and b is not None]
+    if len(pairs) < 3:
+        return "", ""
+    d_last, a_last, b_last = pairs[-1]
+    gap = a_last - b_last
+    cross = None
+    for i in range(len(pairs) - 1, 0, -1):
+        g0, g1 = pairs[i - 1][1] - pairs[i - 1][2], pairs[i][1] - pairs[i][2]
+        if (g0 <= 0 < g1) or (g0 >= 0 > g1):
+            cross = (pairs[i][0], "黃金交叉" if g1 > 0 else "死亡交叉")
+            break
+    state, color = ("黃金交叉（資金活絡）", "#ef4444") if gap > 0 else ("死亡交叉（資金沉睡）", "#22c55e")
+    m1b = [v for v in (mc.get("m1b") or []) if v is not None]
+    inc = [b - a for a, b in zip(m1b[:-1], m1b[1:], strict=False)]
+    inc6 = sum(inc[-6:]) / 6 / 100 if len(inc) >= 6 else None
+    inc_prev = sum(inc[-12:-6]) / 6 / 100 if len(inc) >= 12 else None
+    shrink = inc6 is not None and inc_prev and inc6 < inc_prev * 0.8
+    rm2 = [v for v in (mc.get("ratio_m2") or []) if v is not None]
+    rm2_txt = f"｜市值 ÷ M2 ＝ {rm2[-1]:.2f}（近 {len(rm2)} 個月第 {round(sum(1 for v in rm2 if v < rm2[-1]) / len(rm2) * 100)} 百分位）" if rm2 else ""
+    inc_txt = (f"M1B 近 6 個月月均增加 {inc6:,.0f} 億元（前 6 個月 {inc_prev:,.0f} 億元"
+               + ("，<b style=\"color:#f59e0b;\">萎縮兩成以上：資金動能轉弱</b>" if shrink else "") + "）") if inc6 is not None and inc_prev is not None else ""
+    html = titled_row("M1B 與 M2 年增率（黃金交叉／死亡交叉）", "twMoneyInfo", "tw_money", level="sub-title") + f"""
+  <div class="stat-box" style="margin-bottom:14px;">
+    <div class="stat-label">{d_last[:7].replace('-', '/')}
+      <span class="zone-badge" style="background:rgba(0,0,0,0.25);color:{color};border:1px solid {color};">{state}</span></div>
+    <div><span class="stat-value" style="color:{color};">{gap:+.2f}</span><span class="stat-chg">個百分點（M1B {a_last:.2f}% − M2 {b_last:.2f}%）</span></div>
+    <div class="stat-sub">{('最近一次交叉：' + cross[0][:7].replace('-', '/') + ' ' + cross[1]) if cross else ''}{rm2_txt}</div>
+    <div class="stat-sub">{inc_txt}</div>
+  </div>
+{fold_open("M1B／M2 年增率走勢圖")}
+  <div class="custom-legend" id="twMoneyLegend"></div>
+  <div class="chart-container short"><canvas id="twMoneyChart"></canvas></div>
+{FOLD_CLOSE}
+  <div class="chart-source-box">📌 <a href="https://data.gov.tw/dataset/6024" target="_blank">中央銀行 貨幣總計數 EF15M01</a>（與 M1B 同一份檔案）</div>
+"""
+    script = f"""
+  const mnDates = {json.dumps([p[0] for p in pairs], ensure_ascii=False)};
+  const twMoneyChart = new Chart(document.getElementById('twMoneyChart'), {{
+    type: 'line',
+    data: {{ labels: mnDates.map(fmtLabel), datasets: [
+      {{ label: 'M1B 年增率', data: {json.dumps([round(p[1], 2) for p in pairs])}, borderColor: 'rgb(239,68,68)', pointRadius: 0, borderWidth: 1.8, fill: false }},
+      {{ label: 'M2 年增率', data: {json.dumps([round(p[2], 2) for p in pairs])}, borderColor: 'rgb(56,189,248)', pointRadius: 0, borderWidth: 1.8, fill: false }}
+    ] }},
+    options: {{ responsive: true, maintainAspectRatio: false, interaction: {{ mode: 'index', intersect: false }},
+      plugins: {{ legend: {{ display: false }} }},
+      scales: {{ x: {{ type: 'category', ticks: {{ maxTicksLimit: 8, maxRotation: 0, color: '#94a3b8' }}, grid: {{ color: 'rgba(38,51,77,0.35)' }} }},
+                y: {{ ticks: {{ callback: (v) => v + '%' }}, grid: {{ color: 'rgba(38,51,77,0.35)' }} }} }} }}
+  }});
+  buildLegend(twMoneyChart, 'twMoneyLegend');
+"""
+    return html, script
+
+
 MARGIN_STATE_COLOR = {"purge": "#22d3ee", "hot": "#ef4444", "catch": "#f97316", "delever": "#f59e0b",
                       "healthy": "#34d399", "neutral": "#94a3b8"}
 MARGIN_STATE_NAME = {"purge": "籌碼清洗・留意落底", "hot": "過熱警戒", "catch": "散戶接刀（背離）",
@@ -3507,7 +3627,7 @@ def render_page_header(alerts, taiex, missing=None):
 
 def build_html(taiex, vix, nikkei, michigan, murata, jp_stocks,
                tw_pmi=None, tw_mc_m1b=None, us_indices=None, us_fred=None,
-               missing=None, tw_margin=None):
+               missing=None, tw_margin=None, tw_daytrade=None):
     scripts = []
     us_indices = us_indices or []
     us_fred = us_fred or {}
@@ -3517,6 +3637,9 @@ def build_html(taiex, vix, nikkei, michigan, murata, jp_stocks,
     if tw_margin:
         import tw_margin as TM  # noqa: PLC0415
         alerts = list(alerts) + TM.alerts(tw_margin)
+    if tw_daytrade:
+        import tw_daytrade as TD  # noqa: PLC0415
+        alerts = list(alerts) + TD.alerts(tw_daytrade)
     header_html, summary_html = render_page_header(alerts, taiex, missing)
 
     n_warn = sum(1 for kind, _ in alerts if kind == "warn")
@@ -3540,6 +3663,10 @@ def build_html(taiex, vix, nikkei, michigan, murata, jp_stocks,
         if h:
             macro_tw_html.append(ind_block(h, IND_TONES[1]))
             macro_tw_scripts.append(s)
+        h, s = render_tw_money_section(tw_mc_m1b)
+        if h:
+            macro_tw_html.append(ind_block(h, IND_TONES[4]))
+            macro_tw_scripts.append(s)
     if macro_tw_html:
         tw_subs.append(("twmacro", "台股資金面與景氣領先指標", "".join(macro_tw_html)))
         scripts.append("".join(macro_tw_scripts))
@@ -3547,6 +3674,11 @@ def build_html(taiex, vix, nikkei, michigan, murata, jp_stocks,
         h, sc = render_tw_margin_section(tw_margin)
         if h:
             tw_subs.append(("twmargin", "融資餘額與信用交易", h))   # 五塊各有自己的色框，外層不再加 ind-block 的色條
+            scripts.append(sc)
+    if tw_daytrade:
+        h, sc = render_tw_daytrade_section(tw_daytrade)
+        if h:
+            tw_subs.append(("twdaytrade", "當沖比與投機熱度", ind_block(h, IND_TONES[4])))
             scripts.append(sc)
 
     if tw_subs:
@@ -3713,6 +3845,13 @@ def main():
     except Exception as e:  # noqa: BLE001 - 一個子分頁壞掉不能讓整份報告出不來
         print(f"⚠️ 融資餘額的判讀算不出來，這次報告不顯示那一頁：{e!r}")
 
+    tw_daytrade = None
+    try:
+        import tw_daytrade as TD  # noqa: PLC0415
+        tw_daytrade = TD.analyze(load_json(TD.FILE), taiex, load_json("tw_margin.json"))
+    except Exception as e:  # noqa: BLE001
+        print(f"⚠️ 當沖比的判讀算不出來，這次報告不顯示那一頁：{e!r}")
+
     us_indices = [(idx["key"], load_json(f"index_{idx['key']}.json")) for idx in US_INDEX_CONFIG]
     us_fred = {}
     for meta in US_FRED_CONFIG:
@@ -3757,7 +3896,7 @@ def main():
 
     html = build_html(taiex, vix, nikkei, michigan, murata, jp_stocks,
                       missing=missing,
-                      tw_pmi=tw_pmi, tw_mc_m1b=tw_mc_m1b, tw_margin=tw_margin,
+                      tw_pmi=tw_pmi, tw_mc_m1b=tw_mc_m1b, tw_margin=tw_margin, tw_daytrade=tw_daytrade,
                       us_indices=us_indices, us_fred=us_fred)
 
     if args.local:
